@@ -33,6 +33,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { IMAGE_STYLES } from '@/types/book';
+import { AIAssistant } from '@/components/AIAssistant';
 
 const layoutNames: Record<PageLayout, string> = {
   'text-left-image-right': 'Text Left, Image Right',
@@ -150,6 +151,18 @@ const EditorPage = () => {
     toast.success('PDF export is not implemented in this demo');
   };
 
+  const handleApplyAIText = (text: string) => {
+    if (!currentPageData) return;
+    handleTextChange(text);
+  };
+
+  const handleApplyAIImage = (imageData: string) => {
+    if (!currentPageData) return;
+    const updatedPage = { ...currentPageData, image: imageData };
+    setCurrentPageData(updatedPage);
+    updatePage(updatedPage);
+  };
+
   if (!id || (books.length > 0 && !books.some(book => book.id === id))) {
     return <Navigate to="/books" />;
   }
@@ -182,6 +195,11 @@ const EditorPage = () => {
               </div>
             </div>
             <div className="flex space-x-2">
+              <AIAssistant 
+                onApplyText={handleApplyAIText}
+                onApplyImage={handleApplyAIImage}
+                initialPrompt={currentPageData?.text}
+              />
               <Button variant="outline" size="sm" onClick={handleExportPDF}>
                 <Download className="h-4 w-4 mr-2" />
                 Export PDF
