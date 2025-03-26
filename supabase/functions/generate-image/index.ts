@@ -26,8 +26,8 @@ serve(async (req) => {
     console.log('Sending request to Gemini API with prompt:', prompt)
     console.log('Using style:', style)
 
-    // Using the correct structure for Gemini API according to latest documentation
-    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp-image-generation:generateContent', {
+    // Using the correct model name based on Gemini's available models
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -44,7 +44,12 @@ serve(async (req) => {
             ]
           }
         ],
-        // Removed the generationConfig and responseModalities which was causing issues
+        generationConfig: {
+          temperature: 0.4,
+          topK: 32,
+          topP: 1,
+          maxOutputTokens: 2048
+        }
       })
     })
 
