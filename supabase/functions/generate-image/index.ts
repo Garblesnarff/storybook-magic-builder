@@ -26,7 +26,7 @@ serve(async (req) => {
     console.log('Sending request to Gemini API with prompt:', prompt)
     console.log('Using style:', style)
 
-    // Using the correct structure for Gemini 2.0 image generation API
+    // Using the correct structure for Gemini API according to latest documentation
     const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp-image-generation:generateContent', {
       method: 'POST',
       headers: {
@@ -44,9 +44,7 @@ serve(async (req) => {
             ]
           }
         ],
-        generationConfig: {
-          responseModalities: ["TEXT", "IMAGE"]
-        }
+        // Removed the generationConfig and responseModalities which was causing issues
       })
     })
 
