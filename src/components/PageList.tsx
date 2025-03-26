@@ -54,7 +54,7 @@ export const PageList: React.FC<PageListProps> = ({
           </Button>
         )}
         
-        <ScrollArea className="w-full px-8" orientation="horizontal">
+        <ScrollArea className="w-full px-8">
           <div className="flex space-x-4 py-4 w-max">
             {visiblePages.map((page) => (
               <div key={page.id} className="w-24 md:w-32 shrink-0">
