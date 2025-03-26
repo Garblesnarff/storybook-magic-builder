@@ -5,6 +5,7 @@ import { BookOpen, Palette, Settings, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const Navigation = () => {
+  // We need to make sure this component is only rendered inside Router context
   const location = useLocation();
   
   const navItems = [
