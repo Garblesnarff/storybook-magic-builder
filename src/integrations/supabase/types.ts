@@ -87,6 +87,33 @@ export type Database = {
         }
         Relationships: []
       }
+      birds: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          scientific_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          scientific_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          scientific_name?: string | null
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           atmosphere: string | null
@@ -1323,6 +1350,44 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_birds: {
+        Row: {
+          bird_id: string
+          captured_at: string | null
+          created_at: string | null
+          id: string
+          location: Json | null
+          photo_url: string | null
+          user_id: string
+        }
+        Insert: {
+          bird_id: string
+          captured_at?: string | null
+          created_at?: string | null
+          id?: string
+          location?: Json | null
+          photo_url?: string | null
+          user_id: string
+        }
+        Update: {
+          bird_id?: string
+          captured_at?: string | null
+          created_at?: string | null
+          id?: string
+          location?: Json | null
+          photo_url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_birds_bird_id_fkey"
+            columns: ["bird_id"]
+            isOneToOne: false
+            referencedRelation: "birds"
             referencedColumns: ["id"]
           },
         ]

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { PageList } from '@/components/PageList';
@@ -32,8 +31,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { IMAGE_STYLES } from '@/types/book';
 
-// Helper function to convert a layout id to a human-readable name
 const layoutNames: Record<PageLayout, string> = {
   'text-left-image-right': 'Text Left, Image Right',
   'image-left-text-right': 'Image Left, Text Right',
@@ -50,7 +50,6 @@ const EditorPage = () => {
   const [selectedPageId, setSelectedPageId] = useState<string | undefined>(undefined);
   const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
   
-  // Load book when component mounts or id changes
   useEffect(() => {
     if (id && books.length > 0) {
       const bookExists = books.some(book => book.id === id);
@@ -60,7 +59,6 @@ const EditorPage = () => {
     }
   }, [id, books, loadBook]);
   
-  // Set selected page to first page when book changes
   useEffect(() => {
     if (currentBook && currentBook.pages.length > 0) {
       const firstPageId = currentBook.pages[0].id;
@@ -68,7 +66,6 @@ const EditorPage = () => {
     }
   }, [currentBook]);
   
-  // Update currentPageData when selectedPageId changes
   useEffect(() => {
     if (currentBook && selectedPageId) {
       const page = currentBook.pages.find(page => page.id === selectedPageId);
@@ -115,17 +112,44 @@ const EditorPage = () => {
     updatePage(updatedPage);
   };
 
-  const handleGenerateImage = () => {
-    // This would actually call an API in a real implementation
-    toast.success('Image generation is not implemented in this demo');
+  const handleGenerateImage = async () => {
+    if (!currentPageData) return;
+
+    try {
+      const style = currentPageData.textFormatting?.imageStyle || 'REALISTIC';
+      const response = await supabase.functions.invoke('generate-image', {
+        body: JSON.stringify({ 
+          prompt: currentPageData.text, 
+          style 
+        })
+      });
+
+      if (response.error) {
+        toast.error('Failed to generate image', {
+          description: response.error.message
+        });
+        return;
+      }
+
+      const updatedPage = { 
+        ...currentPageData, 
+        image: `data:image/png;base64,${response.data.image}` 
+      };
+      
+      updatePage(updatedPage);
+      toast.success('Image generated successfully!');
+    } catch (error) {
+      console.error('Image generation error:', error);
+      toast.error('Failed to generate image', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   };
 
   const handleExportPDF = () => {
-    // This would actually generate a PDF in a real implementation
     toast.success('PDF export is not implemented in this demo');
   };
 
-  // Redirect if book doesn't exist
   if (!id || (books.length > 0 && !books.some(book => book.id === id))) {
     return <Navigate to="/books" />;
   }
@@ -143,7 +167,6 @@ const EditorPage = () => {
   return (
     <Layout fullWidth>
       <div className="min-h-screen flex flex-col">
-        {/* Header */}
         <header className="border-b bg-white/70 backdrop-blur-md sticky top-0 z-40 py-3 px-4 md:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -167,7 +190,6 @@ const EditorPage = () => {
           </div>
         </header>
         
-        {/* Page List */}
         <div className="border-b bg-white/50 backdrop-blur-sm">
           <div className="container mx-auto">
             <PageList
@@ -179,16 +201,13 @@ const EditorPage = () => {
           </div>
         </div>
         
-        {/* Main Editor Area */}
         <div className="flex flex-col md:flex-row flex-grow">
-          {/* Page Preview */}
           <div className="flex-grow flex items-center justify-center p-4 md:p-8 bg-gray-50">
             {currentPageData && (
               <div 
                 className="aspect-[3/4] bg-white rounded-xl shadow-lg border overflow-hidden max-h-[80vh]" 
                 style={{ width: 'auto', height: '80vh' }}
               >
-                {/* Render based on layout */}
                 {currentPageData.layout === 'text-left-image-right' && (
                   <div className="flex h-full">
                     <div className="w-1/2 p-8 overflow-auto">
@@ -408,150 +427,8 @@ const EditorPage = () => {
             )}
           </div>
           
-          {/* Right Sidebar / Editor Controls */}
-          {currentPageData && (
-            <div className="w-full md:w-80 lg:w-96 border-l bg-white p-4 overflow-y-auto">
-              <Tabs defaultValue="text">
-                <TabsList className="grid grid-cols-3 mb-4">
-                  <TabsTrigger value="text">
-                    <TextCursor className="h-4 w-4 mr-2" />
-                    Text
-                  </TabsTrigger>
-                  <TabsTrigger value="layout">
-                    <LayoutIcon className="h-4 w-4 mr-2" />
-                    Layout
-                  </TabsTrigger>
-                  <TabsTrigger value="style">
-                    <Palette className="h-4 w-4 mr-2" />
-                    Style
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="text" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="page-text">Page Text</Label>
-                    <Textarea
-                      id="page-text"
-                      value={currentPageData.text}
-                      onChange={(e) => handleTextChange(e.target.value)}
-                      className="min-h-[200px]"
-                      placeholder="Enter the story text for this page..."
-                    />
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="layout" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="layout">Page Layout</Label>
-                    <Select 
-                      value={currentPageData.layout} 
-                      onValueChange={(value) => handleLayoutChange(value as PageLayout)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a layout" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(layoutNames).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="pt-4">
-                    <Button 
-                      className="w-full" 
-                      onClick={handleGenerateImage}
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Generate Image
-                    </Button>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Generates an image based on the text content of this page.
-                    </p>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="style" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="font-family">Font Family</Label>
-                    <Select 
-                      value={currentPageData.textFormatting?.fontFamily || 'Inter'} 
-                      onValueChange={(value) => handleTextFormattingChange('fontFamily', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a font" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Inter">Inter</SelectItem>
-                        <SelectItem value="Georgia">Georgia</SelectItem>
-                        <SelectItem value="Comic Sans MS">Comic Sans</SelectItem>
-                        <SelectItem value="Courier New">Courier</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="font-size">Font Size ({currentPageData.textFormatting?.fontSize || 16}px)</Label>
-                    <Input
-                      id="font-size"
-                      type="range"
-                      min="12"
-                      max="36"
-                      value={currentPageData.textFormatting?.fontSize || 16}
-                      onChange={(e) => handleTextFormattingChange('fontSize', parseInt(e.target.value))}
-                    />
-                  </div>
-                  
-                  <div className="flex space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="bold"
-                        checked={currentPageData.textFormatting?.isBold || false}
-                        onChange={(e) => handleTextFormattingChange('isBold', e.target.checked)}
-                      />
-                      <Label htmlFor="bold">Bold</Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="italic"
-                        checked={currentPageData.textFormatting?.isItalic || false}
-                        onChange={(e) => handleTextFormattingChange('isItalic', e.target.checked)}
-                      />
-                      <Label htmlFor="italic">Italic</Label>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="font-color">Text Color</Label>
-                    <div className="flex space-x-2">
-                      <input
-                        type="color"
-                        id="font-color"
-                        value={currentPageData.textFormatting?.fontColor || '#000000'}
-                        onChange={(e) => handleTextFormattingChange('fontColor', e.target.value)}
-                        className="w-10 h-10 rounded-md"
-                      />
-                      <Input
-                        value={currentPageData.textFormatting?.fontColor || '#000000'}
-                        onChange={(e) => handleTextFormattingChange('fontColor', e.target.value)}
-                        className="flex-grow"
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-          )}
-        </div>
-      </div>
-    </Layout>
-  );
-};
-
-export default EditorPage;
+          <div className="w-full md:w-80 lg:w-96 border-l bg-white p-4 overflow-y-auto">
+            <Tabs defaultValue="text">
+              <TabsList className="grid grid-cols-3 mb-4">
+                <TabsTrigger value="text">
+                 

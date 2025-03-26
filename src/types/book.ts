@@ -1,4 +1,3 @@
-
 export interface Book {
   id: string;
   title: string;
@@ -39,6 +38,7 @@ export interface TextFormatting {
   fontColor?: string;
   isBold?: boolean;
   isItalic?: boolean;
+  imageStyle?: 'REALISTIC' | 'CARTOON' | 'SKETCH' | 'ANIME';
 }
 
 export interface ImageStyle {
@@ -74,9 +74,8 @@ export const DEFAULT_PAGE: Omit<BookPage, 'id' | 'pageNumber'> = {
 };
 
 export const IMAGE_STYLES: ImageStyle[] = [
-  { id: 'cartoon', name: 'Cartoon', description: 'Colorful and playful cartoon style' },
-  { id: 'watercolor', name: 'Watercolor', description: 'Soft and dreamy watercolor painting' },
-  { id: 'pencil', name: 'Pencil Sketch', description: 'Hand-drawn pencil illustration' },
-  { id: 'realistic', name: 'Realistic', description: 'Detailed realistic illustration' },
-  { id: 'storybook', name: 'Storybook', description: 'Classic children\'s book illustration' }
+  { id: 'REALISTIC', name: 'Realistic', description: 'Photorealistic image generation' },
+  { id: 'CARTOON', name: 'Cartoon', description: 'Colorful and playful cartoon style' },
+  { id: 'SKETCH', name: 'Sketch', description: 'Hand-drawn pencil illustration style' },
+  { id: 'ANIME', name: 'Anime', description: 'Japanese animation-inspired style' }
 ];
