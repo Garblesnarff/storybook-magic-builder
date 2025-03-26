@@ -24,10 +24,10 @@ serve(async (req) => {
     }
 
     console.log('Sending request to Gemini API with prompt:', prompt)
-    console.log('Using style:', style || 'REALISTIC')
+    console.log('Using style:', style)
 
-    // Updated request format for image generation based on Gemini documentation
-    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro-vision:generateContent', {
+    // Using the correct model name and endpoint for image generation
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp-image-generation:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -42,6 +42,8 @@ serve(async (req) => {
           ]
         }],
         generationConfig: {
+          // Image generation requires responseModalities to include both Text and Image
+          responseModalities: ["Text", "Image"],
           temperature: 0.7,
           topK: 32,
           topP: 1,
@@ -76,11 +78,11 @@ serve(async (req) => {
     console.log('Gemini API response received. Status:', response.status);
     console.log('Response structure:', JSON.stringify(data, null, 2).substring(0, 500) + '...');
 
-    // Extract the text that describes the image (Gemini Pro Vision doesn't directly return images)
+    // Extract the image data from the response
     if (!data.candidates || data.candidates.length === 0) {
       console.error('No candidates in response:', JSON.stringify(data));
       return new Response(JSON.stringify({ 
-        error: 'No content generated in response',
+        error: 'No image generated in response',
         responseData: data
       }), {
         status: 400,
@@ -88,8 +90,6 @@ serve(async (req) => {
       })
     }
 
-    // Using a different approach - we'll now call a different API to generate the image
-    // based on the text description from Gemini
     const candidate = data.candidates[0];
     if (!candidate.content || !candidate.content.parts) {
       console.error('No content or parts in response candidate:', JSON.stringify(candidate));
@@ -102,11 +102,13 @@ serve(async (req) => {
       })
     }
 
-    const textPart = candidate.content.parts.find(part => part.text);
-    if (!textPart || !textPart.text) {
-      console.error('No text found in response parts:', JSON.stringify(candidate.content.parts));
+    // Find the first inline data part which should be the image
+    const imagePart = candidate.content.parts.find(part => part.inlineData);
+
+    if (!imagePart || !imagePart.inlineData) {
+      console.error('No image data found in response parts:', JSON.stringify(candidate.content.parts));
       return new Response(JSON.stringify({ 
-        error: 'No text description found in the API response',
+        error: 'No image data found in the API response',
         parts: candidate.content.parts
       }), {
         status: 400,
@@ -114,72 +116,11 @@ serve(async (req) => {
       })
     }
 
-    // Now use Stability AI API to generate the actual image from the description
-    // This is a fallback since we're having issues with direct image generation from Gemini
-    const stabilityApiKey = Deno.env.get('STABILITY_API_KEY');
-    if (!stabilityApiKey) {
-      // If no Stability API key, return the text description instead
-      return new Response(JSON.stringify({ 
-        textDescription: textPart.text,
-        note: "Image generation requires a Stability AI API key."
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Call Stability AI for actual image generation
-    const stabilityResponse = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${stabilityApiKey}`
-      },
-      body: JSON.stringify({
-        text_prompts: [
-          {
-            text: textPart.text,
-            weight: 1
-          }
-        ],
-        cfg_scale: 7,
-        height: 1024,
-        width: 1024,
-        samples: 1,
-        steps: 30
-      })
-    });
-
-    if (!stabilityResponse.ok) {
-      const stabilityError = await stabilityResponse.text();
-      console.error('Stability API error:', stabilityError);
-      
-      // Fall back to returning just the text description
-      return new Response(JSON.stringify({ 
-        textDescription: textPart.text,
-        error: 'Failed to generate image with Stability AI',
-        stabilityError
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    const stabilityData = await stabilityResponse.json();
-    if (!stabilityData.artifacts || stabilityData.artifacts.length === 0) {
-      return new Response(JSON.stringify({ 
-        textDescription: textPart.text,
-        error: 'No image generated by Stability AI'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Return the base64 image data
     return new Response(JSON.stringify({ 
-      image: stabilityData.artifacts[0].base64
+      image: imagePart.inlineData.data
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    })
   } catch (error) {
     console.error('Error generating image:', error);
     return new Response(JSON.stringify({ 
