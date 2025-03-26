@@ -1,0 +1,208 @@
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Book, BookPage, DEFAULT_BOOK, DEFAULT_PAGE } from '../types/book';
+import { v4 as uuidv4 } from 'uuid';
+
+interface BookContextProps {
+  books: Book[];
+  currentBook: Book | null;
+  createBook: () => void;
+  updateBook: (book: Book) => void;
+  deleteBook: (id: string) => void;
+  loadBook: (id: string) => void;
+  addPage: () => void;
+  updatePage: (page: BookPage) => void;
+  deletePage: (id: string) => void;
+  reorderPage: (id: string, newPosition: number) => void;
+}
+
+const BookContext = createContext<BookContextProps | undefined>(undefined);
+
+export const useBook = () => {
+  const context = useContext(BookContext);
+  if (!context) {
+    throw new Error('useBook must be used within a BookProvider');
+  }
+  return context;
+};
+
+// Mock function to save books to localStorage
+const saveBooks = (books: Book[]) => {
+  localStorage.setItem('books', JSON.stringify(books));
+};
+
+// Mock function to load books from localStorage
+const loadBooks = (): Book[] => {
+  const saved = localStorage.getItem('books');
+  return saved ? JSON.parse(saved) : [];
+};
+
+export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [books, setBooks] = useState<Book[]>([]);
+  const [currentBook, setCurrentBook] = useState<Book | null>(null);
+
+  // Load books from storage on initial mount
+  useEffect(() => {
+    const savedBooks = loadBooks();
+    if (savedBooks.length) {
+      setBooks(savedBooks);
+    } else {
+      // Create a sample book if no books exist
+      const sampleBook = createNewBook();
+      setBooks([sampleBook]);
+      saveBooks([sampleBook]);
+    }
+  }, []);
+
+  // Save books whenever they change
+  useEffect(() => {
+    if (books.length) {
+      saveBooks(books);
+    }
+  }, [books]);
+
+  const createNewBook = (): Book => {
+    const newBook: Book = {
+      ...DEFAULT_BOOK,
+      id: uuidv4(),
+      pages: [createNewPage(0)]
+    };
+    return newBook;
+  };
+
+  const createNewPage = (pageNumber: number): BookPage => {
+    return {
+      ...DEFAULT_PAGE,
+      id: uuidv4(),
+      pageNumber
+    };
+  };
+
+  const createBook = () => {
+    const newBook = createNewBook();
+    setBooks([...books, newBook]);
+    setCurrentBook(newBook);
+  };
+
+  const updateBook = (updatedBook: Book) => {
+    const updatedBooks = books.map(book => 
+      book.id === updatedBook.id ? 
+        { ...updatedBook, updatedAt: new Date().toISOString() } : 
+        book
+    );
+    setBooks(updatedBooks);
+    
+    if (currentBook?.id === updatedBook.id) {
+      setCurrentBook({ ...updatedBook, updatedAt: new Date().toISOString() });
+    }
+  };
+
+  const deleteBook = (id: string) => {
+    const filteredBooks = books.filter(book => book.id !== id);
+    setBooks(filteredBooks);
+    
+    if (currentBook?.id === id) {
+      setCurrentBook(filteredBooks.length ? filteredBooks[0] : null);
+    }
+  };
+
+  const loadBook = (id: string) => {
+    const book = books.find(book => book.id === id);
+    if (book) {
+      setCurrentBook(book);
+    }
+  };
+
+  const addPage = () => {
+    if (!currentBook) return;
+
+    const newPage = createNewPage(currentBook.pages.length);
+    const updatedBook = {
+      ...currentBook,
+      pages: [...currentBook.pages, newPage],
+      updatedAt: new Date().toISOString()
+    };
+
+    updateBook(updatedBook);
+  };
+
+  const updatePage = (updatedPage: BookPage) => {
+    if (!currentBook) return;
+
+    const updatedPages = currentBook.pages.map(page => 
+      page.id === updatedPage.id ? updatedPage : page
+    );
+
+    const updatedBook = {
+      ...currentBook,
+      pages: updatedPages,
+      updatedAt: new Date().toISOString()
+    };
+
+    updateBook(updatedBook);
+  };
+
+  const deletePage = (id: string) => {
+    if (!currentBook) return;
+
+    const filteredPages = currentBook.pages.filter(page => page.id !== id);
+    
+    // Reorder page numbers
+    const reorderedPages = filteredPages.map((page, index) => ({
+      ...page,
+      pageNumber: index
+    }));
+
+    const updatedBook = {
+      ...currentBook,
+      pages: reorderedPages,
+      updatedAt: new Date().toISOString()
+    };
+
+    updateBook(updatedBook);
+  };
+
+  const reorderPage = (id: string, newPosition: number) => {
+    if (!currentBook) return;
+    
+    const pageIndex = currentBook.pages.findIndex(page => page.id === id);
+    if (pageIndex === -1) return;
+    
+    const reorderedPages = [...currentBook.pages];
+    const [movedPage] = reorderedPages.splice(pageIndex, 1);
+    reorderedPages.splice(newPosition, 0, movedPage);
+    
+    // Update page numbers
+    const updatedPages = reorderedPages.map((page, index) => ({
+      ...page,
+      pageNumber: index
+    }));
+    
+    const updatedBook = {
+      ...currentBook,
+      pages: updatedPages,
+      updatedAt: new Date().toISOString()
+    };
+    
+    updateBook(updatedBook);
+  };
+
+  return (
+    <BookContext.Provider
+      value={{
+        books,
+        currentBook,
+        createBook,
+        updateBook,
+        deleteBook,
+        loadBook,
+        addPage,
+        updatePage,
+        deletePage,
+        reorderPage
+      }}
+    >
+      {children}
+    </BookContext.Provider>
+  );
+};
