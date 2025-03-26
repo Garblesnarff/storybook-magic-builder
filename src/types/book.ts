@@ -1,3 +1,4 @@
+
 export interface Book {
   id: string;
   title: string;
@@ -79,3 +80,13 @@ export const IMAGE_STYLES: ImageStyle[] = [
   { id: 'SKETCH', name: 'Sketch', description: 'Hand-drawn pencil illustration style' },
   { id: 'ANIME', name: 'Anime', description: 'Japanese animation-inspired style' }
 ];
+
+// Add the missing layoutNames constant that maps layout types to display names
+export const layoutNames: Record<PageLayout, string> = {
+  'text-left-image-right': 'Text Left, Image Right',
+  'image-left-text-right': 'Image Left, Text Right',
+  'text-top-image-bottom': 'Text Top, Image Bottom',
+  'image-top-text-bottom': 'Image Top, Text Bottom',
+  'full-page-image': 'Full Page Image',
+  'full-page-text': 'Full Page Text'
+};
