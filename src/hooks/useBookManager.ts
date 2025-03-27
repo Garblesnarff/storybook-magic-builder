@@ -1,7 +1,19 @@
+
 import { useState, useEffect } from 'react';
-import { Book, BookPage, DEFAULT_BOOK, DEFAULT_PAGE } from '../types/book';
-import { v4 as uuidv4 } from 'uuid';
-import { saveBooks, loadBooks } from '../services/bookStorage';
+import { Book } from '../types/book';
+import { loadBooks } from '../services/bookStorage';
+import { 
+  createNewBook, 
+  updateBook, 
+  deleteBook as deleteBookService
+} from '../services/bookOperations';
+import {
+  addPage as addPageService,
+  updatePage as updatePageService,
+  deletePage as deletePageService,
+  reorderPage as reorderPageService,
+  duplicatePage as duplicatePageService
+} from '../services/pageOperations';
 
 export function useBookManager() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -17,7 +29,6 @@ export function useBookManager() {
         // Create a sample book if no books exist
         const sampleBook = createNewBook();
         setBooks([sampleBook]);
-        saveBooks([sampleBook]);
       }
     } catch (e) {
       console.error('Error initializing books', e);
@@ -27,60 +38,10 @@ export function useBookManager() {
     }
   }, []);
 
-  // Save books whenever they change, but not more often than every 2 seconds
-  useEffect(() => {
-    if (books.length) {
-      const timeoutId = setTimeout(() => {
-        saveBooks(books);
-      }, 2000);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [books]);
-
-  const createNewBook = (): Book => {
-    const newBook: Book = {
-      ...DEFAULT_BOOK,
-      id: uuidv4(),
-      pages: [createNewPage(0)]
-    };
-    return newBook;
-  };
-
-  const createNewPage = (pageNumber: number): BookPage => {
-    return {
-      ...DEFAULT_PAGE,
-      id: uuidv4(),
-      pageNumber
-    };
-  };
-
   const createBook = () => {
     const newBook = createNewBook();
-    setBooks([...books, newBook]);
+    setBooks(prevBooks => [...prevBooks, newBook]);
     setCurrentBook(newBook);
-  };
-
-  const updateBook = (updatedBook: Book) => {
-    const updatedBooks = books.map(book => 
-      book.id === updatedBook.id ? 
-        { ...updatedBook, updatedAt: new Date().toISOString() } : 
-        book
-    );
-    setBooks(updatedBooks);
-    
-    if (currentBook?.id === updatedBook.id) {
-      setCurrentBook({ ...updatedBook, updatedAt: new Date().toISOString() });
-    }
-  };
-
-  const deleteBook = (id: string) => {
-    const filteredBooks = books.filter(book => book.id !== id);
-    setBooks(filteredBooks);
-    
-    if (currentBook?.id === id) {
-      setCurrentBook(filteredBooks.length ? filteredBooks[0] : null);
-    }
   };
 
   const loadBook = (id: string) => {
@@ -90,109 +51,98 @@ export function useBookManager() {
     }
   };
 
+  // Book operations
+  const updateBookState = (updatedBook: Book) => {
+    const updatedBooks = updateBook(updatedBook, books);
+    setBooks(updatedBooks);
+    
+    if (currentBook?.id === updatedBook.id) {
+      setCurrentBook({ ...updatedBook });
+    }
+  };
+
+  const deleteBook = (id: string) => {
+    const filteredBooks = deleteBookService(id, books);
+    setBooks(filteredBooks);
+    
+    if (currentBook?.id === id) {
+      setCurrentBook(filteredBooks.length ? filteredBooks[0] : null);
+    }
+  };
+
+  // Page operations
   const addPage = () => {
     if (!currentBook) return;
-
-    const newPage = createNewPage(currentBook.pages.length);
-    const updatedBook = {
-      ...currentBook,
-      pages: [...currentBook.pages, newPage],
-      updatedAt: new Date().toISOString()
-    };
-
-    updateBook(updatedBook);
+    
+    const updatedBooks = addPageService(currentBook, books);
+    setBooks(updatedBooks);
+    
+    // Update current book
+    const updatedBook = updatedBooks.find(book => book.id === currentBook.id);
+    if (updatedBook) {
+      setCurrentBook(updatedBook);
+    }
   };
 
-  const updatePage = (updatedPage: BookPage) => {
+  const updatePage = (updatedPage) => {
     if (!currentBook) return;
-
-    const updatedPages = currentBook.pages.map(page => 
-      page.id === updatedPage.id ? updatedPage : page
-    );
-
-    const updatedBook = {
-      ...currentBook,
-      pages: updatedPages,
-      updatedAt: new Date().toISOString()
-    };
-
-    updateBook(updatedBook);
+    
+    const updatedBooks = updatePageService(updatedPage, currentBook, books);
+    setBooks(updatedBooks);
+    
+    // Update current book
+    const updatedBook = updatedBooks.find(book => book.id === currentBook.id);
+    if (updatedBook) {
+      setCurrentBook(updatedBook);
+    }
   };
 
-  const deletePage = (id: string) => {
+  const deletePage = (id) => {
     if (!currentBook) return;
-
-    const filteredPages = currentBook.pages.filter(page => page.id !== id);
     
-    // Reorder page numbers
-    const reorderedPages = filteredPages.map((page, index) => ({
-      ...page,
-      pageNumber: index
-    }));
-
-    const updatedBook = {
-      ...currentBook,
-      pages: reorderedPages,
-      updatedAt: new Date().toISOString()
-    };
-
-    updateBook(updatedBook);
+    const updatedBooks = deletePageService(id, currentBook, books);
+    setBooks(updatedBooks);
+    
+    // Update current book
+    const updatedBook = updatedBooks.find(book => book.id === currentBook.id);
+    if (updatedBook) {
+      setCurrentBook(updatedBook);
+    }
   };
 
-  const reorderPage = (id: string, newPosition: number) => {
+  const reorderPage = (id, newPosition) => {
     if (!currentBook) return;
     
-    const pageIndex = currentBook.pages.findIndex(page => page.id === id);
-    if (pageIndex === -1) return;
+    const updatedBooks = reorderPageService(id, newPosition, currentBook, books);
+    setBooks(updatedBooks);
     
-    const reorderedPages = [...currentBook.pages];
-    const [movedPage] = reorderedPages.splice(pageIndex, 1);
-    reorderedPages.splice(newPosition, 0, movedPage);
-    
-    // Update page numbers
-    const updatedPages = reorderedPages.map((page, index) => ({
-      ...page,
-      pageNumber: index
-    }));
-    
-    const updatedBook = {
-      ...currentBook,
-      pages: updatedPages,
-      updatedAt: new Date().toISOString()
-    };
-    
-    updateBook(updatedBook);
+    // Update current book
+    const updatedBook = updatedBooks.find(book => book.id === currentBook.id);
+    if (updatedBook) {
+      setCurrentBook(updatedBook);
+    }
   };
 
-  // New function to duplicate a page
-  const duplicatePage = (id: string) => {
+  const duplicatePage = (id) => {
     if (!currentBook) return;
-
-    const pageToDuplicate = currentBook.pages.find(page => page.id === id);
-    if (!pageToDuplicate) return;
-
-    // Create a new page with the same content but a new ID
-    const duplicatedPage: BookPage = {
-      ...pageToDuplicate,
-      id: uuidv4(),
-      pageNumber: currentBook.pages.length,
-    };
-
-    const updatedBook = {
-      ...currentBook,
-      pages: [...currentBook.pages, duplicatedPage],
-      updatedAt: new Date().toISOString()
-    };
-
-    updateBook(updatedBook);
-    return duplicatedPage.id;
+    
+    const [updatedBooks, newPageId] = duplicatePageService(id, currentBook, books);
+    setBooks(updatedBooks);
+    
+    // Update current book
+    const updatedBook = updatedBooks.find(book => book.id === currentBook.id);
+    if (updatedBook) {
+      setCurrentBook(updatedBook);
+    }
+    
+    return newPageId;
   };
 
   return {
     books,
     currentBook,
     createBook,
-    updateBook,
+    updateBook: updateBookState,
     deleteBook,
     loadBook,
     addPage,

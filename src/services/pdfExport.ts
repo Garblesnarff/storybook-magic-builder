@@ -1,168 +1,305 @@
 
-import { jsPDF } from "jspdf";
-import { Book, BookPage } from "@/types/book";
+import { jsPDF } from 'jspdf';
+import { Book, BookPage } from '@/types/book';
 
-// Helper function to create a new PDF document
-const createPdf = () => {
-  return new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4"
-  });
+export const generatePdfFilename = (book: Book): string => {
+  const sanitizedTitle = book.title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  return `${sanitizedTitle}_${new Date().toISOString().split('T')[0]}.pdf`;
 };
 
-// Calculate optimal image dimensions to fit in PDF
-const calculateImageDimensions = (
-  imageWidth: number, 
-  imageHeight: number, 
-  maxWidth: number, 
-  maxHeight: number
-) => {
-  const ratio = Math.min(maxWidth / imageWidth, maxHeight / imageHeight);
-  return {
-    width: imageWidth * ratio,
-    height: imageHeight * ratio
-  };
-};
-
-// Add text to PDF with proper formatting
-const addTextToPdf = (
-  doc: jsPDF, 
-  text: string, 
-  x: number, 
-  y: number, 
-  maxWidth: number,
-  textFormatting: any
-) => {
-  const fontSize = textFormatting?.fontSize || 12;
-  const fontStyle = textFormatting?.bold ? "bold" : "normal";
-  
-  doc.setFontSize(fontSize);
-  doc.setFont("helvetica", fontStyle);
-  
-  const textLines = doc.splitTextToSize(text, maxWidth);
-  doc.text(textLines, x, y);
-  
-  return textLines.length * (fontSize * 0.352778); // Approximate height of text block
-};
-
-// Process an image for the PDF (loading and adding)
-const processImage = (doc: jsPDF, imageUrl: string, x: number, y: number, maxWidth: number, maxHeight: number): Promise<number> => {
-  return new Promise((resolve, reject) => {
-    if (!imageUrl) {
-      resolve(0); // No image, no height used
-      return;
-    }
-    
-    const img = new Image();
-    img.crossOrigin = "Anonymous"; // Handle CORS issues
-    
-    img.onload = () => {
-      const dimensions = calculateImageDimensions(img.width, img.height, maxWidth, maxHeight);
-      try {
-        doc.addImage(img, "JPEG", x, y, dimensions.width, dimensions.height);
-        resolve(dimensions.height);
-      } catch (err) {
-        console.error("Error adding image to PDF:", err);
-        reject(err);
-      }
-    };
-    
-    img.onerror = (err) => {
-      console.error("Error loading image:", err);
-      resolve(0); // Continue without the image
-    };
-    
-    img.src = imageUrl;
-  });
-};
-
-// Export a book to PDF
 export const exportBookToPdf = async (book: Book): Promise<Blob> => {
-  const doc = createPdf();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 15; // mm
-  const contentWidth = pageWidth - (margin * 2);
-  const contentHeight = pageHeight - (margin * 2);
-  
-  // Add title page
-  doc.setFontSize(24);
-  doc.setFont("helvetica", "bold");
-  doc.text(book.title, pageWidth / 2, pageHeight / 3, { align: "center" });
-  
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "normal");
-  doc.text(`by ${book.author}`, pageWidth / 2, pageHeight / 3 + 10, { align: "center" });
-  
-  // Sort pages by page number to ensure correct order
-  const orderedPages = [...book.pages].sort((a, b) => a.pageNumber - b.pageNumber);
-  
+  // Create a new PDF document
+  const pdf = new jsPDF({
+    orientation: book.orientation,
+    unit: 'in',
+    format: [book.dimensions.width, book.dimensions.height]
+  });
+
+  // Set default font
+  pdf.setFont('Helvetica');
+
+  // Get page dimensions in points
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  // Margins in inches
+  const margin = 0.5;
+
   // Process each page
-  for (const page of orderedPages) {
-    doc.addPage();
-    await addPageContentToPdf(doc, page, margin, contentWidth, contentHeight);
+  for (let i = 0; i < book.pages.length; i++) {
+    // Add a new page for all pages except the first one
+    if (i > 0) {
+      pdf.addPage();
+    }
+
+    const page = book.pages[i];
+    await addPageToPdf(pdf, page, pageWidth, pageHeight, margin);
   }
-  
-  return doc.output("blob");
+
+  // Return as blob
+  return pdf.output('blob');
 };
 
-// Add a single page content to the PDF
-const addPageContentToPdf = async (
-  doc: jsPDF, 
-  page: BookPage, 
-  margin: number, 
-  contentWidth: number, 
-  contentHeight: number
+const addPageToPdf = async (
+  pdf: jsPDF,
+  pageData: BookPage,
+  pageWidth: number,
+  pageHeight: number,
+  margin: number
 ): Promise<void> => {
-  const { layout, text, image, textFormatting } = page;
-  
-  switch (layout) {
-    case "text-left-image-right": {
-      const textWidth = contentWidth / 2 - 5;
-      const textHeight = addTextToPdf(doc, text, margin, margin + 10, textWidth, textFormatting);
-      await processImage(doc, image, margin + textWidth + 10, margin, textWidth, contentHeight);
+  // Set background color if specified
+  if (pageData.backgroundColor) {
+    pdf.setFillColor(pageData.backgroundColor);
+    pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+  }
+
+  // Handle different layouts
+  switch (pageData.layout) {
+    case 'text-left-image-right':
+      await addTextLeftImageRight(pdf, pageData, pageWidth, pageHeight, margin);
       break;
-    }
-    case "image-left-text-right": {
-      const textWidth = contentWidth / 2 - 5;
-      await processImage(doc, image, margin, margin, textWidth, contentHeight);
-      addTextToPdf(doc, text, margin + textWidth + 10, margin + 10, textWidth, textFormatting);
+    case 'image-left-text-right':
+      await addImageLeftTextRight(pdf, pageData, pageWidth, pageHeight, margin);
       break;
-    }
-    case "text-top-image-bottom": {
-      const textHeight = addTextToPdf(doc, text, margin, margin + 10, contentWidth, textFormatting);
-      await processImage(doc, image, margin, margin + textHeight + 15, contentWidth, contentHeight / 2);
+    case 'text-top-image-bottom':
+      await addTextTopImageBottom(pdf, pageData, pageWidth, pageHeight, margin);
       break;
-    }
-    case "image-top-text-bottom": {
-      const imageHeight = await processImage(doc, image, margin, margin, contentWidth, contentHeight / 2);
-      addTextToPdf(doc, text, margin, margin + imageHeight + 15, contentWidth, textFormatting);
+    case 'image-top-text-bottom':
+      await addImageTopTextBottom(pdf, pageData, pageWidth, pageHeight, margin);
       break;
-    }
-    case "full-page-image": {
-      await processImage(doc, image, margin, margin, contentWidth, contentHeight);
-      const textBackground = "rgba(0, 0, 0, 0.5)";
-      // Text would be overlay on image, but jsPDF doesn't support this well
-      // We'll add the text at the bottom with simpler formatting
-      addTextToPdf(doc, text, margin, pageHeight - margin - 20, contentWidth, textFormatting);
+    case 'full-page-text':
+      addFullPageText(pdf, pageData, pageWidth, pageHeight, margin);
       break;
-    }
-    case "full-page-text": {
-      addTextToPdf(doc, text, margin, margin + 10, contentWidth, textFormatting);
+    case 'full-page-image':
+      await addFullPageImage(pdf, pageData, pageWidth, pageHeight);
       break;
-    }
     default:
       // Default to text-left-image-right
-      const textWidth = contentWidth / 2 - 5;
-      const textHeight = addTextToPdf(doc, text, margin, margin + 10, textWidth, textFormatting);
-      await processImage(doc, image, margin + textWidth + 10, margin, textWidth, contentHeight);
+      await addTextLeftImageRight(pdf, pageData, pageWidth, pageHeight, margin);
   }
 };
 
-// Generate a filename for the downloaded PDF
-export const generatePdfFilename = (book: Book): string => {
-  // Replace spaces and special characters with underscores
-  const safeTitle = book.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  return `${safeTitle}_book.pdf`;
+const addTextLeftImageRight = async (
+  pdf: jsPDF,
+  pageData: BookPage,
+  pageWidth: number,
+  pageHeight: number,
+  margin: number
+): Promise<void> => {
+  // Text area (left half)
+  const textWidth = (pageWidth / 2) - (margin * 1.5);
+  const textX = margin;
+  const textY = margin;
+  const textHeight = pageHeight - (margin * 2);
+
+  // Add text
+  addFormattedText(pdf, pageData.text, pageData.textFormatting, textX, textY, textWidth, textHeight);
+
+  // Image area (right half)
+  if (pageData.image) {
+    const imageX = pageWidth / 2;
+    const imageY = margin;
+    const imageWidth = (pageWidth / 2) - (margin * 1.5);
+    const imageHeight = pageHeight - (margin * 2);
+
+    await addImage(pdf, pageData.image, imageX, imageY, imageWidth, imageHeight);
+  }
+};
+
+const addImageLeftTextRight = async (
+  pdf: jsPDF,
+  pageData: BookPage,
+  pageWidth: number,
+  pageHeight: number,
+  margin: number
+): Promise<void> => {
+  // Image area (left half)
+  if (pageData.image) {
+    const imageX = margin;
+    const imageY = margin;
+    const imageWidth = (pageWidth / 2) - (margin * 1.5);
+    const imageHeight = pageHeight - (margin * 2);
+
+    await addImage(pdf, pageData.image, imageX, imageY, imageWidth, imageHeight);
+  }
+
+  // Text area (right half)
+  const textWidth = (pageWidth / 2) - (margin * 1.5);
+  const textX = pageWidth / 2;
+  const textY = margin;
+  const textHeight = pageHeight - (margin * 2);
+
+  // Add text
+  addFormattedText(pdf, pageData.text, pageData.textFormatting, textX, textY, textWidth, textHeight);
+};
+
+const addTextTopImageBottom = async (
+  pdf: jsPDF,
+  pageData: BookPage,
+  pageWidth: number,
+  pageHeight: number,
+  margin: number
+): Promise<void> => {
+  // Text area (top half)
+  const textWidth = pageWidth - (margin * 2);
+  const textX = margin;
+  const textY = margin;
+  const textHeight = (pageHeight / 2) - (margin * 1.5);
+
+  // Add text
+  addFormattedText(pdf, pageData.text, pageData.textFormatting, textX, textY, textWidth, textHeight);
+
+  // Image area (bottom half)
+  if (pageData.image) {
+    const imageX = margin;
+    const imageY = pageHeight / 2;
+    const imageWidth = pageWidth - (margin * 2);
+    const imageHeight = (pageHeight / 2) - (margin * 1.5);
+
+    await addImage(pdf, pageData.image, imageX, imageY, imageWidth, imageHeight);
+  }
+};
+
+const addImageTopTextBottom = async (
+  pdf: jsPDF,
+  pageData: BookPage,
+  pageWidth: number,
+  pageHeight: number,
+  margin: number
+): Promise<void> => {
+  // Image area (top half)
+  if (pageData.image) {
+    const imageX = margin;
+    const imageY = margin;
+    const imageWidth = pageWidth - (margin * 2);
+    const imageHeight = (pageHeight / 2) - (margin * 1.5);
+
+    await addImage(pdf, pageData.image, imageX, imageY, imageWidth, imageHeight);
+  }
+
+  // Text area (bottom half)
+  const textWidth = pageWidth - (margin * 2);
+  const textX = margin;
+  const textY = pageHeight / 2;
+  const textHeight = (pageHeight / 2) - (margin * 1.5);
+
+  // Add text
+  addFormattedText(pdf, pageData.text, pageData.textFormatting, textX, textY, textWidth, textHeight);
+};
+
+const addFullPageText = (
+  pdf: jsPDF,
+  pageData: BookPage,
+  pageWidth: number,
+  pageHeight: number,
+  margin: number
+): void => {
+  // Text area (full page with margins)
+  const textWidth = pageWidth - (margin * 2);
+  const textX = margin;
+  const textY = margin;
+  const textHeight = pageHeight - (margin * 2);
+
+  // Add text
+  addFormattedText(pdf, pageData.text, pageData.textFormatting, textX, textY, textWidth, textHeight);
+};
+
+const addFullPageImage = async (
+  pdf: jsPDF,
+  pageData: BookPage,
+  pageWidth: number,
+  pageHeight: number
+): Promise<void> => {
+  // Image area (full page)
+  if (pageData.image) {
+    await addImage(pdf, pageData.image, 0, 0, pageWidth, pageHeight);
+  }
+};
+
+const addFormattedText = (
+  pdf: jsPDF,
+  text: string,
+  formatting: any,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): void => {
+  // Set font style based on formatting
+  if (formatting) {
+    // Set font family
+    const fontFamily = formatting.fontFamily || 'Helvetica';
+    
+    // Set font style (bold, italic, or both)
+    let fontStyle = 'normal';
+    if (formatting.isBold && formatting.isItalic) {
+      fontStyle = 'bolditalic';
+    } else if (formatting.isBold) {
+      fontStyle = 'bold';
+    } else if (formatting.isItalic) {
+      fontStyle = 'italic';
+    }
+    
+    // Set font color
+    if (formatting.fontColor) {
+      // Convert hex color to RGB
+      const r = parseInt(formatting.fontColor.slice(1, 3), 16);
+      const g = parseInt(formatting.fontColor.slice(3, 5), 16);
+      const b = parseInt(formatting.fontColor.slice(5, 7), 16);
+      pdf.setTextColor(r, g, b);
+    } else {
+      pdf.setTextColor(0);
+    }
+    
+    // Set font size (convert from px to pt)
+    const fontSize = formatting.fontSize ? formatting.fontSize / 1.33 : 12;
+    
+    pdf.setFont(fontFamily, fontStyle);
+    pdf.setFontSize(fontSize);
+  }
+
+  // Add text with proper wrapping
+  const splitText = pdf.splitTextToSize(text, width);
+  pdf.text(splitText, x, y + 0.2); // Add a small offset for better positioning
+};
+
+const addImage = async (
+  pdf: jsPDF,
+  imageData: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): Promise<void> => {
+  try {
+    // Handle base64 data URLs
+    if (imageData.startsWith('data:image')) {
+      const format = imageData.split(';')[0].split('/')[1];
+      pdf.addImage(imageData, format.toUpperCase(), x, y, width, height, undefined, 'FAST');
+    } else {
+      // For URL images, fetch and convert to base64 first
+      const img = new Image();
+      img.src = imageData;
+      await new Promise<void>((resolve) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0);
+          
+          const dataURL = canvas.toDataURL('image/jpeg');
+          pdf.addImage(dataURL, 'JPEG', x, y, width, height, undefined, 'FAST');
+          resolve();
+        };
+        img.onerror = () => {
+          console.error('Failed to load image:', imageData);
+          resolve(); // Still resolve so PDF generation continues
+        };
+      });
+    }
+  } catch (error) {
+    console.error('Error adding image to PDF:', error);
+    // Continue without the image
+  }
 };
