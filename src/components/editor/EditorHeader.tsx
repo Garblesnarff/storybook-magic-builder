@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, ChevronLeft } from 'lucide-react';
+import { Download, ChevronLeft, Loader2 } from 'lucide-react';
 import { Book } from '@/types/book';
 import { AIAssistant } from '@/components/AIAssistant';
 
@@ -11,6 +11,7 @@ interface EditorHeaderProps {
   onApplyAIText: (text: string) => void;
   onApplyAIImage: (imageData: string) => void;
   initialPrompt?: string;
+  isExporting?: boolean;
 }
 
 export const EditorHeader: React.FC<EditorHeaderProps> = ({
@@ -18,7 +19,8 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   onExportPDF,
   onApplyAIText,
   onApplyAIImage,
-  initialPrompt
+  initialPrompt,
+  isExporting = false
 }) => {
   if (!book) return null;
 
@@ -43,9 +45,23 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
             onApplyImage={onApplyAIImage}
             initialPrompt={initialPrompt}
           />
-          <Button variant="outline" size="sm" onClick={onExportPDF}>
-            <Download className="h-4 w-4 mr-2" />
-            Export PDF
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onExportPDF}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export PDF
+              </>
+            )}
           </Button>
         </div>
       </div>

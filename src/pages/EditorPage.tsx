@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { PageList } from '@/components/PageList';
 import { useParams, Navigate } from 'react-router-dom';
@@ -8,9 +8,11 @@ import { EditorHeader } from '@/components/editor/EditorHeader';
 import { EditorContent } from '@/components/editor/EditorContent';
 import { usePageState } from '@/hooks/usePageState';
 import { useAIOperations } from '@/hooks/useAIOperations';
+import { exportBookToPdf, generatePdfFilename } from '@/services/pdfExport';
 
 const EditorPage = () => {
   const { id } = useParams<{ id: string }>();
+  const [isExporting, setIsExporting] = useState(false);
   
   const {
     books,
@@ -35,8 +37,38 @@ const EditorPage = () => {
     handleApplyAIImage
   } = useAIOperations(currentPageData, updatePage, setCurrentPageData);
 
-  const handleExportPDF = () => {
-    toast.success('PDF export is not implemented in this demo');
+  const handleExportPDF = async () => {
+    if (!currentBook) {
+      toast.error('No book to export');
+      return;
+    }
+    
+    try {
+      setIsExporting(true);
+      toast.info('Preparing PDF export...');
+      
+      const pdfBlob = await exportBookToPdf(currentBook);
+      const filename = generatePdfFilename(currentBook);
+      
+      // Create download link
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('PDF exported successfully');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast.error('Failed to export PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (!id || (books.length > 0 && !books.some(book => book.id === id))) {
@@ -62,6 +94,7 @@ const EditorPage = () => {
           onApplyAIText={handleApplyAIText}
           onApplyAIImage={handleApplyAIImage}
           initialPrompt={currentPageData?.text}
+          isExporting={isExporting}
         />
         
         <div className="border-b bg-white/50 backdrop-blur-sm">
