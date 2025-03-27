@@ -3,6 +3,7 @@ import React from 'react';
 import { BookPage } from '@/types/book';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Image, Loader2 } from 'lucide-react';
+import { ZoomableImage } from '../ZoomableImage';
 
 interface LayoutProps {
   page: BookPage;
@@ -32,10 +33,9 @@ export const TextTopImageBottom: React.FC<LayoutProps> = ({
       </div>
       <div className="h-1/2 bg-gray-100 flex items-center justify-center">
         {page.image ? (
-          <img 
+          <ZoomableImage 
             src={page.image} 
             alt="Page illustration"
-            className="w-full h-full object-cover"
           />
         ) : (
           <div className="text-center p-8">
