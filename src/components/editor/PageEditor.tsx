@@ -17,11 +17,13 @@ interface PageEditorProps {
   handleLayoutChange: (layout: PageLayout) => void;
   handleTextFormattingChange: (key: keyof TextFormatting, value: any) => void;
   handleGenerateImage: () => Promise<void>;
+  isGenerating?: boolean;
 }
 
 export const PageEditor: React.FC<PageEditorProps> = ({
   currentPageData,
-  handleGenerateImage
+  handleGenerateImage,
+  isGenerating = false
 }) => {
   if (!currentPageData) {
     return <EmptyPagePlaceholder />;
@@ -33,27 +35,31 @@ export const PageEditor: React.FC<PageEditorProps> = ({
         className="aspect-[3/4] bg-white rounded-xl shadow-lg border overflow-hidden max-h-[80vh]" 
         style={{ width: 'auto', height: '80vh' }}
       >
-        {renderLayoutComponent(currentPageData, handleGenerateImage)}
+        {renderLayoutComponent(currentPageData, handleGenerateImage, isGenerating)}
       </div>
     </div>
   );
 };
 
-function renderLayoutComponent(page: BookPage, handleGenerateImage: () => Promise<void>) {
+function renderLayoutComponent(
+  page: BookPage, 
+  handleGenerateImage: () => Promise<void>, 
+  isGenerating: boolean = false
+) {
   switch (page.layout) {
     case 'text-left-image-right':
-      return <TextLeftImageRight page={page} handleGenerateImage={handleGenerateImage} />;
+      return <TextLeftImageRight page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
     case 'image-left-text-right':
-      return <ImageLeftTextRight page={page} handleGenerateImage={handleGenerateImage} />;
+      return <ImageLeftTextRight page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
     case 'text-top-image-bottom':
-      return <TextTopImageBottom page={page} handleGenerateImage={handleGenerateImage} />;
+      return <TextTopImageBottom page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
     case 'image-top-text-bottom':
-      return <ImageTopTextBottom page={page} handleGenerateImage={handleGenerateImage} />;
+      return <ImageTopTextBottom page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
     case 'full-page-image':
-      return <FullPageImage page={page} handleGenerateImage={handleGenerateImage} />;
+      return <FullPageImage page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
     case 'full-page-text':
       return <FullPageText page={page} />;
     default:
-      return <TextLeftImageRight page={page} handleGenerateImage={handleGenerateImage} />;
+      return <TextLeftImageRight page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
   }
 }

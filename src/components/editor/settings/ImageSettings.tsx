@@ -3,7 +3,7 @@ import React from 'react';
 import { BookPage, TextFormatting, IMAGE_STYLES } from '@/types/book';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -16,12 +16,14 @@ interface ImageSettingsProps {
   currentPageData: BookPage;
   handleTextFormattingChange: (key: keyof TextFormatting, value: any) => void;
   handleGenerateImage: () => Promise<void>;
+  isGenerating?: boolean;
 }
 
 export const ImageSettings: React.FC<ImageSettingsProps> = ({
   currentPageData,
   handleTextFormattingChange,
-  handleGenerateImage
+  handleGenerateImage,
+  isGenerating = false
 }) => {
   return (
     <div className="space-y-4">
@@ -46,9 +48,19 @@ export const ImageSettings: React.FC<ImageSettingsProps> = ({
         <Button 
           onClick={handleGenerateImage} 
           className="w-full"
+          disabled={isGenerating}
         >
-          <Sparkles className="w-4 h-4 mr-2" />
-          Generate Image from Text
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Generate Image from Text
+            </>
+          )}
         </Button>
         <p className="text-xs text-gray-500 mt-2">
           This will generate an image based on the current page text using Google's Gemini 2.0 model.

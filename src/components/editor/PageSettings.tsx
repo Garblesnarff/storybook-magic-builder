@@ -18,6 +18,7 @@ interface PageSettingsProps {
   handleLayoutChange: (layout: PageLayout) => void;
   handleTextFormattingChange: (key: keyof TextFormatting, value: any) => void;
   handleGenerateImage: () => Promise<void>;
+  isGenerating?: boolean;
 }
 
 export const PageSettings: React.FC<PageSettingsProps> = ({
@@ -25,7 +26,8 @@ export const PageSettings: React.FC<PageSettingsProps> = ({
   handleTextChange,
   handleLayoutChange,
   handleTextFormattingChange,
-  handleGenerateImage
+  handleGenerateImage,
+  isGenerating = false
 }) => {
   if (!currentPageData) return null;
 
@@ -67,6 +69,7 @@ export const PageSettings: React.FC<PageSettingsProps> = ({
             currentPageData={currentPageData}
             handleTextFormattingChange={handleTextFormattingChange}
             handleGenerateImage={handleGenerateImage}
+            isGenerating={isGenerating}
           />
         </TabsContent>
       </Tabs>
