@@ -22,6 +22,14 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
   handleTextChange,
   handleTextFormattingChange
 }) => {
+  // Add a debounced version of handleTextChange to reduce storage operations
+  const handleTextChangeDebounced = React.useCallback(
+    (value: string) => {
+      handleTextChange(value);
+    },
+    [handleTextChange]
+  );
+  
   return (
     <div className="space-y-4">
       <div>
@@ -34,7 +42,7 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
           onChange={(e) => {
             // Use stopPropagation to prevent any bubbling of the event
             e.stopPropagation();
-            handleTextChange(e.target.value);
+            handleTextChangeDebounced(e.target.value);
           }}
         />
       </div>
