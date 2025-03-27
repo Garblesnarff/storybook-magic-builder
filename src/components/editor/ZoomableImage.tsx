@@ -18,17 +18,19 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
   const [scale, setScale] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const imageRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   const startPanRef = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // Load image dimensions when source changes
   useEffect(() => {
     const img = new Image();
     img.onload = () => {
       setImageDimensions({ width: img.width, height: img.height });
+      setImageLoaded(true);
     };
     img.src = src;
   }, [src]);
@@ -49,6 +51,14 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
     }
   }, []);
 
+  // Calculate initial fitting scale when image and container dimensions are available
+  useEffect(() => {
+    if (imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0) {
+      // Reset position when image changes
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [imageLoaded, containerDimensions, imageDimensions]);
+
   const handleZoomIn = () => {
     setScale(prev => Math.min(prev + 0.25, 3));
   };
@@ -63,6 +73,9 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
       x: e.clientX - position.x, 
       y: e.clientY - position.y 
     };
+    if (containerRef.current) {
+      containerRef.current.style.cursor = 'grabbing';
+    }
     e.preventDefault();
   };
 
@@ -71,7 +84,6 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
       const newX = e.clientX - startPanRef.current.x;
       const newY = e.clientY - startPanRef.current.y;
       
-      // Apply constraints if needed for panning limits
       setPosition({
         x: newX,
         y: newY
@@ -82,6 +94,9 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
 
   const handleMouseUp = () => {
     setIsPanning(false);
+    if (containerRef.current) {
+      containerRef.current.style.cursor = 'grab';
+    }
   };
 
   const handleReset = () => {
@@ -89,37 +104,54 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
     setPosition({ x: 0, y: 0 });
   };
 
-  const canMove = imageDimensions.width > containerDimensions.width || 
-                 imageDimensions.height > containerDimensions.height || 
-                 scale !== 1;
+  const canMove = true; // Always allow moving
 
   return (
     <div 
       ref={containerRef}
       className="relative w-full h-full overflow-hidden"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     >
-      <div 
-        ref={imageRef}
-        className={cn(
-          "w-full h-full select-none", 
-          isPanning ? "cursor-grabbing" : canMove ? "cursor-grab" : "cursor-default",
-          className
-        )}
-        style={{ 
-          backgroundImage: `url(${src})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-          transition: isPanning ? 'none' : 'transform 0.2s ease-out'
-        }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-      />
+      {imageLoaded && (
+        <img
+          ref={imageRef}
+          src={src}
+          alt={alt}
+          className={cn(
+            "select-none object-contain max-w-none", 
+            isPanning ? "cursor-grabbing" : "cursor-grab",
+            className
+          )}
+          style={{ 
+            transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+            transition: isPanning ? 'none' : 'transform 0.2s ease-out',
+            transformOrigin: 'center',
+            maxHeight: '100%',
+            width: 'auto',
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            marginLeft: '-50%',
+            marginTop: '-50%'
+          }}
+          draggable="false"
+          onDragStart={(e) => e.preventDefault()}
+        />
+      )}
+      
+      {/* Drag indicator */}
+      {canMove && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs text-gray-700 flex items-center z-10">
+          <MoveHorizontal className="h-3 w-3 mr-1" />
+          <span>Drag to position</span>
+        </div>
+      )}
       
       {/* Controls */}
-      <div className="absolute bottom-4 right-4 flex space-x-2">
+      <div className="absolute bottom-4 right-4 flex space-x-2 z-10">
         <Button 
           size="sm" 
           variant="secondary" 
@@ -150,13 +182,6 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
           <span className="sr-only">Reset View</span>
         </Button>
       </div>
-
-      {canMove && (
-        <div className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs text-gray-700 flex items-center">
-          <MoveHorizontal className="h-3 w-3 mr-1" />
-          <span>Drag to position</span>
-        </div>
-      )}
     </div>
   );
 };
