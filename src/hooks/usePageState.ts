@@ -5,7 +5,7 @@ import { useBook } from '@/contexts/BookContext';
 import { toast } from 'sonner';
 
 export function usePageState(bookId: string | undefined) {
-  const { books, loadBook, currentBook, addPage, updatePage, deletePage, duplicatePage } = useBook();
+  const { books, loadBook, currentBook, addPage, updatePage, deletePage, duplicatePage, reorderPage } = useBook();
   const [selectedPageId, setSelectedPageId] = useState<string | undefined>(undefined);
   const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
   
@@ -88,6 +88,17 @@ export function usePageState(bookId: string | undefined) {
     updatePage(updatedPage);
   };
 
+  const handleReorderPage = (sourceIndex: number, destinationIndex: number) => {
+    if (!currentBook) return;
+    
+    // Get the actual page from the visiblePages array
+    const pageToMove = currentBook.pages[sourceIndex];
+    
+    if (pageToMove) {
+      reorderPage(pageToMove.id, destinationIndex);
+    }
+  };
+
   return {
     books,
     currentBook,
@@ -100,6 +111,7 @@ export function usePageState(bookId: string | undefined) {
     handleLayoutChange,
     handleTextFormattingChange,
     updatePage,
-    setCurrentPageData
+    setCurrentPageData,
+    handleReorderPage
   };
 }

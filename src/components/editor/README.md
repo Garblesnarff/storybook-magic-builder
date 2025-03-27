@@ -21,6 +21,7 @@ This directory contains components used for the book editor functionality.
 - The editor uses a component-based architecture where each component has a specific responsibility
 - State is managed through custom hooks (`usePageState`, `useAIOperations`)
 - The ZoomableImage component can be used in any context where an image needs zoom and pan capabilities
+- Page reordering is implemented using the react-beautiful-dnd library
 
 ### Dependencies
 
@@ -28,9 +29,11 @@ This directory contains components used for the book editor functionality.
 - UI components from shadcn/ui
 - React Router for navigation
 - Sonner for toast notifications
+- React Beautiful DND for drag-and-drop page reordering
 
 ### Notes
 
 - The editor supports multiple layouts that can be switched at runtime
 - AI operations are isolated in their own hook to keep components clean
 - Image generation is handled through Supabase Edge Functions
+- Drag-and-drop functionality allows intuitive page reordering

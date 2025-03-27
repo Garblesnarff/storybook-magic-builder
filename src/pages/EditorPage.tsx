@@ -24,7 +24,8 @@ const EditorPage = () => {
     handleLayoutChange,
     handleTextFormattingChange,
     updatePage,
-    setCurrentPageData
+    setCurrentPageData,
+    handleReorderPage
   } = usePageState(id);
   
   const {
@@ -71,6 +72,7 @@ const EditorPage = () => {
               onPageSelect={handlePageSelect}
               onAddPage={handleAddPage}
               onDuplicatePage={handleDuplicatePage}
+              onReorderPage={handleReorderPage}
             />
           </div>
         </div>
