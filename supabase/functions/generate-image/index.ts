@@ -43,7 +43,7 @@ serve(async (req) => {
         }],
         generationConfig: {
           // Using the correct parameter name for image generation
-          responseType: ["TEXT", "IMAGE"],
+          responseType: ["Text", "Image"],
           temperature: 0.7,
           topK: 32,
           topP: 1,
