@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Book, BookPage, DEFAULT_BOOK, DEFAULT_PAGE } from '../types/book';
 import { v4 as uuidv4 } from 'uuid';
@@ -165,6 +164,30 @@ export function useBookManager() {
     updateBook(updatedBook);
   };
 
+  // New function to duplicate a page
+  const duplicatePage = (id: string) => {
+    if (!currentBook) return;
+
+    const pageToDuplicate = currentBook.pages.find(page => page.id === id);
+    if (!pageToDuplicate) return;
+
+    // Create a new page with the same content but a new ID
+    const duplicatedPage: BookPage = {
+      ...pageToDuplicate,
+      id: uuidv4(),
+      pageNumber: currentBook.pages.length,
+    };
+
+    const updatedBook = {
+      ...currentBook,
+      pages: [...currentBook.pages, duplicatedPage],
+      updatedAt: new Date().toISOString()
+    };
+
+    updateBook(updatedBook);
+    return duplicatedPage.id;
+  };
+
   return {
     books,
     currentBook,
@@ -175,6 +198,7 @@ export function useBookManager() {
     addPage,
     updatePage,
     deletePage,
-    reorderPage
+    reorderPage,
+    duplicatePage
   };
 }

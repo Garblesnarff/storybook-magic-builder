@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { PageList } from '@/components/PageList';
@@ -13,12 +12,11 @@ import { PageSettings } from '@/components/editor/PageSettings';
 
 const EditorPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { books, loadBook, currentBook, addPage, updatePage, deletePage } = useBook();
+  const { books, loadBook, currentBook, addPage, updatePage, deletePage, duplicatePage } = useBook();
   
   const [selectedPageId, setSelectedPageId] = useState<string | undefined>(undefined);
   const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
   
-  // Load the book when the component mounts or the ID changes
   useEffect(() => {
     if (id && books.length > 0) {
       const bookExists = books.some(book => book.id === id);
@@ -28,8 +26,6 @@ const EditorPage = () => {
     }
   }, [id, books, loadBook]);
   
-  // Set the selected page to the first page when the book changes
-  // But only if selectedPageId is undefined (initial load)
   useEffect(() => {
     if (currentBook && currentBook.pages.length > 0 && !selectedPageId) {
       const firstPageId = currentBook.pages[0].id;
@@ -37,7 +33,6 @@ const EditorPage = () => {
     }
   }, [currentBook, selectedPageId]);
   
-  // Update currentPageData when the selected page changes
   useEffect(() => {
     if (currentBook && selectedPageId) {
       const page = currentBook.pages.find(page => page.id === selectedPageId);
@@ -56,16 +51,19 @@ const EditorPage = () => {
     toast.success('New page added');
   };
 
+  const handleDuplicatePage = (pageId: string) => {
+    const newPageId = duplicatePage(pageId);
+    if (newPageId) {
+      setSelectedPageId(newPageId);
+    }
+  };
+
   const handleTextChange = (value: string) => {
     if (!currentPageData) return;
     
-    // Create a new updated page object
     const updatedPage = { ...currentPageData, text: value };
-    
-    // Update the local state first
     setCurrentPageData(updatedPage);
     
-    // Debounce the update to the book context to avoid excessive updates
     const timeoutId = setTimeout(() => {
       updatePage(updatedPage);
     }, 300);
@@ -176,6 +174,7 @@ const EditorPage = () => {
               selectedPageId={selectedPageId}
               onPageSelect={handlePageSelect}
               onAddPage={handleAddPage}
+              onDuplicatePage={handleDuplicatePage}
             />
           </div>
         </div>

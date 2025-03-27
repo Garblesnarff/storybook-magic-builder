@@ -14,6 +14,7 @@ interface BookContextProps {
   updatePage: (page: BookPage) => void;
   deletePage: (id: string) => void;
   reorderPage: (id: string, newPosition: number) => void;
+  duplicatePage: (id: string) => string | undefined;
 }
 
 const BookContext = createContext<BookContextProps | undefined>(undefined);
