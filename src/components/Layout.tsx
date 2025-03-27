@@ -19,7 +19,7 @@ export const Layout: React.FC<LayoutProps> = ({
       <Navigation />
       <main
         className={cn(
-          "pb-16 md:pb-0 md:pl-16 min-h-screen",
+          "pl-16 min-h-screen",
           fullWidth ? "px-0" : "px-4 md:px-8 lg:px-12 max-w-7xl mx-auto",
           className
         )}
