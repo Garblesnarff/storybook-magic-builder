@@ -2,11 +2,13 @@
 import React, { createContext, useContext } from 'react';
 import { Book, BookPage } from '../types/book';
 import { useBookManager } from '../hooks/useBookManager';
+import { BookTemplate } from '@/data/bookTemplates';
 
 interface BookContextProps {
   books: Book[];
   currentBook: Book | null;
   createBook: () => void;
+  createBookFromTemplate: (template: BookTemplate) => void;
   updateBook: (book: Book) => void;
   deleteBook: (id: string) => void;
   loadBook: (id: string) => void;

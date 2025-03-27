@@ -10,7 +10,9 @@ export const createNewBook = (): Book => {
   const newBook: Book = {
     ...DEFAULT_BOOK,
     id: uuidv4(),
-    pages: [createNewPage(0)]
+    pages: [createNewPage(0)],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
   return newBook;
 };

@@ -7,6 +7,7 @@ import {
   updateBook, 
   deleteBook as deleteBookService
 } from '../services/bookOperations';
+import { BookTemplate } from '@/data/bookTemplates';
 import {
   addPage as addPageService,
   updatePage as updatePageService,
@@ -42,6 +43,14 @@ export function useBookManager() {
     const newBook = createNewBook();
     setBooks(prevBooks => [...prevBooks, newBook]);
     setCurrentBook(newBook);
+    return newBook.id;
+  };
+
+  const createBookFromTemplate = (template: BookTemplate) => {
+    const newBook = template.createBook();
+    setBooks(prevBooks => [...prevBooks, newBook]);
+    setCurrentBook(newBook);
+    return newBook.id;
   };
 
   const loadBook = (id: string) => {
@@ -142,6 +151,7 @@ export function useBookManager() {
     books,
     currentBook,
     createBook,
+    createBookFromTemplate,
     updateBook: updateBookState,
     deleteBook,
     loadBook,

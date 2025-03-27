@@ -4,13 +4,19 @@ import { Layout } from '@/components/Layout';
 import { BookList } from '@/components/BookList';
 import { useBook } from '@/contexts/BookContext';
 import { toast } from 'sonner';
+import { BookTemplate } from '@/data/bookTemplates';
 
 const BooksPage = () => {
-  const { books, createBook, deleteBook } = useBook();
+  const { books, createBook, createBookFromTemplate, deleteBook } = useBook();
 
   const handleCreateBook = () => {
     createBook();
     toast.success('New book created!');
+  };
+
+  const handleCreateBookFromTemplate = (template: BookTemplate) => {
+    createBookFromTemplate(template);
+    toast.success(`New book created from the "${template.name}" template!`);
   };
 
   const handleDeleteBook = (id: string) => {
@@ -24,7 +30,8 @@ const BooksPage = () => {
       <div className="py-8">
         <BookList 
           books={books} 
-          onCreateBook={handleCreateBook} 
+          onCreateBook={handleCreateBook}
+          onCreateBookFromTemplate={handleCreateBookFromTemplate}
           onDeleteBook={handleDeleteBook} 
         />
       </div>
