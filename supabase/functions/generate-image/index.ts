@@ -26,8 +26,8 @@ serve(async (req) => {
     console.log('Sending request to Gemini API with prompt:', prompt)
     console.log('Using style:', style)
 
-    // Using the correct model name and endpoint for image generation
-    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp-image-generation:generateContent', {
+    // Using the correct model name for image generation
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -42,8 +42,8 @@ serve(async (req) => {
           ]
         }],
         generationConfig: {
-          // Image generation requires responseModalities to include both Text and Image
-          responseModalities: ["Text", "Image"],
+          // Using the correct parameter name for image generation
+          responseType: ["TEXT", "IMAGE"],
           temperature: 0.7,
           topK: 32,
           topP: 1,
