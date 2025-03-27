@@ -18,6 +18,7 @@ const EditorPage = () => {
   const [selectedPageId, setSelectedPageId] = useState<string | undefined>(undefined);
   const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
   
+  // Load the book when the component mounts or the ID changes
   useEffect(() => {
     if (id && books.length > 0) {
       const bookExists = books.some(book => book.id === id);
@@ -27,13 +28,16 @@ const EditorPage = () => {
     }
   }, [id, books, loadBook]);
   
+  // Set the selected page to the first page when the book changes
+  // But only if selectedPageId is undefined (initial load)
   useEffect(() => {
-    if (currentBook && currentBook.pages.length > 0) {
+    if (currentBook && currentBook.pages.length > 0 && !selectedPageId) {
       const firstPageId = currentBook.pages[0].id;
       setSelectedPageId(firstPageId);
     }
-  }, [currentBook]);
+  }, [currentBook, selectedPageId]);
   
+  // Update currentPageData when the selected page changes
   useEffect(() => {
     if (currentBook && selectedPageId) {
       const page = currentBook.pages.find(page => page.id === selectedPageId);
@@ -54,9 +58,19 @@ const EditorPage = () => {
 
   const handleTextChange = (value: string) => {
     if (!currentPageData) return;
+    
+    // Create a new updated page object
     const updatedPage = { ...currentPageData, text: value };
+    
+    // Update the local state first
     setCurrentPageData(updatedPage);
-    updatePage(updatedPage);
+    
+    // Debounce the update to the book context to avoid excessive updates
+    const timeoutId = setTimeout(() => {
+      updatePage(updatedPage);
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
   };
 
   const handleLayoutChange = (value: PageLayout) => {

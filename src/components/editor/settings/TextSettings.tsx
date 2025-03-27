@@ -31,7 +31,11 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
           placeholder="Once upon a time..."
           className="h-40"
           value={currentPageData.text || ""}
-          onChange={(e) => handleTextChange(e.target.value)}
+          onChange={(e) => {
+            // Use stopPropagation to prevent any bubbling of the event
+            e.stopPropagation();
+            handleTextChange(e.target.value);
+          }}
         />
       </div>
       
