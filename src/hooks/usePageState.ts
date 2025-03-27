@@ -1,20 +1,41 @@
-
 import { useState, useEffect } from 'react';
 import { BookPage } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
 import { toast } from 'sonner';
 
 export function usePageState(bookId: string | undefined) {
-  const { books, loadBook, currentBook, addPage, updatePage, deletePage, duplicatePage, reorderPage } = useBook();
+  // Ensure context is available before using it
+  const bookContext = useBook();
+  const { 
+    books, 
+    loadBook, 
+    currentBook, 
+    addPage, 
+    updatePage, 
+    deletePage, 
+    duplicatePage, 
+    reorderPage 
+  } = bookContext;
+
+  console.log('usePageState: initializing with bookId:', bookId);
+  console.log('usePageState: books available:', books.length);
+  if (currentBook) {
+    console.log('usePageState: current book:', currentBook.title);
+  }
+  
   const [selectedPageId, setSelectedPageId] = useState<string | undefined>(undefined);
   const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
   
   // Load the book when the component mounts or the book ID changes
   useEffect(() => {
     if (bookId && books.length > 0) {
+      console.log('Attempting to load book with ID:', bookId);
       const bookExists = books.some(book => book.id === bookId);
       if (bookExists) {
+        console.log('Book found, loading...');
         loadBook(bookId);
+      } else {
+        console.log('Book not found in available books');
       }
     }
   }, [bookId, books, loadBook]);
@@ -22,6 +43,7 @@ export function usePageState(bookId: string | undefined) {
   // Select the first page when the book loads or changes
   useEffect(() => {
     if (currentBook && currentBook.pages.length > 0 && !selectedPageId) {
+      console.log('Selecting first page in current book');
       const firstPageId = currentBook.pages[0].id;
       setSelectedPageId(firstPageId);
     }
@@ -30,9 +52,12 @@ export function usePageState(bookId: string | undefined) {
   // Update the current page data when the selected page changes
   useEffect(() => {
     if (currentBook && selectedPageId) {
+      console.log('Updating current page data for page ID:', selectedPageId);
       const page = currentBook.pages.find(page => page.id === selectedPageId);
       if (page) {
         setCurrentPageData({ ...page });
+      } else {
+        console.log('Selected page not found in current book');
       }
     }
   }, [selectedPageId, currentBook]);

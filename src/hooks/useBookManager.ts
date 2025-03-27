@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Book } from '../types/book';
 import { loadBooks } from '../services/bookStorage';
@@ -23,10 +22,13 @@ export function useBookManager() {
   // Load books from storage on initial mount
   useEffect(() => {
     try {
+      console.log('Loading books from storage...');
       const savedBooks = loadBooks();
       if (savedBooks.length) {
+        console.log(`Found ${savedBooks.length} existing books`);
         setBooks(savedBooks);
       } else {
+        console.log('No books found, creating sample book');
         // Create a sample book if no books exist
         const sampleBook = createNewBook();
         setBooks([sampleBook]);

@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { Book, BookPage } from '../types/book';
 import { useBookManager } from '../hooks/useBookManager';
 import { BookTemplate } from '@/data/bookTemplates';
@@ -19,17 +19,20 @@ interface BookContextProps {
   duplicatePage: (id: string) => string | undefined;
 }
 
+// Create the context with a default undefined value
 const BookContext = createContext<BookContextProps | undefined>(undefined);
 
+// Custom hook to use the book context
 export const useBook = () => {
   const context = useContext(BookContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useBook must be used within a BookProvider');
   }
   return context;
 };
 
-export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Provider component that wraps the parts of our app that need the context
+export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const bookManager = useBookManager();
   
   return (
