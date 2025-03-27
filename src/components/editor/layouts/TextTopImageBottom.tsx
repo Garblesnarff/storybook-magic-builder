@@ -2,14 +2,19 @@
 import React from 'react';
 import { BookPage } from '@/types/book';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Image } from 'lucide-react';
+import { Sparkles, Image, Loader2 } from 'lucide-react';
 
 interface LayoutProps {
   page: BookPage;
   handleGenerateImage: () => Promise<void>;
+  isGenerating?: boolean;
 }
 
-export const TextTopImageBottom: React.FC<LayoutProps> = ({ page, handleGenerateImage }) => {
+export const TextTopImageBottom: React.FC<LayoutProps> = ({ 
+  page, 
+  handleGenerateImage,
+  isGenerating = false
+}) => {
   return (
     <div className="flex flex-col h-full">
       <div className="h-1/2 p-8 overflow-auto">
@@ -40,9 +45,19 @@ export const TextTopImageBottom: React.FC<LayoutProps> = ({ page, handleGenerate
               variant="outline" 
               className="mt-4"
               onClick={handleGenerateImage}
+              disabled={isGenerating}
             >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate Image
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Image
+                </>
+              )}
             </Button>
           </div>
         )}
