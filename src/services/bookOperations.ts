@@ -1,12 +1,22 @@
 
 import { Book, BookPage, DEFAULT_BOOK, DEFAULT_PAGE } from '../types/book';
 import { v4 as uuidv4 } from 'uuid';
-import { saveBooks } from './bookStorage';
+import { 
+  saveBookToSupabase, 
+  loadBookFromSupabase,
+  loadBooksFromSupabase,
+  createBookInSupabase,
+  deleteBookFromSupabase,
+  updatePageInSupabase,
+  addPageToSupabase,
+  deletePageFromSupabase,
+  reorderPagesInSupabase
+} from './supabaseStorage';
 
 /**
  * Core book creation and management functions
  */
-export const createNewBook = (): Book => {
+export const createNewBook = async (): Promise<Book> => {
   const newBook: Book = {
     ...DEFAULT_BOOK,
     id: uuidv4(),
@@ -14,7 +24,10 @@ export const createNewBook = (): Book => {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
-  return newBook;
+  
+  // Create in Supabase and return the result
+  const savedBook = await createBookInSupabase(newBook);
+  return savedBook || newBook; // Fallback to the local book if save fails
 };
 
 export const createNewPage = (pageNumber: number): BookPage => {
@@ -25,7 +38,7 @@ export const createNewPage = (pageNumber: number): BookPage => {
   };
 };
 
-export const updateBook = (book: Book, books: Book[]): Book[] => {
+export const updateBook = async (book: Book, books: Book[]): Promise<Book[]> => {
   const updatedBook = { 
     ...book, 
     updatedAt: new Date().toISOString() 
@@ -35,17 +48,27 @@ export const updateBook = (book: Book, books: Book[]): Book[] => {
     b.id === updatedBook.id ? updatedBook : b
   );
   
-  // Schedule save to storage
-  setTimeout(() => saveBooks(updatedBooks), 0);
+  // Save to Supabase
+  await saveBookToSupabase(updatedBook);
   
   return updatedBooks;
 };
 
-export const deleteBook = (id: string, books: Book[]): Book[] => {
+export const deleteBook = async (id: string, books: Book[]): Promise<Book[]> => {
+  // Delete from Supabase
+  await deleteBookFromSupabase(id);
+  
+  // Update local state
   const filteredBooks = books.filter(book => book.id !== id);
-  
-  // Schedule save to storage
-  setTimeout(() => saveBooks(filteredBooks), 0);
-  
   return filteredBooks;
+};
+
+// Load all books from Supabase
+export const loadAllBooks = async (): Promise<Book[]> => {
+  return await loadBooksFromSupabase();
+};
+
+// Load a specific book from Supabase
+export const loadBookById = async (bookId: string): Promise<Book | null> => {
+  return await loadBookFromSupabase(bookId);
 };

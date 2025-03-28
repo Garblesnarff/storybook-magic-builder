@@ -114,6 +114,110 @@ export type Database = {
         }
         Relationships: []
       }
+      book_pages: {
+        Row: {
+          background_color: string | null
+          book_id: string
+          created_at: string
+          font_color: string | null
+          font_family: string | null
+          font_size: number | null
+          id: string
+          image_style: string | null
+          image_url: string | null
+          is_bold: boolean | null
+          is_italic: boolean | null
+          layout: string
+          page_number: number
+          text: string | null
+          updated_at: string
+        }
+        Insert: {
+          background_color?: string | null
+          book_id: string
+          created_at?: string
+          font_color?: string | null
+          font_family?: string | null
+          font_size?: number | null
+          id?: string
+          image_style?: string | null
+          image_url?: string | null
+          is_bold?: boolean | null
+          is_italic?: boolean | null
+          layout?: string
+          page_number: number
+          text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          background_color?: string | null
+          book_id?: string
+          created_at?: string
+          font_color?: string | null
+          font_family?: string | null
+          font_size?: number | null
+          id?: string
+          image_style?: string | null
+          image_url?: string | null
+          is_bold?: boolean | null
+          is_italic?: boolean | null
+          layout?: string
+          page_number?: number
+          text?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_pages_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      books: {
+        Row: {
+          author: string
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          height: number
+          id: string
+          orientation: string
+          title: string
+          updated_at: string
+          user_id: string | null
+          width: number
+        }
+        Insert: {
+          author?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          height?: number
+          id?: string
+          orientation?: string
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+          width?: number
+        }
+        Update: {
+          author?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          height?: number
+          id?: string
+          orientation?: string
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+          width?: number
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           atmosphere: string | null
