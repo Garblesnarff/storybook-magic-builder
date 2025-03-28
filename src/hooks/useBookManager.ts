@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { Book } from '../types/book';
 import { BookTemplate } from '@/data/bookTemplates';
 import { useBookOperations } from './useBookOperations';
@@ -15,7 +14,9 @@ export function useBookManager() {
     deleteBook,
     loadBook,
     loading: bookLoading,
-    error: bookError
+    error: bookError,
+    setBooks,
+    setCurrentBook
   } = useBookOperations();
 
   const {
@@ -29,8 +30,8 @@ export function useBookManager() {
   } = usePageOperations(
     books,
     currentBook,
-    useState<Book[]>()[1], // This gets replaced with the setBooks function from useBookOperations
-    useState<Book | null>(null)[1] // This gets replaced with the setCurrentBook function from useBookOperations
+    setBooks,  // Now passing the actual setBooks function from useBookOperations
+    setCurrentBook  // Now passing the actual setCurrentBook function from useBookOperations
   );
 
   // Combine loading and error states

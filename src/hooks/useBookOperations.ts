@@ -128,6 +128,9 @@ export function useBookOperations() {
     deleteBook,
     loadBook,
     loading,
-    error
+    error,
+    // Export state setters to be used by usePageOperations
+    setBooks,
+    setCurrentBook
   };
 }
