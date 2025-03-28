@@ -17,12 +17,14 @@ This directory contains layout components used in the book editor to display dif
 ### Instructions
 
 - Each layout component receives the current page data and handlers for generating images
-- All image-containing layouts support zoom and pan functionality through the ZoomableImage component
-- When no image is present, a placeholder with a "Generate Image" button is shown
-- The image generation process includes a loading state to provide feedback to users
+- All image-containing layouts use the ImagePlaceholder component when no image is present
+- The ImagePlaceholder component provides consistent UI for image generation across all layouts
+- All layouts with images support zoom and pan functionality through the ZoomableImage component
 
 ### Dependencies
 
 - The ZoomableImage component for all layouts that include images
-- Lucide React for icons (Sparkles, Image, Loader2)
+- The ImagePlaceholder component for displaying image generation UI
+- Lucide React for icons
 - UI components from shadcn/ui
+

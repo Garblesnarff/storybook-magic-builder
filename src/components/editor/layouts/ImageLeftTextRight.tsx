@@ -1,9 +1,8 @@
 
 import React from 'react';
 import { BookPage } from '@/types/book';
-import { Button } from '@/components/ui/button';
-import { Sparkles, Image, Loader2 } from 'lucide-react';
 import { ZoomableImage } from '../ZoomableImage';
+import { ImagePlaceholder } from '../ImagePlaceholder';
 
 interface LayoutProps {
   page: BookPage;
@@ -25,28 +24,10 @@ export const ImageLeftTextRight: React.FC<LayoutProps> = ({
             alt="Page illustration"
           />
         ) : (
-          <div className="text-center p-8">
-            <Image className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No image generated yet</p>
-            <Button 
-              variant="outline" 
-              className="mt-4"
-              onClick={handleGenerateImage}
-              disabled={isGenerating}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Image
-                </>
-              )}
-            </Button>
-          </div>
+          <ImagePlaceholder
+            isGenerating={isGenerating}
+            onGenerate={handleGenerateImage}
+          />
         )}
       </div>
       <div className="w-1/2 p-8 overflow-auto">
