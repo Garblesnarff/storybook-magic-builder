@@ -82,11 +82,16 @@ export function usePageState(bookId: string | undefined) {
     toast.success('New page added');
   };
 
-  const handleDuplicatePage = (pageId: string) => {
-    const newPageId = duplicatePage(pageId);
-    if (newPageId) {
-      setSelectedPageId(newPageId);
-      toast.success('Page duplicated');
+  const handleDuplicatePage = async (pageId: string) => {
+    try {
+      const newPageId = await duplicatePage(pageId);
+      if (newPageId) {
+        setSelectedPageId(newPageId);
+        toast.success('Page duplicated');
+      }
+    } catch (error) {
+      console.error('Error duplicating page:', error);
+      toast.error('Failed to duplicate page');
     }
   };
 
