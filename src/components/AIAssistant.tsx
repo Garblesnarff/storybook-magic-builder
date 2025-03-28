@@ -1,14 +1,7 @@
 
 import React, { useState } from 'react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Wand2 } from 'lucide-react';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Sparkles } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -20,8 +13,7 @@ import {
 
 // Import our components
 import { PromptInput } from './ai/PromptInput';
-import { TextGenerationTab } from './ai/TextGenerationTab';
-import { ImageGenerationTab } from './ai/ImageGenerationTab';
+import { AIAssistantTabs } from './ai/AIAssistantTabs';
 
 // Import the AI operations hook
 import { useAIOperations } from '@/hooks/useAIOperations';
@@ -55,26 +47,22 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   } = useAIOperations(null, () => {}, () => {});
 
   const handleGenerateText = async () => {
-    const text = await generateText(prompt, temperature, maxTokens);
-    // Text is already set in the hook state, nothing more to do here
+    await generateText(prompt, temperature, maxTokens);
   };
 
   const handleGenerateImage = async () => {
-    const image = await generateImage(prompt, imageStyle);
-    // Image is already set in the hook state, nothing more to do here
+    await generateImage(prompt, imageStyle);
   };
 
   const handleApplyText = () => {
     if (onApplyText && generatedText) {
       onApplyText(generatedText);
-      toast.success('Text applied to page');
     }
   };
 
   const handleApplyImage = () => {
     if (onApplyImage && generatedImage) {
       onApplyImage(generatedImage);
-      toast.success('Image applied to page');
     }
   };
 
@@ -100,44 +88,23 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             setPrompt={setPrompt} 
           />
 
-          <Tabs defaultValue="text" className="w-full">
-            <TabsList className="grid grid-cols-2 mb-4">
-              <TabsTrigger value="text">
-                <Wand2 className="mr-2 h-4 w-4" />
-                Text
-              </TabsTrigger>
-              <TabsTrigger value="image">
-                <Sparkles className="mr-2 h-4 w-4" />
-                Image
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="text" className="space-y-4">
-              <TextGenerationTab
-                prompt={prompt}
-                temperature={temperature}
-                setTemperature={setTemperature}
-                maxTokens={maxTokens}
-                setMaxTokens={setMaxTokens}
-                isGenerating={isGeneratingText}
-                generatedText={generatedText}
-                onGenerate={handleGenerateText}
-                onApply={handleApplyText}
-              />
-            </TabsContent>
-            
-            <TabsContent value="image" className="space-y-4">
-              <ImageGenerationTab
-                prompt={prompt}
-                imageStyle={imageStyle}
-                setImageStyle={setImageStyle}
-                isGenerating={isGeneratingImage}
-                generatedImage={generatedImage}
-                onGenerate={handleGenerateImage}
-                onApply={handleApplyImage}
-              />
-            </TabsContent>
-          </Tabs>
+          <AIAssistantTabs
+            prompt={prompt}
+            temperature={temperature}
+            setTemperature={setTemperature}
+            maxTokens={maxTokens}
+            setMaxTokens={setMaxTokens}
+            imageStyle={imageStyle}
+            setImageStyle={setImageStyle}
+            isGeneratingText={isGeneratingText}
+            isGeneratingImage={isGeneratingImage}
+            generatedText={generatedText}
+            generatedImage={generatedImage}
+            onGenerateText={handleGenerateText}
+            onGenerateImage={handleGenerateImage}
+            onApplyText={handleApplyText}
+            onApplyImage={handleApplyImage}
+          />
         </div>
       </SheetContent>
     </Sheet>
