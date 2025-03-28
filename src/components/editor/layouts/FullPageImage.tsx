@@ -3,6 +3,7 @@ import React from 'react';
 import { BookPage } from '@/types/book';
 import { ZoomableImage } from '../ZoomableImage';
 import { ImagePlaceholder } from '../ImagePlaceholder';
+import { BookTextRenderer } from '../BookTextRenderer';
 
 interface LayoutProps {
   page: BookPage;
@@ -31,16 +32,14 @@ export const FullPageImage: React.FC<LayoutProps> = ({
         </div>
       )}
       <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/70 to-transparent">
-        <div 
-          style={{ 
-            fontFamily: page.textFormatting?.fontFamily || 'Inter',
-            fontSize: `${page.textFormatting?.fontSize || 16}px`,
-            color: '#FFFFFF',
-            fontWeight: page.textFormatting?.isBold ? 'bold' : 'normal',
-            fontStyle: page.textFormatting?.isItalic ? 'italic' : 'normal',
-          }}
-        >
-          {page.text}
+        <div className="text-white">
+          <BookTextRenderer 
+            text={page.text} 
+            textFormatting={{
+              ...page.textFormatting,
+              fontColor: '#FFFFFF' // Override color for visibility
+            }}
+          />
         </div>
       </div>
     </div>

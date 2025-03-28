@@ -99,9 +99,13 @@ export function usePageState(bookId: string | undefined) {
   const handleTextChange = (value: string) => {
     if (!currentPageData) return;
     
+    console.log('Text changed to:', value);
+    
     // Update local state immediately for smooth typing experience
-    const updatedPage = { ...currentPageData, text: value };
-    setCurrentPageData(updatedPage);
+    setCurrentPageData(prevState => {
+      if (!prevState) return null;
+      return { ...prevState, text: value };
+    });
     
     // Show saving indicator
     setIsSaving(true);
@@ -113,11 +117,16 @@ export function usePageState(bookId: string | undefined) {
     
     // Set a new timeout
     textUpdateTimeoutRef.current = setTimeout(() => {
-      updatePage(updatedPage);
-      // Show saved indicator briefly after saving
-      setTimeout(() => {
-        setIsSaving(false);
-      }, 500);
+      if (currentPageData) {
+        const updatedPage = { ...currentPageData, text: value };
+        console.log('Saving updated page with text:', updatedPage.text);
+        updatePage(updatedPage);
+        
+        // Show saved indicator briefly after saving
+        setTimeout(() => {
+          setIsSaving(false);
+        }, 500);
+      }
       textUpdateTimeoutRef.current = null;
     }, 500);
   };

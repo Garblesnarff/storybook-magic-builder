@@ -35,7 +35,8 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
             // Use stopPropagation to prevent any bubbling of the event
             e.stopPropagation();
             // Pass the value directly to the handler
-            handleTextChange(e.target.value);
+            const value = e.target.value;
+            handleTextChange(value);
           }}
         />
       </div>

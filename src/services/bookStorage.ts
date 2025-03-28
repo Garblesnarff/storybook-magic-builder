@@ -2,6 +2,11 @@
 import { Book, BookPage } from '../types/book';
 import { toast } from 'sonner';
 
+// Function to sanitize text for localStorage
+const sanitizeText = (text: string): string => {
+  return text || '';
+};
+
 // Function to save books to localStorage with error handling
 export const saveBooks = (books: Book[]) => {
   try {
@@ -25,8 +30,10 @@ export const saveBooks = (books: Book[]) => {
     books.forEach(book => {
       try {
         book.pages.forEach(page => {
-          if (page.text) {
-            localStorage.setItem(`book-${book.id}-page-${page.id}-text`, page.text);
+          if (page.text !== undefined) {
+            const sanitizedText = sanitizeText(page.text);
+            localStorage.setItem(`book-${book.id}-page-${page.id}-text`, sanitizedText);
+            console.log(`Saved text for book ${book.id}, page ${page.id}:`, sanitizedText.substring(0, 50));
           }
           
           // Store images separately (might still fail due to size)
@@ -69,10 +76,13 @@ export const loadBooks = (): Book[] => {
     return bookMetadata.map(book => {
       const fullPages = book.pages.map(page => {
         // Load text content
-        let text = '';
+        let text = 'Once upon a time...';
         try {
           const savedText = localStorage.getItem(`book-${book.id}-page-${page.id}-text`);
-          if (savedText) text = savedText;
+          if (savedText !== null) {
+            text = savedText;
+            console.log(`Loaded text for book ${book.id}, page ${page.id}:`, text.substring(0, 50));
+          }
         } catch (e) {
           console.warn(`Failed to load text for book ${book.id}, page ${page.id}`, e);
         }
@@ -89,7 +99,7 @@ export const loadBooks = (): Book[] => {
         
         return {
           ...page,
-          text: text || 'Once upon a time...',
+          text,
           image
         } as BookPage;
       });
