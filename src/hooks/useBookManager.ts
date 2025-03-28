@@ -69,7 +69,7 @@ export function useBookManager() {
       const savedBook = await createNewBook();
       // Merge template book data with saved book
       const mergedBook = { ...savedBook, ...newBook, id: savedBook.id };
-      await updateBook(mergedBook);
+      await updateBook(mergedBook, books);
       
       setBooks(prevBooks => [...prevBooks, mergedBook]);
       setCurrentBook(mergedBook);
@@ -99,11 +99,9 @@ export function useBookManager() {
   // Book operations
   const updateBookState = async (updatedBook: Book) => {
     try {
-      await updateBook(updatedBook);
+      const updatedBooks = await updateBook(updatedBook, books);
       
-      setBooks(prevBooks => 
-        prevBooks.map(book => book.id === updatedBook.id ? updatedBook : book)
-      );
+      setBooks(updatedBooks);
       
       if (currentBook?.id === updatedBook.id) {
         setCurrentBook({ ...updatedBook });
@@ -116,9 +114,8 @@ export function useBookManager() {
 
   const deleteBook = async (id: string) => {
     try {
-      await deleteBookService(id, books);
+      const updatedBooks = await deleteBookService(id, books);
       
-      const updatedBooks = books.filter(book => book.id !== id);
       setBooks(updatedBooks);
       
       if (currentBook?.id === id) {
@@ -214,7 +211,7 @@ export function useBookManager() {
   };
 
   const duplicatePage = async (id) => {
-    if (!currentBook) return;
+    if (!currentBook) return undefined;
     
     try {
       const [updatedBooksResult, newPageId] = await duplicatePageService(id, currentBook, books);

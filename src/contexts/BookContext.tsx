@@ -7,16 +7,18 @@ import { BookTemplate } from '@/data/bookTemplates';
 interface BookContextProps {
   books: Book[];
   currentBook: Book | null;
-  createBook: () => void;
-  createBookFromTemplate: (template: BookTemplate) => void;
-  updateBook: (book: Book) => void;
-  deleteBook: (id: string) => void;
-  loadBook: (id: string) => void;
-  addPage: () => void;
-  updatePage: (page: BookPage) => void;
-  deletePage: (id: string) => void;
-  reorderPage: (id: string, newPosition: number) => void;
-  duplicatePage: (id: string) => string | undefined;
+  createBook: () => Promise<string | null>;
+  createBookFromTemplate: (template: BookTemplate) => Promise<string | null>;
+  updateBook: (book: Book) => Promise<void>;
+  deleteBook: (id: string) => Promise<void>;
+  loadBook: (id: string) => Promise<Book | null>;
+  addPage: () => Promise<void>;
+  updatePage: (page: BookPage) => Promise<void>;
+  deletePage: (id: string) => Promise<void>;
+  reorderPage: (id: string, newPosition: number) => Promise<void>;
+  duplicatePage: (id: string) => Promise<string | undefined>;
+  loading: boolean;
+  error: string | null;
 }
 
 // Create the context with a default undefined value
