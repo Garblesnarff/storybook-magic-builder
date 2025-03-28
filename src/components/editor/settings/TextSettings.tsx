@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { BookPage, TextFormatting } from '@/types/book';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,14 +22,6 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
   handleTextChange,
   handleTextFormattingChange
 }) => {
-  // Add a debounced version of handleTextChange to reduce storage operations
-  const handleTextChangeDebounced = useCallback(
-    (value: string) => {
-      handleTextChange(value);
-    },
-    [handleTextChange]
-  );
-  
   return (
     <div className="space-y-4">
       <div>
@@ -42,7 +34,8 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
           onChange={(e) => {
             // Use stopPropagation to prevent any bubbling of the event
             e.stopPropagation();
-            handleTextChangeDebounced(e.target.value);
+            // Pass the value directly to the handler
+            handleTextChange(e.target.value);
           }}
         />
       </div>

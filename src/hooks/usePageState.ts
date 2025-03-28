@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import { BookPage } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
 import { toast } from 'sonner';
@@ -25,6 +26,7 @@ export function usePageState(bookId: string | undefined) {
   
   const [selectedPageId, setSelectedPageId] = useState<string | undefined>(undefined);
   const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
+  const textUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Load the book when the component mounts or the book ID changes
   useEffect(() => {
@@ -62,6 +64,15 @@ export function usePageState(bookId: string | undefined) {
     }
   }, [selectedPageId, currentBook]);
 
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (textUpdateTimeoutRef.current) {
+        clearTimeout(textUpdateTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handlePageSelect = (pageId: string) => {
     setSelectedPageId(pageId);
   };
@@ -82,14 +93,20 @@ export function usePageState(bookId: string | undefined) {
   const handleTextChange = (value: string) => {
     if (!currentPageData) return;
     
+    // Update local state immediately for smooth typing experience
     const updatedPage = { ...currentPageData, text: value };
     setCurrentPageData(updatedPage);
     
-    const timeoutId = setTimeout(() => {
-      updatePage(updatedPage);
-    }, 300);
+    // Clear any existing timeout
+    if (textUpdateTimeoutRef.current) {
+      clearTimeout(textUpdateTimeoutRef.current);
+    }
     
-    return () => clearTimeout(timeoutId);
+    // Set a new timeout
+    textUpdateTimeoutRef.current = setTimeout(() => {
+      updatePage(updatedPage);
+      textUpdateTimeoutRef.current = null;
+    }, 500);
   };
 
   const handleLayoutChange = (value: any) => {
