@@ -33,6 +33,10 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
       setImageLoaded(true);
     };
     img.src = src;
+    
+    // Reset position and scale when image changes
+    setPosition({ x: 0, y: 0 });
+    setScale(1);
   }, [src]);
 
   // Get container dimensions
@@ -53,9 +57,18 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
 
   // Calculate initial fitting scale when image and container dimensions are available
   useEffect(() => {
-    if (imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0) {
-      // Reset position when image changes
-      setPosition({ x: 0, y: 0 });
+    if (imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
+      // Auto-fit image to container on initial load
+      const widthRatio = containerDimensions.width / imageDimensions.width;
+      const heightRatio = containerDimensions.height / imageDimensions.height;
+      
+      // Use the smaller ratio to ensure the image fits within the container
+      const fitScale = Math.min(widthRatio, heightRatio, 1) * 0.9; // 90% of container to leave some margin
+      
+      // Only auto-scale down for large images, never scale up small images
+      if (fitScale < 1) {
+        setScale(fitScale);
+      }
     }
   }, [imageLoaded, containerDimensions, imageDimensions]);
 
@@ -104,8 +117,6 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
     setPosition({ x: 0, y: 0 });
   };
 
-  const canMove = true; // Always allow moving
-
   return (
     <div 
       ref={containerRef}
@@ -116,39 +127,32 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
       onMouseLeave={handleMouseUp}
     >
       {imageLoaded && (
-        <img
-          ref={imageRef}
-          src={src}
-          alt={alt}
-          className={cn(
-            "select-none object-contain max-w-none", 
-            isPanning ? "cursor-grabbing" : "cursor-grab",
-            className
-          )}
-          style={{ 
-            transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-            transition: isPanning ? 'none' : 'transform 0.2s ease-out',
-            transformOrigin: 'center',
-            maxHeight: '100%',
-            width: 'auto',
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            marginLeft: '-50%',
-            marginTop: '-50%'
-          }}
-          draggable="false"
-          onDragStart={(e) => e.preventDefault()}
-        />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <img
+            ref={imageRef}
+            src={src}
+            alt={alt}
+            className={cn(
+              "select-none max-h-full max-w-full object-contain", 
+              isPanning ? "cursor-grabbing" : "cursor-grab",
+              className
+            )}
+            style={{ 
+              transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+              transition: isPanning ? 'none' : 'transform 0.2s ease-out',
+              transformOrigin: 'center',
+            }}
+            draggable="false"
+            onDragStart={(e) => e.preventDefault()}
+          />
+        </div>
       )}
       
       {/* Drag indicator */}
-      {canMove && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs text-gray-700 flex items-center z-10">
-          <MoveHorizontal className="h-3 w-3 mr-1" />
-          <span>Drag to position</span>
-        </div>
-      )}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs text-gray-700 flex items-center z-10">
+        <MoveHorizontal className="h-3 w-3 mr-1" />
+        <span>Drag to position</span>
+      </div>
       
       {/* Controls */}
       <div className="absolute bottom-4 right-4 flex space-x-2 z-10">
