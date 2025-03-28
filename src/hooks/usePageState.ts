@@ -115,7 +115,7 @@ export function usePageState(bookId: string | undefined) {
       clearTimeout(textUpdateTimeoutRef.current);
     }
     
-    // Set a new timeout
+    // Set a new timeout to save changes after user stops typing
     textUpdateTimeoutRef.current = setTimeout(() => {
       if (currentPageData) {
         const updatedPage = { ...currentPageData, text: value };
@@ -128,7 +128,7 @@ export function usePageState(bookId: string | undefined) {
         }, 500);
       }
       textUpdateTimeoutRef.current = null;
-    }, 500);
+    }, 1000); // Increased timeout to 1000ms to give user more time to type
   };
 
   const handleLayoutChange = (value: any) => {

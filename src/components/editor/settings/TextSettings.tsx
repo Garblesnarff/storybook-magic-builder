@@ -22,6 +22,14 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
   handleTextChange,
   handleTextFormattingChange
 }) => {
+  // Create a direct onChange handler that doesn't use timeouts
+  const onTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const value = e.target.value;
+    handleTextChange(value);
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -31,13 +39,7 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
           placeholder="Once upon a time..."
           className="h-40"
           value={currentPageData.text || ""}
-          onChange={(e) => {
-            // Use stopPropagation to prevent any bubbling of the event
-            e.stopPropagation();
-            // Pass the value directly to the handler
-            const value = e.target.value;
-            handleTextChange(value);
-          }}
+          onChange={onTextChange}
         />
       </div>
       

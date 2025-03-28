@@ -33,7 +33,7 @@ export const ImageLeftTextRight: React.FC<LayoutProps> = ({
       </div>
       <div className="w-1/2 p-8 overflow-auto">
         <BookTextRenderer 
-          text={page.text} 
+          text={page.text || ''} 
           textFormatting={page.textFormatting}
         />
       </div>

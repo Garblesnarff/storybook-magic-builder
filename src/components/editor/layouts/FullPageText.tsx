@@ -11,7 +11,7 @@ export const FullPageText: React.FC<LayoutProps> = ({ page }) => {
   return (
     <div className="h-full p-12 flex items-center justify-center overflow-auto">
       <BookTextRenderer 
-        text={page.text} 
+        text={page.text || ''} 
         textFormatting={page.textFormatting}
       />
     </div>
