@@ -6,11 +6,7 @@ import {
   loadBookFromSupabase,
   loadBooksFromSupabase,
   createBookInSupabase,
-  deleteBookFromSupabase,
-  updatePageInSupabase,
-  addPageToSupabase,
-  deletePageFromSupabase,
-  reorderPagesInSupabase
+  deleteBookFromSupabase
 } from './supabaseStorage';
 
 /**
