@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Wand2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import {
   Tabs,
   TabsContent,
@@ -19,10 +18,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-// Import our new components
+// Import our components
 import { PromptInput } from './ai/PromptInput';
 import { TextGenerationTab } from './ai/TextGenerationTab';
 import { ImageGenerationTab } from './ai/ImageGenerationTab';
+
+// Import the AI operations hook
+import { useAIOperations } from '@/hooks/useAIOperations';
 
 interface AIAssistantProps {
   onApplyText?: (text: string) => void;
@@ -36,88 +38,30 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   initialPrompt = ''
 }) => {
   const [prompt, setPrompt] = useState(initialPrompt);
-  const [isGeneratingText, setIsGeneratingText] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [generatedText, setGeneratedText] = useState('');
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [imageStyle, setImageStyle] = useState('REALISTIC');
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(800);
+  const [imageStyle, setImageStyle] = useState('REALISTIC');
+
+  // Initialize the hook with null values since we're not operating on a specific page
+  const {
+    isGeneratingText,
+    isGeneratingImage,
+    generatedText,
+    generatedImage,
+    setGeneratedText,
+    setGeneratedImage,
+    generateText,
+    generateImage
+  } = useAIOperations(null, () => {}, () => {});
 
   const handleGenerateText = async () => {
-    if (!prompt.trim()) {
-      toast.error('Please enter a prompt first');
-      return;
-    }
-
-    setIsGeneratingText(true);
-    setGeneratedText('');
-
-    try {
-      const response = await supabase.functions.invoke('generate-text', {
-        body: JSON.stringify({ 
-          prompt, 
-          temperature,
-          maxTokens
-        })
-      });
-
-      if (response.error) {
-        toast.error('Text generation failed', {
-          description: response.error.message
-        });
-        console.error('Text generation error:', response.error);
-        return;
-      }
-
-      setGeneratedText(response.data.text);
-      toast.success('Text generated successfully!');
-    } catch (error) {
-      console.error('Text generation error:', error);
-      toast.error('Text generation failed', {
-        description: error instanceof Error ? error.message : 'Unknown error'
-      });
-    } finally {
-      setIsGeneratingText(false);
-    }
+    const text = await generateText(prompt, temperature, maxTokens);
+    // Text is already set in the hook state, nothing more to do here
   };
 
   const handleGenerateImage = async () => {
-    if (!prompt.trim()) {
-      toast.error('Please enter a prompt first');
-      return;
-    }
-
-    setIsGeneratingImage(true);
-    setGeneratedImage(null);
-
-    try {
-      const response = await supabase.functions.invoke('generate-image', {
-        body: JSON.stringify({ 
-          prompt, 
-          style: imageStyle
-        })
-      });
-
-      if (response.error) {
-        toast.error('Image generation failed', {
-          description: response.error.message
-        });
-        console.error('Image generation error:', response.error);
-        return;
-      }
-
-      const imageData = `data:image/png;base64,${response.data.image}`;
-      setGeneratedImage(imageData);
-      toast.success('Image generated successfully!');
-    } catch (error) {
-      console.error('Image generation error:', error);
-      toast.error('Image generation failed', {
-        description: error instanceof Error ? error.message : 'Unknown error'
-      });
-    } finally {
-      setIsGeneratingImage(false);
-    }
+    const image = await generateImage(prompt, imageStyle);
+    // Image is already set in the hook state, nothing more to do here
   };
 
   const handleApplyText = () => {
