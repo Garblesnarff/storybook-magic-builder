@@ -27,6 +27,7 @@ export function usePageState(bookId: string | undefined) {
   const [selectedPageId, setSelectedPageId] = useState<string | undefined>(undefined);
   const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
   const textUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Load the book when the component mounts or the book ID changes
   useEffect(() => {
@@ -102,6 +103,9 @@ export function usePageState(bookId: string | undefined) {
     const updatedPage = { ...currentPageData, text: value };
     setCurrentPageData(updatedPage);
     
+    // Show saving indicator
+    setIsSaving(true);
+    
     // Clear any existing timeout
     if (textUpdateTimeoutRef.current) {
       clearTimeout(textUpdateTimeoutRef.current);
@@ -110,19 +114,29 @@ export function usePageState(bookId: string | undefined) {
     // Set a new timeout
     textUpdateTimeoutRef.current = setTimeout(() => {
       updatePage(updatedPage);
+      // Show saved indicator briefly after saving
+      setTimeout(() => {
+        setIsSaving(false);
+      }, 500);
       textUpdateTimeoutRef.current = null;
     }, 500);
   };
 
   const handleLayoutChange = (value: any) => {
     if (!currentPageData) return;
+    setIsSaving(true);
     const updatedPage = { ...currentPageData, layout: value };
     setCurrentPageData(updatedPage);
     updatePage(updatedPage);
+    // Show saved indicator briefly after saving
+    setTimeout(() => {
+      setIsSaving(false);
+    }, 500);
   };
 
   const handleTextFormattingChange = (key: any, value: any) => {
     if (!currentPageData) return;
+    setIsSaving(true);
     const updatedFormatting = { 
       ...currentPageData.textFormatting,
       [key]: value 
@@ -133,6 +147,10 @@ export function usePageState(bookId: string | undefined) {
     };
     setCurrentPageData(updatedPage);
     updatePage(updatedPage);
+    // Show saved indicator briefly after saving
+    setTimeout(() => {
+      setIsSaving(false);
+    }, 500);
   };
 
   const handleReorderPage = (sourceIndex: number, destinationIndex: number) => {
@@ -142,7 +160,12 @@ export function usePageState(bookId: string | undefined) {
     const pageToMove = currentBook.pages[sourceIndex];
     
     if (pageToMove) {
+      setIsSaving(true);
       reorderPage(pageToMove.id, destinationIndex);
+      // Show saved indicator briefly after saving
+      setTimeout(() => {
+        setIsSaving(false);
+      }, 500);
     }
   };
 
@@ -151,6 +174,7 @@ export function usePageState(bookId: string | undefined) {
     currentBook,
     selectedPageId,
     currentPageData,
+    isSaving,
     handlePageSelect,
     handleAddPage,
     handleDuplicatePage,

@@ -36,6 +36,10 @@ export const saveBooks = (books: Book[]) => {
             } catch (e) {
               console.warn(`Failed to store image for book ${book.id}, page ${page.id}`, e);
               // Don't throw error here, just continue without storing the image
+              toast.error(`Failed to save large image for page ${page.pageNumber}. Try using a smaller image.`, { 
+                id: `image-save-error-${page.id}`,
+                duration: 5000
+              });
             }
           }
         });
@@ -43,9 +47,12 @@ export const saveBooks = (books: Book[]) => {
         console.error(`Error storing book ${book.id} data`, e);
       }
     });
+    
+    return true;
   } catch (e) {
     console.error('Failed to save books to localStorage', e);
     toast.error('Failed to save your books locally. Some data may be lost when you reload.');
+    return false;
   }
 };
 

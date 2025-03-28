@@ -1,17 +1,19 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronLeft, Download, Save, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Download, ChevronLeft, Loader2 } from 'lucide-react';
 import { Book } from '@/types/book';
 import { AIAssistant } from '@/components/AIAssistant';
 
 interface EditorHeaderProps {
-  book: Book | null;
+  book: Book;
   onExportPDF: () => void;
-  onApplyAIText: (text: string) => void;
-  onApplyAIImage: (imageData: string) => void;
+  onApplyAIText: (prompt: string) => void;
+  onApplyAIImage: (prompt: string) => void;
   initialPrompt?: string;
-  isExporting?: boolean;
+  isExporting: boolean;
+  isSaving?: boolean;
 }
 
 export const EditorHeader: React.FC<EditorHeaderProps> = ({
@@ -19,41 +21,46 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   onExportPDF,
   onApplyAIText,
   onApplyAIImage,
-  initialPrompt,
-  isExporting = false
+  initialPrompt = '',
+  isExporting,
+  isSaving = false
 }) => {
-  if (!book) return null;
-
   return (
-    <header className="border-b bg-white/70 backdrop-blur-md sticky top-0 z-40 py-3 px-4 md:px-8">
-      <div className="flex items-center justify-between">
+    <header className="sticky top-0 bg-white border-b z-10">
+      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" asChild>
-            <a href="/books">
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
-            </a>
-          </Button>
-          <div>
-            <h1 className="font-display text-xl font-semibold text-gray-900">{book.title}</h1>
-            <p className="text-sm text-gray-500">by {book.author}</p>
-          </div>
+          <Link to="/books" className="flex items-center text-gray-500 hover:text-gray-700">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            <span>Back to Books</span>
+          </Link>
+          <h1 className="text-xl font-medium">{book?.title || 'Untitled Book'}</h1>
+          
+          {/* Saving indicator */}
+          {isSaving && (
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Loader className="h-3 w-3 mr-1 animate-spin" />
+              <span>Saving...</span>
+            </div>
+          )}
+          {!isSaving && (
+            <div className="flex items-center text-sm text-green-600 opacity-0 transition-opacity duration-300">
+              <Save className="h-3 w-3 mr-1" />
+              <span>Saved</span>
+            </div>
+          )}
         </div>
-        <div className="flex space-x-2">
-          <AIAssistant 
-            onApplyText={onApplyAIText}
-            onApplyImage={onApplyAIImage}
-            initialPrompt={initialPrompt}
-          />
-          <Button 
-            variant="outline" 
-            size="sm" 
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center"
             onClick={onExportPDF}
             disabled={isExporting}
           >
             {isExporting ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader className="h-4 w-4 mr-2 animate-spin" />
                 Exporting...
               </>
             ) : (
@@ -63,6 +70,12 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
               </>
             )}
           </Button>
+          
+          <AIAssistant 
+            onApplyText={onApplyAIText}
+            onApplyImage={onApplyAIImage}
+            initialPrompt={initialPrompt}
+          />
         </div>
       </div>
     </header>

@@ -9,6 +9,7 @@ import { EditorContent } from '@/components/editor/EditorContent';
 import { usePageState } from '@/hooks/usePageState';
 import { useAIOperations } from '@/hooks/useAIOperations';
 import { exportBookToPdf, generatePdfFilename } from '@/services/pdfExport';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const EditorPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,7 @@ const EditorPage = () => {
     currentBook,
     selectedPageId,
     currentPageData,
+    isSaving,
     handlePageSelect,
     handleAddPage,
     handleDuplicatePage,
@@ -78,8 +80,18 @@ const EditorPage = () => {
   if (!currentBook) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-96">
-          <p>Loading book...</p>
+        <div className="flex flex-col space-y-4 p-8 w-full max-w-5xl mx-auto">
+          <Skeleton className="h-12 w-3/4" />
+          <div className="flex space-x-4">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+          <Skeleton className="h-64 w-full" />
         </div>
       </Layout>
     );
@@ -95,6 +107,7 @@ const EditorPage = () => {
           onApplyAIImage={handleApplyAIImage}
           initialPrompt={currentPageData?.text}
           isExporting={isExporting}
+          isSaving={isSaving}
         />
         
         <div className="border-b bg-white/50 backdrop-blur-sm">
