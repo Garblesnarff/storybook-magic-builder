@@ -28,6 +28,8 @@ export function usePageState(bookId: string | undefined) {
   const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
   const textUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [localText, setLocalText] = useState<string>('');
+  const [textChangesPending, setTextChangesPending] = useState(false);
   
   // Load the book when the component mounts or the book ID changes
   useEffect(() => {
@@ -59,32 +61,53 @@ export function usePageState(bookId: string | undefined) {
       const page = currentBook.pages.find(page => page.id === selectedPageId);
       if (page) {
         setCurrentPageData({ ...page });
+        setLocalText(page.text || '');
+        setTextChangesPending(false);
       } else {
         console.log('Selected page not found in current book');
       }
     }
   }, [selectedPageId, currentBook]);
 
-  // Clean up timeout on unmount
+  // Save pending text changes when navigating away
   useEffect(() => {
     return () => {
+      if (textChangesPending && currentPageData) {
+        saveTextChanges(localText);
+      }
+      
       if (textUpdateTimeoutRef.current) {
         clearTimeout(textUpdateTimeoutRef.current);
       }
     };
-  }, []);
+  }, [textChangesPending, currentPageData, localText]);
 
   const handlePageSelect = (pageId: string) => {
+    // Save any pending changes before switching pages
+    if (textChangesPending && currentPageData) {
+      saveTextChanges(localText);
+    }
+    
     setSelectedPageId(pageId);
   };
   
   const handleAddPage = () => {
+    // Save any pending changes before adding a new page
+    if (textChangesPending && currentPageData) {
+      saveTextChanges(localText);
+    }
+    
     addPage();
     toast.success('New page added');
   };
 
   const handleDuplicatePage = async (pageId: string) => {
     try {
+      // Save any pending changes before duplicating a page
+      if (textChangesPending && currentPageData) {
+        saveTextChanges(localText);
+      }
+      
       const newPageId = await duplicatePage(pageId);
       if (newPageId) {
         setSelectedPageId(newPageId);
@@ -96,19 +119,21 @@ export function usePageState(bookId: string | undefined) {
     }
   };
 
+  // This function only updates the local state without triggering a save
   const handleTextChange = (value: string) => {
     if (!currentPageData) return;
     
-    console.log('Text changed to:', value);
+    // Update local text state immediately for smooth typing experience
+    setLocalText(value);
     
-    // Update local state immediately for smooth typing experience
+    // Mark that we have unsaved changes
+    setTextChangesPending(true);
+    
+    // Update the current page data for rendering
     setCurrentPageData(prevState => {
       if (!prevState) return null;
       return { ...prevState, text: value };
     });
-    
-    // Show saving indicator
-    setIsSaving(true);
     
     // Clear any existing timeout
     if (textUpdateTimeoutRef.current) {
@@ -117,22 +142,37 @@ export function usePageState(bookId: string | undefined) {
     
     // Set a new timeout to save changes after user stops typing
     textUpdateTimeoutRef.current = setTimeout(() => {
-      if (currentPageData) {
-        const updatedPage = { ...currentPageData, text: value };
-        console.log('Saving updated page with text:', updatedPage.text);
-        updatePage(updatedPage);
-        
-        // Show saved indicator briefly after saving
-        setTimeout(() => {
-          setIsSaving(false);
-        }, 500);
-      }
+      saveTextChanges(value);
       textUpdateTimeoutRef.current = null;
-    }, 1000); // Increased timeout to 1000ms to give user more time to type
+    }, 2000); // Increased timeout to 2000ms to give user more time to type
+  };
+
+  // This function actually saves the text changes to the server
+  const saveTextChanges = (text: string) => {
+    if (!currentPageData) return;
+    
+    console.log('Saving text changes:', text);
+    setIsSaving(true);
+    
+    const updatedPage = { ...currentPageData, text: text };
+    updatePage(updatedPage);
+    
+    setTextChangesPending(false);
+    
+    // Show saved indicator briefly after saving
+    setTimeout(() => {
+      setIsSaving(false);
+    }, 500);
   };
 
   const handleLayoutChange = (value: any) => {
     if (!currentPageData) return;
+    
+    // Save any pending text changes first
+    if (textChangesPending) {
+      saveTextChanges(localText);
+    }
+    
     setIsSaving(true);
     const updatedPage = { ...currentPageData, layout: value };
     setCurrentPageData(updatedPage);
@@ -145,6 +185,12 @@ export function usePageState(bookId: string | undefined) {
 
   const handleTextFormattingChange = (key: any, value: any) => {
     if (!currentPageData) return;
+    
+    // Save any pending text changes first
+    if (textChangesPending) {
+      saveTextChanges(localText);
+    }
+    
     setIsSaving(true);
     const updatedFormatting = { 
       ...currentPageData.textFormatting,
@@ -164,6 +210,11 @@ export function usePageState(bookId: string | undefined) {
 
   const handleReorderPage = (sourceIndex: number, destinationIndex: number) => {
     if (!currentBook) return;
+    
+    // Save any pending text changes first
+    if (textChangesPending && currentPageData) {
+      saveTextChanges(localText);
+    }
     
     // Get the actual page from the visiblePages array
     const pageToMove = currentBook.pages[sourceIndex];
