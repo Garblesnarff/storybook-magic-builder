@@ -5,18 +5,35 @@ This directory contains modular services for interacting with Supabase.
 
 ### Files
 
-- **bookService.ts**: Functions for creating, loading, updating, and deleting books in Supabase.
-- **pageService.ts**: Functions for adding, updating, deleting, and reordering book pages in Supabase.
-- **storageService.ts**: Functions for uploading and managing images in Supabase Storage.
-- **utils.ts**: Utility functions for data conversion between our app models and Supabase database schema.
+- **bookService.ts**: Handles book-related operations with Supabase including creating, loading, updating, and deleting books. Contains functions such as `saveBookToSupabase`, `loadBookFromSupabase`, `loadBooksFromSupabase`, `createBookInSupabase`, and `deleteBookFromSupabase`.
+
+- **pageService.ts**: Manages page-related operations within books, including adding, updating, deleting, and reordering pages in Supabase. Contains functions such as `addPageToSupabase`, `updatePageInSupabase`, `deletePageFromSupabase`, and `reorderPagesInSupabase`.
+
+- **storageService.ts**: Handles image upload and storage operations in Supabase Storage. Contains functions like `uploadImage`, `deleteBookImages`, and `deletePageImages` for managing image assets related to books and pages.
+
+- **utils.ts**: Provides utility functions for data conversion between the application's data models and Supabase database schema. Contains functions like `bookPageToDatabasePage` and `databasePageToBookPage`.
+
+### Subdirectories
+
+- None at this time.
+
+### Instructions
+
+- All database interactions with Supabase should go through these service modules
+- When adding new functionality, place it in the appropriate service file based on its purpose
+- Keep functions focused on a single responsibility
+- Handle errors gracefully and provide user-friendly error messages via toast notifications
 
 ### Dependencies
 
-- @supabase/supabase-js: For Supabase client interaction
-- Book and BookPage types from types/book.ts
+- @supabase/supabase-js: For interacting with Supabase client
+- sonner: For toast notifications
+- Book and BookPage types from src/types/book.ts
+- Supabase client from src/integrations/supabase/client.ts
 
-### Usage Notes
+### Notes
 
 - These services replace the previous monolithic supabaseStorage.ts file
-- All functions maintain the same API signatures for drop-in replacement
-- Services handle proper error reporting via toast notifications
+- All services maintain backward compatibility with the original API signatures
+- When updating these services, ensure that error handling is consistently applied
+- Book images are stored in the 'book_images' bucket in Supabase Storage with a path pattern of `{bookId}/{pageId}_{timestamp}.png`
