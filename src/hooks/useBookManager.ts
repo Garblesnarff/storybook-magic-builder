@@ -27,12 +27,7 @@ export function useBookManager() {
     duplicatePage,
     pageLoading,
     pageError
-  } = usePageOperations(
-    books,
-    currentBook,
-    setBooks,  // Now passing the actual setBooks function from useBookOperations
-    setCurrentBook  // Now passing the actual setCurrentBook function from useBookOperations
-  );
+  } = usePageOperations(books, currentBook, setBooks, setCurrentBook);
 
   // Combine loading and error states
   const loading = bookLoading || pageLoading;
