@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { PageList } from '@/components/PageList';
@@ -35,24 +34,19 @@ const EditorPage = () => {
     handleDeletePage
   } = usePageState(id);
   
-  // Create a Promise-returning wrapper for handleAddPage with increased timeout
   const handleAddPageAsync = async () => {
     return new Promise<void>((resolve) => {
       handleAddPage();
-      // Give more time for the page to be added and saved to the database
       setTimeout(resolve, 1000);
     });
   };
   
-  // Add a data attribute to expose the current book state for multi-page creation
   useEffect(() => {
     if (currentBook) {
-      // Create or update the hidden data element with current book state
       let dataElement = document.querySelector('[data-book-state]');
       if (!dataElement) {
-        dataElement = document.createElement('div');
+        dataElement = document.createElement('div') as HTMLDivElement;
         dataElement.setAttribute('data-book-state', '{}');
-        // Fix: Correctly type the element as HTMLElement before accessing style property
         dataElement.style.display = 'none';
         document.body.appendChild(dataElement);
       }
@@ -60,7 +54,6 @@ const EditorPage = () => {
       dataElement.setAttribute('data-book-state', JSON.stringify(currentBook));
     }
     
-    // Cleanup
     return () => {
       const dataElement = document.querySelector('[data-book-state]');
       if (dataElement) {
@@ -77,7 +70,6 @@ const EditorPage = () => {
     handleApplyAIImage
   } = useAIOperations(currentPageData, updatePage, setCurrentPageData, handleAddPageAsync);
 
-  // Create a proper adapter function for layout changes
   const handleLayoutChange = (layout: PageLayout) => {
     handlePageLayoutChange(layout);
   };
@@ -95,7 +87,6 @@ const EditorPage = () => {
       const pdfBlob = await exportBookToPdf(currentBook);
       const filename = generatePdfFilename(currentBook);
       
-      // Create download link
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -103,7 +94,6 @@ const EditorPage = () => {
       document.body.appendChild(link);
       link.click();
       
-      // Clean up
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
@@ -143,7 +133,7 @@ const EditorPage = () => {
             onApplyAIImage={handleApplyAIImage}
             initialPrompt={currentPageData?.text}
             isExporting={isExporting}
-            isSaving={isSaving || processingStory} // Include story processing state
+            isSaving={isSaving || processingStory}
             currentBook={currentBook}
             updatePage={updatePage}
           />
@@ -169,7 +159,7 @@ const EditorPage = () => {
             handleTextFormattingChange={handleTextFormattingChange}
             handleGenerateImage={handleGenerateImage}
             handleImageSettingsChange={handleImageSettingsChange}
-            isGenerating={isGenerating || processingStory} // Include story processing state
+            isGenerating={isGenerating || processingStory}
           />
         </div>
       )}
