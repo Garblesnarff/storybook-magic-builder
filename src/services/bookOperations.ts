@@ -1,5 +1,5 @@
 
-import { Book, BookPage, DEFAULT_BOOK, DEFAULT_PAGE } from '../types/book';
+import { Book, BookPage, DEFAULT_BOOK, DEFAULT_PAGE, DEFAULT_PAGE_TEXT } from '../types/book';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   saveBookToSupabase, 
@@ -30,7 +30,8 @@ export const createNewPage = (pageNumber: number): BookPage => {
   return {
     ...DEFAULT_PAGE,
     id: uuidv4(),
-    pageNumber
+    pageNumber,
+    text: DEFAULT_PAGE_TEXT  // Ensure we use the constant here
   };
 };
 

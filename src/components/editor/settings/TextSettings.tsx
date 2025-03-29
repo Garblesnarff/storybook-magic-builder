@@ -47,7 +47,7 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
         <Label htmlFor="pageText">Page Text</Label>
         <Textarea
           id="pageText"
-          placeholder="Once upon a time..."
+          placeholder="Enter your text here..."
           className="h-40"
           value={text}
           onChange={(e) => onTextChange(e.target.value)}

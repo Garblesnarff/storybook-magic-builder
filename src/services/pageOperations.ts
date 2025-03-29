@@ -1,5 +1,5 @@
 
-import { Book, BookPage } from '../types/book';
+import { Book, BookPage, DEFAULT_PAGE_TEXT } from '../types/book';
 import { v4 as uuidv4 } from 'uuid';
 import { createNewPage, updateBook } from './bookOperations';
 import { 

@@ -1,5 +1,5 @@
 
-import { Book, BookPage } from '../../types/book';
+import { Book, BookPage, DEFAULT_PAGE_TEXT } from '../../types/book';
 
 // Function to convert BookPage type to database schema
 export const bookPageToDatabasePage = (bookPage: BookPage, bookId: string) => {
@@ -7,7 +7,7 @@ export const bookPageToDatabasePage = (bookPage: BookPage, bookId: string) => {
     id: bookPage.id,
     book_id: bookId,
     page_number: bookPage.pageNumber,
-    text: bookPage.text,
+    text: bookPage.text, // We'll use the exact text value, even if empty
     image_url: bookPage.image, // This will be updated to store image URLs
     layout: bookPage.layout,
     background_color: bookPage.backgroundColor,
@@ -25,7 +25,7 @@ export const databasePageToBookPage = (dbPage: any): BookPage => {
   return {
     id: dbPage.id,
     pageNumber: dbPage.page_number,
-    text: dbPage.text || 'Once upon a time...',
+    text: dbPage.text ?? '', // Use empty string if null, don't insert default text
     image: dbPage.image_url,
     layout: dbPage.layout,
     backgroundColor: dbPage.background_color,

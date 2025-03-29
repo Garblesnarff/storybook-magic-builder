@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 
 interface UseRealTimeTextProps {
@@ -51,14 +52,14 @@ export function useRealTimeText({
       clearTimeout(debounceTimerRef.current);
     }
     
-    // Only save if the text is different from the initial text
+    // Always save if the text is different from the initial text or if text has been explicitly cleared
     if (newText !== initialText || hasBeenCleared.current) {
       // Show saving indicator
       setIsSaving(true);
       
       // Set a delay before saving
       debounceTimerRef.current = setTimeout(() => {
-        // Call the save function (even if empty)
+        // Call the save function (always save the exact text, even if empty)
         onSave(newText);
         
         // Hide saving indicator after a short delay

@@ -1,5 +1,5 @@
 
-import { BookPage } from '../../types/book';
+import { BookPage, DEFAULT_PAGE_TEXT } from '../../types/book';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,14 +11,14 @@ export const addPageToSupabase = async (bookId: string, pageNumber: number): Pro
   try {
     const pageId = uuidv4();
     
-    // Insert the new page
+    // Insert the new page (use empty text by default)
     const { data, error } = await supabase
       .from('book_pages')
       .insert({
         id: pageId,
         book_id: bookId,
         page_number: pageNumber,
-        text: 'Once upon a time...',
+        text: DEFAULT_PAGE_TEXT, // Use empty text by default
         layout: 'text-left-image-right'
       })
       .select()

@@ -48,6 +48,9 @@ export interface ImageStyle {
   description: string;
 }
 
+// Define the default text as a constant for reuse and a single source of truth
+export const DEFAULT_PAGE_TEXT = ''; // Changed from 'Once upon a time...' to empty string
+
 export const DEFAULT_BOOK: Omit<Book, 'id'> = {
   title: 'Untitled Book',
   author: 'Anonymous',
@@ -63,7 +66,7 @@ export const DEFAULT_BOOK: Omit<Book, 'id'> = {
 };
 
 export const DEFAULT_PAGE: Omit<BookPage, 'id' | 'pageNumber'> = {
-  text: 'Once upon a time...',
+  text: DEFAULT_PAGE_TEXT, // Use the constant here
   layout: 'text-left-image-right',
   textFormatting: {
     fontFamily: 'Inter',

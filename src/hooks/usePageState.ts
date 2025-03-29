@@ -90,7 +90,7 @@ export function usePageState(bookId: string | undefined) {
     if (!currentPageData) return;
     
     // Always update the page, even with empty text
-    // No need to compare with currentPageData.text anymore
+    console.log('Updating page text to:', value);
     
     // Show saving indicator
     setIsSaving(true);
@@ -170,7 +170,7 @@ export function usePageState(bookId: string | undefined) {
     handleAddPage,
     handleDuplicatePage,
     handleTextChange,
-    handleLayoutChange,
+    handleLayoutChange: handleTextFormattingChange,
     handleTextFormattingChange,
     updatePage,
     setCurrentPageData,
