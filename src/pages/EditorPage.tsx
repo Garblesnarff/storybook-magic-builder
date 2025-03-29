@@ -10,6 +10,7 @@ import { usePageState } from '@/hooks/usePageState';
 import { useAIOperations } from '@/hooks/useAIOperations';
 import { exportBookToPdf, generatePdfFilename } from '@/services/pdfExport';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageLayout } from '@/types/book';
 
 const EditorPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,7 +26,7 @@ const EditorPage = () => {
     handleAddPage,
     handleDuplicatePage,
     handleTextChange,
-    handleLayoutChange,
+    handleLayoutChange: handlePageLayoutChange,
     handleTextFormattingChange,
     updatePage,
     setCurrentPageData,
@@ -38,6 +39,11 @@ const EditorPage = () => {
     handleApplyAIText,
     handleApplyAIImage
   } = useAIOperations(currentPageData, updatePage, setCurrentPageData);
+
+  // Create a proper adapter function for layout changes
+  const handleLayoutChange = (layout: PageLayout) => {
+    handlePageLayoutChange(layout);
+  };
 
   const handleExportPDF = async () => {
     if (!currentBook) {

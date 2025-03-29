@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useRef } from 'react';
-import { BookPage } from '@/types/book';
+import { BookPage, PageLayout } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
 import { toast } from 'sonner';
 
@@ -111,7 +112,8 @@ export function usePageState(bookId: string | undefined) {
     }, 300);
   };
 
-  const handleLayoutChange = (value: any) => {
+  // Fixed function for layout changes (single parameter)
+  const handleLayoutChange = (value: PageLayout) => {
     if (!currentPageData) return;
     
     setIsSaving(true);
@@ -170,7 +172,7 @@ export function usePageState(bookId: string | undefined) {
     handleAddPage,
     handleDuplicatePage,
     handleTextChange,
-    handleLayoutChange: handleTextFormattingChange,
+    handleLayoutChange,
     handleTextFormattingChange,
     updatePage,
     setCurrentPageData,
