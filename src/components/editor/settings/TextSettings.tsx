@@ -16,12 +16,14 @@ interface TextSettingsProps {
   currentPageData: BookPage;
   handleTextChange: (value: string) => void;
   handleTextFormattingChange: (key: keyof TextFormatting, value: any) => void;
+  onPreviewTextChange?: (value: string) => void; // Add this prop definition
 }
 
 export const TextSettings: React.FC<TextSettingsProps> = ({
   currentPageData,
   handleTextChange,
-  handleTextFormattingChange
+  handleTextFormattingChange,
+  onPreviewTextChange
 }) => {
   const { 
     text, 
@@ -31,6 +33,13 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
     initialText: currentPageData.text || "",
     onSave: handleTextChange
   });
+  
+  // Call onPreviewTextChange when text changes if provided
+  useEffect(() => {
+    if (onPreviewTextChange) {
+      onPreviewTextChange(text);
+    }
+  }, [text, onPreviewTextChange]);
   
   return (
     <div className="space-y-4">
