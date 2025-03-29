@@ -17,17 +17,24 @@ import { AIAssistantTabs } from './ai/AIAssistantTabs';
 
 // Import the AI operations hook
 import { useAIOperations } from '@/hooks/useAIOperations';
+import { BookPage } from '@/types/book';
 
 interface AIAssistantProps {
   onApplyText?: (text: string) => void;
   onApplyImage?: (imageBase64: string) => void;
   initialPrompt?: string;
+  currentBook?: {
+    pages: BookPage[];
+  } | null;
+  updatePage?: (page: BookPage) => void;
 }
 
 export const AIAssistant: React.FC<AIAssistantProps> = ({ 
   onApplyText, 
   onApplyImage,
-  initialPrompt = ''
+  initialPrompt = '',
+  currentBook,
+  updatePage
 }) => {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [temperature, setTemperature] = useState(0.7);
@@ -57,6 +64,29 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const handleApplyText = () => {
     if (onApplyText && generatedText) {
       onApplyText(generatedText);
+      
+      // If we have a book and updatePage function, distribute text across pages
+      if (currentBook && updatePage && generatedText) {
+        const pageBreakMarker = '---PAGE BREAK---';
+        const segments = generatedText
+          .split(pageBreakMarker)
+          .map(segment => segment.trim())
+          .filter(segment => segment.length > 0);
+        
+        // If we have enough segments and pages, update each page
+        if (segments.length > 1 && currentBook.pages.length >= segments.length) {
+          // Distribute text segments to pages
+          segments.forEach((segment, index) => {
+            if (index < currentBook.pages.length) {
+              const page = currentBook.pages[index];
+              updatePage({
+                ...page,
+                text: segment
+              });
+            }
+          });
+        }
+      }
     }
   };
 

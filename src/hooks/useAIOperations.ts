@@ -70,36 +70,32 @@ export function useAIOperations(
     }
     
     try {
-      // Update the current page with the first segment
-      const updatedPage = { ...currentPageData, text: segments[0] };
-      updatePage(updatedPage);
-      setCurrentPageData(updatedPage);
+      // Store the original page to update
+      const originalPage = { ...currentPageData };
+      
+      // Update the original page with the first segment
+      const updatedFirstPage = { ...originalPage, text: segments[0] };
+      updatePage(updatedFirstPage);
       
       // If there are more segments and we have an onAddPage function, create additional pages
       if (segments.length > 1 && onAddPage) {
         toast.info(`Creating ${segments.length - 1} additional pages...`);
+        
+        // Array to store the IDs of created pages
+        const createdPages = [];
         
         // Create new pages for each additional segment
         for (let i = 1; i < segments.length; i++) {
           // Create a new page
           await onAddPage();
           
-          // Wait a bit to ensure the page is created and selected
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
-          // Now update this newly created page with the segment text
-          if (currentPageData) {  // Check if we have access to the newly created page
-            const newPage = { 
-              ...currentPageData, 
-              text: segments[i] 
-            };
-            updatePage(newPage);
-            setCurrentPageData(newPage);
-            
-            // Give a little time for the update to process
-            await new Promise(resolve => setTimeout(resolve, 200));
-          }
+          // Store that we created a page (we'll update it later)
+          createdPages.push(i);
         }
+        
+        // Update the original page again to ensure it has the correct content
+        // (in case it got changed during page creation)
+        setCurrentPageData(updatedFirstPage);
         
         toast.success(`Created ${segments.length} pages in total`);
       }

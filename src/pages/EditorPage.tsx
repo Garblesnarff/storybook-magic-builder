@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { PageList } from '@/components/PageList';
@@ -37,7 +36,10 @@ const EditorPage = () => {
   
   // Create a Promise-returning wrapper for handleAddPage
   const handleAddPageAsync = async () => {
-    return handleAddPage();
+    return new Promise<void>((resolve) => {
+      handleAddPage();
+      setTimeout(resolve, 100); // Give time for the page to be added
+    });
   };
   
   const {
@@ -114,6 +116,8 @@ const EditorPage = () => {
             initialPrompt={currentPageData?.text}
             isExporting={isExporting}
             isSaving={isSaving}
+            currentBook={currentBook}
+            updatePage={updatePage}
           />
           
           <div className="border-b bg-white/50 backdrop-blur-sm">
