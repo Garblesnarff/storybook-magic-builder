@@ -28,6 +28,7 @@ export function useAIOperations(
   
   const {
     isGenerating,
+    processingStory,
     pendingTextSegments,
     getPendingTextSegments,
     handleGenerateImage,
@@ -38,6 +39,7 @@ export function useAIOperations(
   return {
     // Original functions for direct page updates
     isGenerating,
+    processingStory,
     pendingTextSegments,
     getPendingTextSegments,
     handleGenerateImage,

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import {
@@ -51,43 +51,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setGeneratedText,
     setGeneratedImage,
     generateText,
-    generateImage,
-    pendingTextSegments,
-    getPendingTextSegments
+    generateImage
   } = useAIOperations(null, () => {}, () => {});
-
-  // Effect to distribute pending text segments to pages when the book changes
-  useEffect(() => {
-    if (currentBook && updatePage && pendingTextSegments && pendingTextSegments.length > 0) {
-      console.log('AIAssistant: detected pending text segments, distributing to pages', {
-        pendingSegments: pendingTextSegments.length,
-        bookPageCount: currentBook.pages.length
-      });
-      
-      // Get a copy of the pending segments and clear them from state
-      const segments = getPendingTextSegments();
-      
-      // Calculate starting index - skip the first page as it's already updated
-      const startingPageIndex = currentBook.pages.length - segments.length;
-      
-      // Apply each segment to the corresponding page
-      segments.forEach((segment, index) => {
-        const pageIndex = startingPageIndex + index;
-        if (pageIndex >= 0 && pageIndex < currentBook.pages.length) {
-          const page = currentBook.pages[pageIndex];
-          console.log(`Updating page ${pageIndex} with segment:`, { pageId: page.id, textLength: segment.length });
-          updatePage({
-            ...page,
-            text: segment
-          });
-        } else {
-          console.warn(`Page index ${pageIndex} out of bounds (0-${currentBook.pages.length-1})`);
-        }
-      });
-      
-      console.log('All pending text segments distributed to pages');
-    }
-  }, [currentBook, updatePage, pendingTextSegments, getPendingTextSegments]);
 
   const handleGenerateText = async () => {
     await generateText(prompt, temperature, maxTokens);

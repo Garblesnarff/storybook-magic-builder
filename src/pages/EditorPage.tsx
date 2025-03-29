@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { PageList } from '@/components/PageList';
 import { useParams, Navigate } from 'react-router-dom';
@@ -35,16 +35,42 @@ const EditorPage = () => {
     handleDeletePage
   } = usePageState(id);
   
-  // Create a Promise-returning wrapper for handleAddPage
+  // Create a Promise-returning wrapper for handleAddPage with increased timeout
   const handleAddPageAsync = async () => {
     return new Promise<void>((resolve) => {
       handleAddPage();
-      setTimeout(resolve, 500); // Give more time for the page to be added
+      // Give more time for the page to be added and saved to the database
+      setTimeout(resolve, 1000);
     });
   };
   
+  // Add a data attribute to expose the current book state for multi-page creation
+  useEffect(() => {
+    if (currentBook) {
+      // Create or update the hidden data element with current book state
+      let dataElement = document.querySelector('[data-book-state]');
+      if (!dataElement) {
+        dataElement = document.createElement('div');
+        dataElement.setAttribute('data-book-state', '{}');
+        dataElement.style.display = 'none';
+        document.body.appendChild(dataElement);
+      }
+      
+      dataElement.setAttribute('data-book-state', JSON.stringify(currentBook));
+    }
+    
+    // Cleanup
+    return () => {
+      const dataElement = document.querySelector('[data-book-state]');
+      if (dataElement) {
+        document.body.removeChild(dataElement);
+      }
+    };
+  }, [currentBook]);
+  
   const {
     isGenerating,
+    processingStory,
     handleGenerateImage,
     handleApplyAIText,
     handleApplyAIImage
@@ -116,7 +142,7 @@ const EditorPage = () => {
             onApplyAIImage={handleApplyAIImage}
             initialPrompt={currentPageData?.text}
             isExporting={isExporting}
-            isSaving={isSaving}
+            isSaving={isSaving || processingStory} // Include story processing state
             currentBook={currentBook}
             updatePage={updatePage}
           />
@@ -142,7 +168,7 @@ const EditorPage = () => {
             handleTextFormattingChange={handleTextFormattingChange}
             handleGenerateImage={handleGenerateImage}
             handleImageSettingsChange={handleImageSettingsChange}
-            isGenerating={isGenerating}
+            isGenerating={isGenerating || processingStory} // Include story processing state
           />
         </div>
       )}
