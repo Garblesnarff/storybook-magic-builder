@@ -35,11 +35,11 @@ const EditorPage = () => {
     handleDeletePage
   } = usePageState(id);
   
-  const handleAddPageAsync = async () => {
-    return new Promise<void>((resolve) => {
-      handleAddPage();
-      setTimeout(resolve, 1000);
-    });
+  // Modify handleAddPageAsync to correctly await and return the new page ID
+  const handleAddPageAsync = async (): Promise<string | undefined> => {
+    // handleAddPage now returns Promise<string | undefined>
+    const newPageId = await handleAddPage(); 
+    return newPageId; // Return the ID received from handleAddPage
   };
   
   useEffect(() => {

@@ -12,7 +12,7 @@ interface BookContextProps {
   updateBook: (book: Book) => Promise<void>;
   deleteBook: (id: string) => Promise<void>;
   loadBook: (id: string) => Promise<Book | null>;
-  addPage: () => Promise<void>;
+  addPage: () => Promise<string | undefined>; // Update return type
   updatePage: (page: BookPage) => Promise<void>;
   deletePage: (id: string) => Promise<void>;
   reorderPage: (id: string, newPosition: number) => Promise<void>;

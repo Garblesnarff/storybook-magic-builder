@@ -12,35 +12,42 @@ import {
 /**
  * Page-specific operations
  */
-export const addPage = async (currentBook: Book, books: Book[]): Promise<Book[]> => {
-  if (!currentBook) return books;
+// Modify return type to include the new page ID
+export const addPage = async (currentBook: Book, books: Book[]): Promise<[Book[], string | undefined]> => {
+  if (!currentBook) return [books, undefined];
 
   const newPageNumber = currentBook.pages.length;
-  const newPage = await addPageToSupabase(currentBook.id, newPageNumber);
+  const newPageFromDb = await addPageToSupabase(currentBook.id, newPageNumber); // Capture the result
+  let newPageId: string | undefined = undefined;
+  let pageToAdd: BookPage;
   
-  if (!newPage) {
+  if (!newPageFromDb) {
     // Fallback to local creation if Supabase fails
-    const localNewPage = createNewPage(newPageNumber);
-    const updatedBook = {
-      ...currentBook,
-      pages: [...currentBook.pages, localNewPage],
-      updatedAt: new Date().toISOString()
-    };
-    
-    return updateBook(updatedBook, books);
+    console.warn("Supabase failed to add page, creating locally.");
+    pageToAdd = createNewPage(newPageNumber);
+    // newPageId remains undefined in fallback
+  } else {
+    // Use the page returned from Supabase
+    pageToAdd = newPageFromDb;
+    newPageId = newPageFromDb.id; // Capture the ID
   }
   
-  // Update with the page from Supabase
+  // Update with the page (either from Supabase or local fallback)
   const updatedBook = {
     ...currentBook,
-    pages: [...currentBook.pages, newPage],
+    pages: [...currentBook.pages, pageToAdd],
     updatedAt: new Date().toISOString()
   };
 
-  return updateBook(updatedBook, books);
+  // Assume updateBook returns the updated books array, and await it
+  const updatedBooksArray = await updateBook(updatedBook, books); 
+  
+  // Return the updated books array and the new page ID
+  return [updatedBooksArray, newPageId]; 
 };
 
 export const updatePage = async (updatedPage: BookPage, currentBook: Book, books: Book[]): Promise<Book[]> => {
+  // Removed erroneous pasted block from addPage fallback
   if (!currentBook) return books;
 
   // Update page in Supabase

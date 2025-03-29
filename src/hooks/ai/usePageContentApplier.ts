@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from 'react';
-import { BookPage } from '@/types/book';
+// Import missing types and DEFAULT_PAGE
+import { BookPage, PageLayout, TextFormatting, ImageSettings, DEFAULT_PAGE } from '@/types/book'; 
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -8,7 +9,7 @@ export function usePageContentApplier(
   currentPageData: BookPage | null,
   updatePage: (page: BookPage) => Promise<void>,
   setCurrentPageData: (page: BookPage | null) => void,
-  onAddPage?: () => Promise<void>
+  onAddPage?: () => Promise<string | undefined> // Update expected return type
 ) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [processingStory, setProcessingStory] = useState(false);
@@ -117,65 +118,29 @@ export function usePageContentApplier(
         return;
       }
       
-      // Step 1: Update the first page (current page) directly
-      const firstSegment = segments[0];
+      // --- REMOVED Special handling for the first page ---
       
-      // Update first page in memory immediately for UI feedback
-      const updatedFirstPage = { 
-        ...currentPageData, 
-        text: firstSegment 
-      };
-      setCurrentPageData(updatedFirstPage);
+      // Update progress toast (start from 0)
+      toast.loading(`Processing pages: 0/${segments.length}`, { id: toastId });
       
-      // Update first page directly
-      const { error: firstPageError } = await supabase
-        .from('book_pages')
-        .update({ 
-          text: firstSegment,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentPageData.id);
-      
-      if (firstPageError) {
-        console.error('Error updating first page:', firstPageError);
-        toast.error('Failed to update first page', { id: toastId });
-        setProcessingStory(false);
-        return;
-      }
-      
-      // Call the update function to ensure local state is updated
-      await updatePage(updatedFirstPage);
-      
-      // Wait to ensure database update has time to process
-      await wait(500);
-      
-      // Update progress toast
-      toast.loading(`Processing pages: 1/${segments.length}`, { id: toastId });
-      
-      // If there are more segments, handle them sequentially
-      if (segments.length > 1 && onAddPage) {
-        // Process remaining segments one by one
-        for (let i = 1; i < segments.length; i++) {
+      // Create new pages for ALL segments
+      if (segments.length > 0 && onAddPage) {
+        // Process ALL segments one by one, starting from index 0
+        for (let i = 0; i < segments.length; i++) { 
           try {
-            // Create a new page
-            await onAddPage();
+            // Create a new page and get its ID
+            const newPageId = await onAddPage(); 
             
-            // Get all pages, sorted by page number
-            const { data: allPages } = await supabase
-              .from('book_pages')
-              .select('id, page_number')
-              .eq('book_id', bookId)
-              .order('page_number', { ascending: true });
-              
-            if (!allPages || allPages.length <= i) {
-              console.error(`Not enough pages found for segment ${i+1}`);
-              continue;
+            if (!newPageId) {
+              console.error(`Failed to create page for segment ${i+1}`);
+              toast.error(`Failed to create page ${i+1}`, { id: toastId });
+              // Optionally break or continue depending on desired behavior
+              continue; 
             }
+
+            // No longer need to fetch all pages or guess the ID
             
-            // Find the page with the highest page number
-            const newPageId = allPages[allPages.length - 1].id;
-            
-            // Update the page with content
+            // Update the newly created page directly using its ID
             const { error } = await supabase
               .from('book_pages')
               .update({ 
@@ -185,11 +150,32 @@ export function usePageContentApplier(
               .eq('id', newPageId);
               
             if (error) {
-              console.error(`Error updating page ${newPageId}:`, error);
-            }
+              console.error(`Error updating page ${newPageId} text:`, error);
+              // Optionally notify user
+            } 
             
-            // Allow database time to process
-            await wait(500);
+            // Construct the page object to update state *before* calling updatePage
+            // Calculate the expected page number (relative to the original page + loop index + 1)
+            const expectedPageNumber = currentPageData.pageNumber + i + 1; 
+            
+            const pageToUpdate: BookPage = {
+              ...DEFAULT_PAGE, // Start with defaults
+              id: newPageId,
+              pageNumber: expectedPageNumber,
+              text: segments[i], // Use the correct text segment
+              // Inherit layout/formatting from the first page? Or use defaults? Using defaults for now.
+              // layout: currentPageData.layout, 
+              // textFormatting: currentPageData.textFormatting,
+              // imageSettings: currentPageData.imageSettings,
+              // backgroundColor: currentPageData.backgroundColor
+            };
+
+            // Call updatePage prop to sync application state AND update DB
+            // updatePage service function handles the Supabase update internally
+            await updatePage(pageToUpdate); 
+
+            // Wait after state/DB update attempt before next iteration
+            await wait(500); 
             
             // Update progress toast
             toast.loading(`Processing pages: ${i+1}/${segments.length}`, { id: toastId });

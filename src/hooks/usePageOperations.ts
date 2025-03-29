@@ -19,12 +19,14 @@ export function usePageOperations(
   const [pageLoading, setPageLoading] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
-  const addPage = async (): Promise<void> => {
-    if (!currentBook) return;
+  // Modify addPage to return the new page ID
+  const addPage = async (): Promise<string | undefined> => {
+    if (!currentBook) return undefined;
     
     try {
       setPageLoading(true);
-      const updatedBooksResult = await addPageService(currentBook, books);
+      // Assume addPageService returns [updatedBooks, newPageId]
+      const [updatedBooksResult, newPageId] = await addPageService(currentBook, books);
       
       setBooks(updatedBooksResult);
       
@@ -34,11 +36,14 @@ export function usePageOperations(
         setCurrentBook(updatedBook);
       }
       
-      toast.success('New page added');
+      // Don't show toast here, let the handler do it
+      // toast.success('New page added'); 
+      return newPageId; // Return the ID
     } catch (error) {
       console.error('Error adding page:', error);
       setPageError('Failed to add page');
       toast.error('Failed to add page');
+      return undefined; // Return undefined on error
     } finally {
       setPageLoading(false);
     }

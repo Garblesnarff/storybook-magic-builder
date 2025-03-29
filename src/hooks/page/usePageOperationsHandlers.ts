@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react'; // Add missing React import
 import { toast } from 'sonner';
 import { Book } from '@/types/book';
 import { useSavingState } from './useSavingState';
@@ -7,7 +7,7 @@ import { useSavingState } from './useSavingState';
 export function usePageOperationsHandlers(
   currentBook: Book | null,
   selectedPageId: string | undefined,
-  addPage: () => Promise<void>,
+  addPage: () => Promise<string | undefined>, // Expect addPage to return the new ID
   duplicatePage: (id: string) => Promise<string | undefined>,
   deletePage: (id: string) => Promise<void>,
   reorderPage: (id: string, newPosition: number) => Promise<void>,
@@ -15,9 +15,22 @@ export function usePageOperationsHandlers(
 ) {
   const { trackSavingOperation, completeSavingOperation } = useSavingState();
   
-  const handleAddPage = () => {
-    addPage();
-    toast.success('New page added');
+  // Modify handleAddPage to be async and return the new page ID
+  const handleAddPage = async (): Promise<string | undefined> => {
+    try {
+      const newPageId = await addPage(); // Await the context function
+      if (newPageId) {
+        toast.success('New page added');
+        return newPageId; // Return the ID
+      } else {
+        toast.error('Failed to add new page');
+        return undefined;
+      }
+    } catch (error) {
+      console.error('Error adding page:', error);
+      toast.error('Failed to add new page');
+      return undefined;
+    }
   };
 
   const handleDuplicatePage = async (pageId: string) => {

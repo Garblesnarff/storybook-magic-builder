@@ -9,7 +9,7 @@ export function useAIOperations(
   currentPageData: BookPage | null, 
   updatePage: (page: BookPage) => Promise<void>, 
   setCurrentPageData: (page: BookPage | null) => void,
-  onAddPage?: () => Promise<void>
+  onAddPage?: () => Promise<string | undefined> // Update expected return type
 ) {
   // Use the separate hook modules for AI operations
   const { 
