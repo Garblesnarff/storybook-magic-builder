@@ -28,6 +28,7 @@ export function usePageState(bookId: string | undefined) {
   const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentSavingOperationsRef = useRef<number>(0);
   
   // Load the book when the component mounts or the book ID changes
   useEffect(() => {
@@ -58,27 +59,39 @@ export function usePageState(bookId: string | undefined) {
       console.log('Updating current page data for page ID:', selectedPageId);
       const page = currentBook.pages.find(page => page.id === selectedPageId);
       if (page) {
-        setCurrentPageData({ ...page });
+        // Deep clone to avoid reference issues
+        setCurrentPageData(JSON.parse(JSON.stringify(page)));
       } else {
         console.log('Selected page not found in current book');
       }
     }
   }, [selectedPageId, currentBook]);
 
-  // Helper function to show saving indicator with controlled timing
-  const showSavingIndicator = () => {
-    // Clear any existing timeout to prevent flickering
+  // Helper function to track saving operations
+  const trackSavingOperation = () => {
+    // Increment the counter
+    currentSavingOperationsRef.current += 1;
+    
+    // Make sure saving indicator is shown
+    setIsSaving(true);
+    
+    // Clear any existing timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
+  };
+
+  // Helper function to complete a saving operation
+  const completeSavingOperation = () => {
+    // Decrement the counter
+    currentSavingOperationsRef.current = Math.max(0, currentSavingOperationsRef.current - 1);
     
-    // Show saving indicator
-    setIsSaving(true);
-    
-    // Hide indicator after a short delay
-    saveTimeoutRef.current = setTimeout(() => {
-      setIsSaving(false);
-    }, 800);
+    // If no more operations are in progress, schedule hiding the indicator
+    if (currentSavingOperationsRef.current === 0) {
+      saveTimeoutRef.current = setTimeout(() => {
+        setIsSaving(false);
+      }, 800);
+    }
   };
 
   // Cleanup timeouts on unmount
@@ -117,7 +130,7 @@ export function usePageState(bookId: string | undefined) {
     if (!currentBook) return;
     
     try {
-      showSavingIndicator();
+      trackSavingOperation();
       await deletePage(pageId);
       
       // After deleting, select the first page or the previous page
@@ -128,9 +141,11 @@ export function usePageState(bookId: string | undefined) {
       }
       
       toast.success('Page deleted');
+      completeSavingOperation();
     } catch (error) {
       console.error('Error deleting page:', error);
       toast.error('Failed to delete page');
+      completeSavingOperation();
     }
   };
 
@@ -141,7 +156,7 @@ export function usePageState(bookId: string | undefined) {
     // Always update the page, even with empty text
     console.log('Updating page text to:', value);
     
-    showSavingIndicator();
+    trackSavingOperation();
     
     // Update local state and save to backend
     setCurrentPageData(prevState => {
@@ -149,7 +164,10 @@ export function usePageState(bookId: string | undefined) {
       const updatedPage = { ...prevState, text: value };
       
       // Save the changes to the database
-      updatePage(updatedPage);
+      updatePage(updatedPage)
+        .then(() => completeSavingOperation())
+        .catch(() => completeSavingOperation());
+        
       return updatedPage;
     });
   };
@@ -158,16 +176,19 @@ export function usePageState(bookId: string | undefined) {
   const handleLayoutChange = (value: PageLayout) => {
     if (!currentPageData) return;
     
-    showSavingIndicator();
+    trackSavingOperation();
     const updatedPage = { ...currentPageData, layout: value };
     setCurrentPageData(updatedPage);
-    updatePage(updatedPage);
+    
+    updatePage(updatedPage)
+      .then(() => completeSavingOperation())
+      .catch(() => completeSavingOperation());
   };
 
   const handleTextFormattingChange = (key: any, value: any) => {
     if (!currentPageData) return;
     
-    showSavingIndicator();
+    trackSavingOperation();
     const updatedFormatting = { 
       ...currentPageData.textFormatting,
       [key]: value 
@@ -177,7 +198,10 @@ export function usePageState(bookId: string | undefined) {
       textFormatting: updatedFormatting 
     };
     setCurrentPageData(updatedPage);
-    updatePage(updatedPage);
+    
+    updatePage(updatedPage)
+      .then(() => completeSavingOperation())
+      .catch(() => completeSavingOperation());
   };
 
   // Function to handle image settings changes
@@ -185,14 +209,16 @@ export function usePageState(bookId: string | undefined) {
     if (!currentPageData) return;
     
     console.log('Saving image settings:', settings);
-    showSavingIndicator();
+    trackSavingOperation();
     
-    const updatedPage = { 
-      ...currentPageData, 
-      imageSettings: settings 
-    };
+    // Create a deep clone of the current page data to prevent reference issues
+    const updatedPage = JSON.parse(JSON.stringify(currentPageData));
+    updatedPage.imageSettings = settings;
+    
     setCurrentPageData(updatedPage);
-    updatePage(updatedPage);
+    updatePage(updatedPage)
+      .then(() => completeSavingOperation())
+      .catch(() => completeSavingOperation());
   };
 
   const handleReorderPage = (sourceIndex: number, destinationIndex: number) => {
@@ -202,8 +228,10 @@ export function usePageState(bookId: string | undefined) {
     const pageToMove = currentBook.pages[sourceIndex];
     
     if (pageToMove) {
-      showSavingIndicator();
-      reorderPage(pageToMove.id, destinationIndex);
+      trackSavingOperation();
+      reorderPage(pageToMove.id, destinationIndex)
+        .then(() => completeSavingOperation())
+        .catch(() => completeSavingOperation());
     }
   };
 
