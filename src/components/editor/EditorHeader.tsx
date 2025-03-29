@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, Download, Save, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Book } from '@/types/book';
+import { Book, BookPage } from '@/types/book';
 import { AIAssistant } from '@/components/AIAssistant';
 
 interface EditorHeaderProps {
@@ -14,6 +14,8 @@ interface EditorHeaderProps {
   initialPrompt?: string;
   isExporting: boolean;
   isSaving?: boolean;
+  currentBook?: Book | null;
+  updatePage?: (page: BookPage) => void;
 }
 
 export const EditorHeader: React.FC<EditorHeaderProps> = ({
@@ -23,7 +25,9 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   onApplyAIImage,
   initialPrompt = '',
   isExporting,
-  isSaving = false
+  isSaving = false,
+  currentBook,
+  updatePage
 }) => {
   return (
     <header className="sticky top-0 bg-white border-b z-10">
@@ -75,6 +79,8 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
             onApplyText={onApplyAIText}
             onApplyImage={onApplyAIImage}
             initialPrompt={initialPrompt}
+            currentBook={currentBook}
+            updatePage={updatePage}
           />
         </div>
       </div>
