@@ -24,6 +24,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [fitMethod, setFitMethod] = useState<'contain' | 'cover'>('contain');
 
   // Load image dimensions when source changes
   useEffect(() => {
@@ -58,17 +59,33 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
   // Calculate initial fitting scale when image and container dimensions are available
   useEffect(() => {
     if (imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
-      // Auto-fit image to container on initial load - fill instead of fit
-      const widthRatio = containerDimensions.width / imageDimensions.width;
-      const heightRatio = containerDimensions.height / imageDimensions.height;
-      
-      // Use the larger ratio to ensure the image fills the container
-      const fillScale = Math.max(widthRatio, heightRatio);
-      
-      // Set scale to fill the container, with minimum scale of 1
-      setScale(Math.max(fillScale, 1));
+      fitImageToContainer();
     }
-  }, [imageLoaded, containerDimensions, imageDimensions]);
+  }, [imageLoaded, containerDimensions, imageDimensions, fitMethod]);
+
+  const fitImageToContainer = () => {
+    if (!imageLoaded || containerDimensions.width <= 0 || containerDimensions.height <= 0 || imageDimensions.width <= 0) {
+      return;
+    }
+    
+    const widthRatio = containerDimensions.width / imageDimensions.width;
+    const heightRatio = containerDimensions.height / imageDimensions.height;
+    
+    // For contain: use the smaller ratio to ensure the whole image is visible
+    // For cover: use the larger ratio to fill the container
+    const newScale = fitMethod === 'contain' 
+      ? Math.min(widthRatio, heightRatio) 
+      : Math.max(widthRatio, heightRatio);
+    
+    setScale(newScale);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const toggleFitMethod = () => {
+    const newMethod = fitMethod === 'contain' ? 'cover' : 'contain';
+    setFitMethod(newMethod);
+    // Fit will be applied by the useEffect when fitMethod changes
+  };
 
   const handleZoomIn = () => {
     setScale(prev => Math.min(prev + 0.25, 4));
@@ -111,16 +128,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
   };
 
   const handleReset = () => {
-    if (imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
-      // Reset to filling the container
-      const widthRatio = containerDimensions.width / imageDimensions.width;
-      const heightRatio = containerDimensions.height / imageDimensions.height;
-      const fillScale = Math.max(widthRatio, heightRatio);
-      setScale(Math.max(fillScale, 1));
-    } else {
-      setScale(1);
-    }
-    setPosition({ x: 0, y: 0 });
+    fitImageToContainer();
   };
 
   return (
@@ -139,7 +147,8 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
             src={src}
             alt={alt}
             className={cn(
-              "select-none object-cover min-w-full min-h-full", 
+              "select-none",
+              fitMethod === 'contain' ? "object-contain" : "object-cover",
               isPanning ? "cursor-grabbing" : "cursor-grab",
               className
             )}
@@ -147,6 +156,8 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
               transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
               transition: isPanning ? 'none' : 'transform 0.2s ease-out',
               transformOrigin: 'center',
+              maxWidth: "none", // Remove max-width constraint to allow proper scaling
+              maxHeight: "none", // Remove max-height constraint to allow proper scaling
             }}
             draggable="false"
             onDragStart={(e) => e.preventDefault()}
@@ -175,6 +186,18 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
         >
           <ZoomOut className="h-4 w-4" />
           <span className="sr-only">Zoom Out</span>
+        </Button>
+        <Button 
+          size="sm" 
+          variant="secondary" 
+          className="rounded-full h-8 w-8 p-0 bg-white/80 backdrop-blur-sm"
+          onClick={toggleFitMethod}
+          title={fitMethod === 'contain' ? 'Switch to cover mode' : 'Switch to contain mode'}
+        >
+          <Move className="h-4 w-4" />
+          <span className="sr-only">
+            {fitMethod === 'contain' ? 'Switch to cover mode' : 'Switch to contain mode'}
+          </span>
         </Button>
         <Button 
           size="sm" 

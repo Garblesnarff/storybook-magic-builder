@@ -20,12 +20,14 @@ export const ImageTopTextBottom: React.FC<LayoutProps> = ({
 }) => {
   return (
     <div className="flex flex-col h-full">
-      <div className="h-1/2 bg-gray-100 flex items-center justify-center overflow-hidden">
+      <div className="h-1/2 bg-gray-100 flex items-center justify-center">
         {page.image ? (
-          <ZoomableImage 
-            src={page.image} 
-            alt="Page illustration"
-          />
+          <div className="w-full h-full">
+            <ZoomableImage 
+              src={page.image} 
+              alt="Page illustration"
+            />
+          </div>
         ) : (
           <ImagePlaceholder
             isGenerating={isGenerating}
