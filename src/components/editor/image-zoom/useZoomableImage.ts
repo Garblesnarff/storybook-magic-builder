@@ -51,11 +51,12 @@ export function useZoomableImage(
   const {
     fitMethod,
     fitMethodRef,
-    toggleFitMethod,
+    toggleFitMethod: baseToggleFitMethod, // Renamed base function
     fitImageToContainer,
     setFitMethod
-  } = useImageFit(initialSettings, onSettingsChange);
+  } = useImageFit(initialSettings); // Removed onSettingsChange from here
   
+  // Get the saveSettings function, but it won't be called automatically anymore
   const { saveSettings } = useSettingsSync(
     scale, position, fitMethod, imageLoaded, isPanning, isInteractionReady, initialSettings, onSettingsChange
   );
@@ -119,30 +120,44 @@ export function useZoomableImage(
     scaleRef
   ]);
 
-  // Enhance base handlers with additional functionality
+  // Enhance base handlers to call saveSettings explicitly after interaction
   const handleZoomIn = useCallback(() => {
     baseHandleZoomIn();
-    // Debounced save will happen via useSettingsSync
-  }, [baseHandleZoomIn]);
+    saveSettings(); // Save immediately after zoom
+  }, [baseHandleZoomIn, saveSettings]);
 
   const handleZoomOut = useCallback(() => {
     baseHandleZoomOut();
-    // Debounced save will happen via useSettingsSync
-  }, [baseHandleZoomOut]);
+    saveSettings(); // Save immediately after zoom
+  }, [baseHandleZoomOut, saveSettings]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // No save needed on mouse down
     baseHandleMouseDown(e, isInteractionReady, containerRef);
   }, [baseHandleMouseDown, isInteractionReady]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    // No save needed while moving
     baseHandleMouseMove(e, isInteractionReady);
   }, [baseHandleMouseMove, isInteractionReady]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    baseHandleMouseUp(e, isInteractionReady, containerRef, onSettingsChange, scaleRef, fitMethodRef);
-  }, [baseHandleMouseUp, isInteractionReady, onSettingsChange, scaleRef, fitMethodRef]);
+    // Call base mouse up logic first
+    baseHandleMouseUp(e, isInteractionReady, containerRef);
+    // Then explicitly save settings if panning occurred
+    if (isPanningRef.current) { // Check if panning actually happened
+       saveSettings(); 
+    }
+  }, [baseHandleMouseUp, isInteractionReady, containerRef, saveSettings, isPanningRef]);
 
-  // Reset function
+  // Enhance toggleFitMethod to save settings
+  const toggleFitMethod = useCallback(() => {
+    baseToggleFitMethod();
+    // Need a slight delay to allow state to update before saving
+    setTimeout(saveSettings, 0); 
+  }, [baseToggleFitMethod, saveSettings]);
+
+  // Reset function - should also save the reset state
   const handleReset = useCallback(() => {
     fitImageToContainer(
       imageLoaded,
@@ -153,6 +168,8 @@ export function useZoomableImage(
       setPosition,
       scaleRef
     );
+    // Need a slight delay to allow state to update before saving
+    setTimeout(saveSettings, 0); 
   }, [
     fitImageToContainer, 
     imageLoaded, 
@@ -161,8 +178,36 @@ export function useZoomableImage(
     isInteractionReady,
     setScale,
     setPosition,
-    scaleRef
+    scaleRef,
+    saveSettings // Added saveSettings dependency
   ]);
+
+  // Save settings on unmount if they have changed from initial
+  useEffect(() => {
+    // Store refs to ensure cleanup uses the latest values
+    const scaleRefCleanup = { current: scale };
+    const positionRefCleanup = { current: position };
+    const fitMethodRefCleanup = { current: fitMethod };
+    const initialSettingsRefCleanup = { current: initialSettings };
+    const saveSettingsRefCleanup = { current: saveSettings };
+
+    return () => {
+      if (!initialSettingsRefCleanup.current) return; // No initial settings to compare against
+
+      const currentState: ImageSettings = {
+        scale: scaleRefCleanup.current,
+        position: positionRefCleanup.current,
+        fitMethod: fitMethodRefCleanup.current
+      };
+
+      // Compare current state to initial state for this instance
+      if (JSON.stringify(currentState) !== JSON.stringify(initialSettingsRefCleanup.current)) {
+        console.log('Saving image settings on unmount:', currentState);
+        saveSettingsRefCleanup.current();
+      }
+    };
+    // Run only on mount/unmount
+  }, []); // Empty dependency array
 
   return {
     scale,

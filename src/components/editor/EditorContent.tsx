@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react'; // Removed useState, useEffect, useRef, useCallback
 import { BookPage, ImageSettings } from '@/types/book';
 import { PageEditor } from './PageEditor';
 import { PageSettings } from './PageSettings';
@@ -23,28 +23,9 @@ export const EditorContent: React.FC<EditorContentProps> = ({
   handleImageSettingsChange,
   isGenerating = false
 }) => {
-  // State for real-time text preview
-  const [previewText, setPreviewText] = useState<string | undefined>(undefined);
-  
-  // Reset preview text when the page changes
-  useEffect(() => {
-    setPreviewText(undefined);
-  }, [currentPageData?.id]);
-  
-  // Create a wrapper for text change that updates both the preview and the actual data
-  const handleTextChangeWithPreview = (value: string) => {
-    // Update the persistent data
-    handleTextChange(value);
-    // Clear the preview since the actual data has been updated
-    setPreviewText(undefined);
-  };
-  
-  // Handle real-time preview updates
-  const handlePreviewTextChange = (value: string) => {
-    setPreviewText(value);
-  };
+  // Removed previewText state and related logic
 
-  // Handle image settings changes
+  // Handle image settings changes (passed down)
   const handleImageSettings = (settings: ImageSettings) => {
     if (handleImageSettingsChange) {
       handleImageSettingsChange(settings);
@@ -60,18 +41,18 @@ export const EditorContent: React.FC<EditorContentProps> = ({
         handleTextFormattingChange={handleTextFormattingChange}
         handleGenerateImage={handleGenerateImage}
         isGenerating={isGenerating}
-        previewText={previewText}
+        // Removed previewText prop
         onImageSettingsChange={handleImageSettings}
       />
-      
+
       <PageSettings
         currentPageData={currentPageData}
-        handleTextChange={handleTextChangeWithPreview}
+        handleTextChange={handleTextChange} // Pass handleTextChange directly now
         handleLayoutChange={handleLayoutChange}
         handleTextFormattingChange={handleTextFormattingChange}
         handleGenerateImage={handleGenerateImage}
         isGenerating={isGenerating}
-        onPreviewTextChange={handlePreviewTextChange}
+        // Removed onPreviewTextChange prop
       />
     </div>
   );

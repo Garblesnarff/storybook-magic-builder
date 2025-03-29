@@ -1,26 +1,28 @@
 
-import { useState, useEffect } from 'react';
-import { BookPage } from '@/types/book';
+import { useMemo } from 'react';
+import { Book, BookPage } from '@/types/book';
 
-export function usePageData(currentBook: any, selectedPageId: string | undefined) {
-  const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
+/**
+ * Hook to derive the current page data directly from the current book and selected page ID.
+ * It does not maintain its own state but calculates the data on each render based on props.
+ */
+export function usePageData(currentBook: Book | null, selectedPageId: string | undefined) {
   
-  // Update the current page data when the selected page changes
-  useEffect(() => {
-    if (currentBook && selectedPageId) {
-      console.log('Updating current page data for page ID:', selectedPageId);
-      const page = currentBook.pages.find((page: BookPage) => page.id === selectedPageId);
-      if (page) {
-        // Deep clone to avoid reference issues
-        setCurrentPageData(JSON.parse(JSON.stringify(page)));
-      } else {
-        console.log('Selected page not found in current book');
-      }
+  const currentPageData = useMemo(() => {
+    if (!currentBook || !selectedPageId) {
+      return null;
     }
-  }, [selectedPageId, currentBook]);
+    const page = currentBook.pages.find((p: BookPage) => p.id === selectedPageId);
+    
+    // Return the found page or null if not found
+    // No cloning needed here as the source of truth is the context state
+    return page || null; 
+    
+  }, [currentBook, selectedPageId]);
 
+  // Note: We no longer return setCurrentPageData as this hook doesn't manage state directly.
+  // State updates should happen via the context's updatePage function.
   return {
-    currentPageData,
-    setCurrentPageData
+    currentPageData
   };
 }

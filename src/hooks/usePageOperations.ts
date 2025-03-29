@@ -51,24 +51,47 @@ export function usePageOperations(
 
   const updatePage = async (updatedPage: BookPage): Promise<void> => {
     if (!currentBook) return;
-    
+
+    // Store previous state for potential rollback
+    const previousBooks = [...books];
+    const previousCurrentBook = currentBook ? { ...currentBook } : null;
+
+    // --- Optimistic Update ---
+    // 1. Update the page within the current book optimistically
+    const updatedPages = currentBook.pages.map(p => 
+      p.id === updatedPage.id ? updatedPage : p
+    );
+    const optimisticallyUpdatedBook = { ...currentBook, pages: updatedPages };
+
+    // 2. Update the list of books optimistically
+    const optimisticallyUpdatedBooks = books.map(b => 
+      b.id === currentBook.id ? optimisticallyUpdatedBook : b
+    );
+
+    // 3. Apply optimistic updates to the state
+    setBooks(optimisticallyUpdatedBooks);
+    setCurrentBook(optimisticallyUpdatedBook);
+    // --- End Optimistic Update ---
+
     try {
-      setPageLoading(true);
-      const updatedBooksResult = await updatePageService(updatedPage, currentBook, books);
-      
-      setBooks(updatedBooksResult);
-      
-      // Update current book
-      const updatedBook = updatedBooksResult.find(book => book.id === currentBook.id);
-      if (updatedBook) {
-        setCurrentBook(updatedBook);
-      }
+      setPageLoading(true); // Indicate background activity
+      // Call the service to persist the change (we don't need the result for state update now)
+      await updatePageService(updatedPage, currentBook, books); 
+      // If successful, the optimistic state is correct.
+      console.log(`Page ${updatedPage.id} update persisted successfully.`);
+
     } catch (error) {
-      console.error('Error updating page:', error);
+      console.error('Error updating page, rolling back optimistic update:', error);
       setPageError('Failed to update page');
-      toast.error('Failed to update page');
+      toast.error('Failed to save page changes. Reverting.');
+
+      // --- Rollback on Error ---
+      setBooks(previousBooks);
+      setCurrentBook(previousCurrentBook);
+      // --- End Rollback ---
+
     } finally {
-      setPageLoading(false);
+      setPageLoading(false); // Stop indicating background activity
     }
   };
 

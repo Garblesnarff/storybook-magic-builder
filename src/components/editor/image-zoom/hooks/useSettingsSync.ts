@@ -40,30 +40,8 @@ export function useSettingsSync(
     }
   }, [imageLoaded, isInteractionReady, onSettingsChange, scale, position, fitMethod, isPanning]);
 
-  // Save settings when they change (except during panning)
-  // Use a more efficient debounced approach
-  const saveSettingsTimeoutRef = useRef<number | null>(null);
-  
-  useEffect(() => {
-    if (!isPanning && imageLoaded && isInteractionReady) {
-      // Clear any pending timeout
-      if (saveSettingsTimeoutRef.current !== null) {
-        window.clearTimeout(saveSettingsTimeoutRef.current);
-      }
-      
-      // Set new timeout for debouncing
-      saveSettingsTimeoutRef.current = window.setTimeout(() => {
-        saveSettings();
-        saveSettingsTimeoutRef.current = null;
-      }, 200); // Increased debounce time for better performance
-    }
-    
-    return () => {
-      if (saveSettingsTimeoutRef.current !== null) {
-        window.clearTimeout(saveSettingsTimeoutRef.current);
-      }
-    };
-  }, [scale, position, fitMethod, imageLoaded, isPanning, isInteractionReady, saveSettings]);
+  // Removed the useEffect hook that automatically debounced and called saveSettings.
+  // saveSettings will now need to be called explicitly when an interaction finishes.
 
   // Apply initial settings when they change (e.g., when changing pages)
   const lastInitialSettingsRef = useRef<ImageSettings | undefined>(initialSettings);
