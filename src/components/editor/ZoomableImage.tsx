@@ -30,6 +30,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
   const [imageLoaded, setImageLoaded] = useState(false);
+  const settingsChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load image dimensions when source changes
   useEffect(() => {
@@ -63,16 +64,38 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
     }
   }, []);
 
-  // Save settings when they change
-  useEffect(() => {
+  // Save settings when they change, with debounce to prevent excessive updates
+  const saveSettings = () => {
     if (onSettingsChange && imageLoaded) {
-      onSettingsChange({
-        scale,
-        position,
-        fitMethod
-      });
+      // Clear any pending timeout
+      if (settingsChangeTimeoutRef.current) {
+        clearTimeout(settingsChangeTimeoutRef.current);
+      }
+      
+      // Set a new timeout
+      settingsChangeTimeoutRef.current = setTimeout(() => {
+        onSettingsChange({
+          scale,
+          position,
+          fitMethod
+        });
+      }, 300); // Debounce for 300ms
     }
-  }, [scale, position, fitMethod, imageLoaded, onSettingsChange]);
+  };
+
+  // Effect to save settings when they change
+  useEffect(() => {
+    if (imageLoaded) {
+      saveSettings();
+    }
+    
+    return () => {
+      // Clean up timeout on unmount
+      if (settingsChangeTimeoutRef.current) {
+        clearTimeout(settingsChangeTimeoutRef.current);
+      }
+    };
+  }, [scale, position, fitMethod, imageLoaded]);
 
   // Calculate initial fitting scale when image and container dimensions are available
   useEffect(() => {

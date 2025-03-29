@@ -27,6 +27,7 @@ export function usePageState(bookId: string | undefined) {
   const [selectedPageId, setSelectedPageId] = useState<string | undefined>(undefined);
   const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Load the book when the component mounts or the book ID changes
   useEffect(() => {
@@ -64,6 +65,31 @@ export function usePageState(bookId: string | undefined) {
     }
   }, [selectedPageId, currentBook]);
 
+  // Helper function to show saving indicator with controlled timing
+  const showSavingIndicator = () => {
+    // Clear any existing timeout to prevent flickering
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    // Show saving indicator
+    setIsSaving(true);
+    
+    // Hide indicator after a short delay
+    saveTimeoutRef.current = setTimeout(() => {
+      setIsSaving(false);
+    }, 800);
+  };
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handlePageSelect = (pageId: string) => {
     setSelectedPageId(pageId);
   };
@@ -91,7 +117,7 @@ export function usePageState(bookId: string | undefined) {
     if (!currentBook) return;
     
     try {
-      setIsSaving(true);
+      showSavingIndicator();
       await deletePage(pageId);
       
       // After deleting, select the first page or the previous page
@@ -105,8 +131,6 @@ export function usePageState(bookId: string | undefined) {
     } catch (error) {
       console.error('Error deleting page:', error);
       toast.error('Failed to delete page');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -117,8 +141,7 @@ export function usePageState(bookId: string | undefined) {
     // Always update the page, even with empty text
     console.log('Updating page text to:', value);
     
-    // Show saving indicator
-    setIsSaving(true);
+    showSavingIndicator();
     
     // Update local state and save to backend
     setCurrentPageData(prevState => {
@@ -129,31 +152,22 @@ export function usePageState(bookId: string | undefined) {
       updatePage(updatedPage);
       return updatedPage;
     });
-    
-    // Hide saving indicator after a short delay
-    setTimeout(() => {
-      setIsSaving(false);
-    }, 300);
   };
 
   // Function for layout changes
   const handleLayoutChange = (value: PageLayout) => {
     if (!currentPageData) return;
     
-    setIsSaving(true);
+    showSavingIndicator();
     const updatedPage = { ...currentPageData, layout: value };
     setCurrentPageData(updatedPage);
     updatePage(updatedPage);
-    // Show saved indicator briefly after saving
-    setTimeout(() => {
-      setIsSaving(false);
-    }, 500);
   };
 
   const handleTextFormattingChange = (key: any, value: any) => {
     if (!currentPageData) return;
     
-    setIsSaving(true);
+    showSavingIndicator();
     const updatedFormatting = { 
       ...currentPageData.textFormatting,
       [key]: value 
@@ -164,27 +178,19 @@ export function usePageState(bookId: string | undefined) {
     };
     setCurrentPageData(updatedPage);
     updatePage(updatedPage);
-    // Show saved indicator briefly after saving
-    setTimeout(() => {
-      setIsSaving(false);
-    }, 500);
   };
 
-  // Add function to handle image settings changes
+  // Function to handle image settings changes
   const handleImageSettingsChange = (settings: ImageSettings) => {
     if (!currentPageData) return;
     
-    setIsSaving(true);
+    showSavingIndicator();
     const updatedPage = { 
       ...currentPageData, 
       imageSettings: settings 
     };
     setCurrentPageData(updatedPage);
     updatePage(updatedPage);
-    // Show saved indicator briefly after saving
-    setTimeout(() => {
-      setIsSaving(false);
-    }, 500);
   };
 
   const handleReorderPage = (sourceIndex: number, destinationIndex: number) => {
@@ -194,12 +200,8 @@ export function usePageState(bookId: string | undefined) {
     const pageToMove = currentBook.pages[sourceIndex];
     
     if (pageToMove) {
-      setIsSaving(true);
+      showSavingIndicator();
       reorderPage(pageToMove.id, destinationIndex);
-      // Show saved indicator briefly after saving
-      setTimeout(() => {
-        setIsSaving(false);
-      }, 500);
     }
   };
 
