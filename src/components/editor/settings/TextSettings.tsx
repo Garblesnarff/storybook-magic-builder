@@ -16,7 +16,7 @@ interface TextSettingsProps {
   currentPageData: BookPage;
   handleTextChange: (value: string) => void;
   handleTextFormattingChange: (key: keyof TextFormatting, value: any) => void;
-  onPreviewTextChange?: (value: string) => void; // Add this prop definition
+  onPreviewTextChange?: (value: string) => void; // For real-time preview
 }
 
 export const TextSettings: React.FC<TextSettingsProps> = ({

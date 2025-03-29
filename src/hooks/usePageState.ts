@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { BookPage } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
@@ -90,9 +89,8 @@ export function usePageState(bookId: string | undefined) {
   const handleTextChange = (value: string) => {
     if (!currentPageData) return;
     
-    // Only perform update if the text has actually changed
-    // This prevents the default text from being restored when deleting all text
-    if (value === currentPageData.text) return;
+    // Always update the page, even with empty text
+    // No need to compare with currentPageData.text anymore
     
     // Show saving indicator
     setIsSaving(true);

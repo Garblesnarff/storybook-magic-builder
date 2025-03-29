@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 
 interface UseRealTimeTextProps {
@@ -18,10 +17,14 @@ export function useRealTimeText({
   const [isSaving, setIsSaving] = useState(false);
   // Reference to the debounce timer
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Keep track of whether the text has been explicitly cleared
+  const hasBeenCleared = useRef(false);
 
   // Update local text when initialText prop changes (e.g., when page changes)
   useEffect(() => {
     setText(initialText);
+    // Reset the cleared flag when the page changes
+    hasBeenCleared.current = false;
   }, [initialText]);
 
   // Clean up timeout on unmount
@@ -38,20 +41,24 @@ export function useRealTimeText({
     // Update local state immediately for responsive typing
     setText(newText);
     
+    // If text is empty, mark it as cleared
+    if (newText === '') {
+      hasBeenCleared.current = true;
+    }
+    
     // Clear any existing timeout
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
     
     // Only save if the text is different from the initial text
-    // and don't reset empty text to default value
-    if (newText !== initialText) {
+    if (newText !== initialText || hasBeenCleared.current) {
       // Show saving indicator
       setIsSaving(true);
       
       // Set a delay before saving
       debounceTimerRef.current = setTimeout(() => {
-        // Call the save function
+        // Call the save function (even if empty)
         onSave(newText);
         
         // Hide saving indicator after a short delay

@@ -1,11 +1,11 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { TextFormatting } from '@/types/book';
 
 interface BookTextRendererProps {
   text: string;
   textFormatting?: TextFormatting;
-  previewText?: string; // New prop for displaying text in real-time
+  previewText?: string; // For displaying text in real-time
 }
 
 export const BookTextRenderer: React.FC<BookTextRendererProps> = ({ 
@@ -13,8 +13,14 @@ export const BookTextRenderer: React.FC<BookTextRendererProps> = ({
   textFormatting,
   previewText
 }) => {
-  // Use previewText if provided, otherwise use the saved text
-  const displayText = previewText !== undefined ? previewText : text;
+  // Use a local state to prevent flashing of old content
+  const [displayText, setDisplayText] = useState(previewText !== undefined ? previewText : text);
+  
+  // Update the display text when props change, but use transitions to prevent flashing
+  useEffect(() => {
+    const nextText = previewText !== undefined ? previewText : text;
+    setDisplayText(nextText);
+  }, [previewText, text]);
   
   // Convert newlines to <br> tags for proper display
   const renderText = () => {
