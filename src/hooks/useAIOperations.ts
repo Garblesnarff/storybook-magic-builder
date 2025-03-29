@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { BookPage } from '@/types/book';
 import { supabase } from '@/integrations/supabase/client';
@@ -87,6 +86,19 @@ export function useAIOperations(
           
           // Wait a bit to ensure the page is created and selected
           await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Now update this newly created page with the segment text
+          if (currentPageData) {  // Check if we have access to the newly created page
+            const newPage = { 
+              ...currentPageData, 
+              text: segments[i] 
+            };
+            updatePage(newPage);
+            setCurrentPageData(newPage);
+            
+            // Give a little time for the update to process
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
         }
         
         toast.success(`Created ${segments.length} pages in total`);
