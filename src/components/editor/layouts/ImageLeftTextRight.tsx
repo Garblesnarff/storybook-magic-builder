@@ -20,14 +20,12 @@ export const ImageLeftTextRight: React.FC<LayoutProps> = ({
 }) => {
   return (
     <div className="flex h-full">
-      <div className="w-1/2 h-full bg-gray-100 flex items-center justify-center">
+      <div className="w-1/2 h-full bg-gray-100 flex items-center justify-center overflow-hidden">
         {page.image ? (
-          <div className="w-full h-full">
-            <ZoomableImage 
-              src={page.image} 
-              alt="Page illustration"
-            />
-          </div>
+          <ZoomableImage 
+            src={page.image} 
+            alt="Page illustration"
+          />
         ) : (
           <ImagePlaceholder
             isGenerating={isGenerating}

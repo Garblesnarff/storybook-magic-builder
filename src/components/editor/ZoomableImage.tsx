@@ -58,22 +58,20 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
   // Calculate initial fitting scale when image and container dimensions are available
   useEffect(() => {
     if (imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
-      // Auto-fit image to container on initial load
+      // Auto-fit image to container on initial load - fill instead of fit
       const widthRatio = containerDimensions.width / imageDimensions.width;
       const heightRatio = containerDimensions.height / imageDimensions.height;
       
-      // Use the smaller ratio to ensure the image fits within the container
-      const fitScale = Math.min(widthRatio, heightRatio, 1) * 0.9; // 90% of container to leave some margin
+      // Use the larger ratio to ensure the image fills the container
+      const fillScale = Math.max(widthRatio, heightRatio);
       
-      // Only auto-scale down for large images, never scale up small images
-      if (fitScale < 1) {
-        setScale(fitScale);
-      }
+      // Set scale to fill the container, with minimum scale of 1
+      setScale(Math.max(fillScale, 1));
     }
   }, [imageLoaded, containerDimensions, imageDimensions]);
 
   const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.25, 3));
+    setScale(prev => Math.min(prev + 0.25, 4));
   };
 
   const handleZoomOut = () => {
@@ -113,7 +111,15 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
   };
 
   const handleReset = () => {
-    setScale(1);
+    if (imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
+      // Reset to filling the container
+      const widthRatio = containerDimensions.width / imageDimensions.width;
+      const heightRatio = containerDimensions.height / imageDimensions.height;
+      const fillScale = Math.max(widthRatio, heightRatio);
+      setScale(Math.max(fillScale, 1));
+    } else {
+      setScale(1);
+    }
     setPosition({ x: 0, y: 0 });
   };
 
@@ -127,13 +133,13 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
       onMouseLeave={handleMouseUp}
     >
       {imageLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center w-full h-full">
           <img
             ref={imageRef}
             src={src}
             alt={alt}
             className={cn(
-              "select-none max-h-full max-w-full object-contain", 
+              "select-none object-cover min-w-full min-h-full", 
               isPanning ? "cursor-grabbing" : "cursor-grab",
               className
             )}
@@ -148,12 +154,6 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
         </div>
       )}
       
-      {/* Drag indicator */}
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs text-gray-700 flex items-center z-10">
-        <MoveHorizontal className="h-3 w-3 mr-1" />
-        <span>Drag to position</span>
-      </div>
-      
       {/* Controls */}
       <div className="absolute bottom-4 right-4 flex space-x-2 z-10">
         <Button 
@@ -161,7 +161,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
           variant="secondary" 
           className="rounded-full h-8 w-8 p-0 bg-white/80 backdrop-blur-sm"
           onClick={handleZoomIn}
-          disabled={scale >= 3}
+          disabled={scale >= 4}
         >
           <ZoomIn className="h-4 w-4" />
           <span className="sr-only">Zoom In</span>

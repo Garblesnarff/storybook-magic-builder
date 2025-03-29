@@ -21,7 +21,7 @@ export const FullPageImage: React.FC<LayoutProps> = ({
   return (
     <div className="relative h-full">
       {page.image ? (
-        <div className="w-full h-full">
+        <div className="w-full h-full overflow-hidden">
           <ZoomableImage 
             src={page.image} 
             alt="Page illustration"
