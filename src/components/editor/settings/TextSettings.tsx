@@ -28,6 +28,7 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
   const { 
     text, 
     handleTextChange: onTextChange,
+    forceSave,
     isSaving 
   } = useRealTimeText({
     initialText: currentPageData.text || "",
@@ -41,6 +42,13 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
     }
   }, [text, onPreviewTextChange]);
   
+  // Force save when component unmounts or page changes
+  useEffect(() => {
+    return () => {
+      forceSave();
+    };
+  }, [currentPageData.id, forceSave]);
+  
   return (
     <div className="space-y-4">
       <div>
@@ -51,6 +59,7 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
           className="h-40"
           value={text}
           onChange={(e) => onTextChange(e.target.value)}
+          onBlur={() => forceSave()} // Save on blur for immediate persistence
         />
         {isSaving && (
           <div className="text-xs text-muted-foreground mt-1">Saving...</div>

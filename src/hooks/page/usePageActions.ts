@@ -2,6 +2,7 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { BookPage, PageLayout, TextFormatting, ImageSettings } from '@/types/book';
 import { useSavingState } from './useSavingState';
+import { supabase } from '@/integrations/supabase/client';
 
 export function usePageActions(
   currentBook: any, 
@@ -16,30 +17,51 @@ export function usePageActions(
   const textChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const imageSettingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Handle text changes
-  const handleTextChange = useCallback((value: string) => {
+  // Handle text changes with more robust saving
+  const handleTextChange = useCallback(async (value: string) => {
     if (!currentPageData) return;
     
-    // Update local state immediately
+    console.log(`handleTextChange called with value: "${value.substring(0, 30)}..." for page ${currentPageData.id}`);
+    
+    // Update local state immediately for UI responsiveness
     setCurrentPageData({
       ...currentPageData,
       text: value
     });
     
-    // Debounce the save to the backend
+    // Clear any existing timeout
     if (textChangeTimeoutRef.current) clearTimeout(textChangeTimeoutRef.current);
     
-    textChangeTimeoutRef.current = setTimeout(() => {
-      trackSavingOperation();
+    // Track the saving operation
+    trackSavingOperation();
+    
+    try {
+      // First, directly update in Supabase for immediate persistence
+      const { error } = await supabase
+        .from('book_pages')
+        .update({
+          text: value,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentPageData.id);
+        
+      if (error) {
+        console.error('Direct Supabase update error:', error);
+        throw error;
+      }
       
-      updatePage({
+      // Then also update through the normal flow for state management
+      await updatePage({
         ...currentPageData,
         text: value
-      })
-      .then(() => completeSavingOperation())
-      .catch(() => completeSavingOperation());
+      });
       
-    }, 1000);
+      console.log(`Text successfully saved for page ${currentPageData.id}`);
+    } catch (error) {
+      console.error('Error saving text:', error);
+    } finally {
+      completeSavingOperation();
+    }
   }, [currentPageData, setCurrentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
   
   // Handle layout changes - immediately save

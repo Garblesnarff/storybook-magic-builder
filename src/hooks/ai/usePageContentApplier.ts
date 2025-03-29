@@ -104,8 +104,15 @@ export function usePageContentApplier(
       console.log(`Updating first page (${currentPageData.id}) directly in database`);
       const firstSegment = segments[0];
       
-      // CRITICAL: Force empty value check to avoid default text overriding
-      const textToUse = firstSegment || ' '; // Use space if empty to avoid default text
+      // CRITICAL: Do not allow empty text to prevent default text being applied
+      const textToUse = firstSegment && firstSegment.trim() !== '' ? firstSegment : ' ';
+      
+      // Update first page in memory immediately for UI feedback
+      const updatedFirstPage = { 
+        ...currentPageData, 
+        text: textToUse 
+      };
+      setCurrentPageData(updatedFirstPage);
       
       // Update first page directly in database with explicit UPDATE query
       const { error: firstPageError } = await supabase
@@ -123,15 +130,15 @@ export function usePageContentApplier(
         return;
       }
       
-      // Update local state for immediate UI feedback
-      const updatedFirstPage = { ...currentPageData, text: textToUse };
-      setCurrentPageData(updatedFirstPage);
+      console.log('First page updated successfully with text:', textToUse);
+      
+      // Call the update function to ensure local state is updated
       updatePage(updatedFirstPage);
       
-      // Allow time for database to process the update
-      await wait(1500);
+      // Wait to ensure database update has time to process
+      await wait(2000);
       
-      // Verify the update was successful by fetching the page data
+      // Verify the update was successful by fetching the page data directly
       const { data: verifyData, error: verifyError } = await supabase
         .from('book_pages')
         .select('text')
@@ -140,74 +147,79 @@ export function usePageContentApplier(
       
       if (verifyError || !verifyData) {
         console.error('Failed to verify first page update:', verifyError);
+        toast.error('Failed to verify first page update');
       } else {
         console.log('First page text verified:', verifyData.text);
+        
+        // If text doesn't match what we set, update it again
+        if (verifyData.text !== textToUse) {
+          console.log('First page text mismatch, updating again');
+          await supabase
+            .from('book_pages')
+            .update({ 
+              text: textToUse,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', currentPageData.id);
+          
+          // Wait for second update
+          await wait(1000);
+        }
       }
       
       toast.loading(`Processing pages: 1/${segments.length}`, { id: toastId });
       
-      // If there are more segments and we have an onAddPage function
+      // If there are more segments, handle additional pages
       if (segments.length > 1 && onAddPage) {
-        // Track all created pages by ID
-        const createdPageIds = new Set<string>([currentPageData.id]);
+        // Track all created pages to avoid duplicates
+        const processedPages = new Map<number, string>();
+        processedPages.set(0, currentPageData.id); // First page is already processed
         
-        // Get initial page count
-        const { data: initialPages } = await supabase
-          .from('book_pages')
-          .select('id, page_number')
-          .eq('book_id', bookId)
-          .order('page_number', { ascending: true });
-          
-        const initialPageCount = initialPages?.length || 1;
-        console.log(`Initial page count: ${initialPageCount}`);
-        
-        // Process each additional page sequentially
+        // Process remaining segments sequentially
         for (let i = 1; i < segments.length; i++) {
           console.log(`Creating/updating page for segment ${i+1}`);
           
           // Create a new page
           await onAddPage();
           
-          // Wait longer to ensure page creation completes
-          await wait(2000);
+          // Wait for page creation
+          await wait(2500);
           
           // Get all pages for this book after adding the new page
-          const { data: allPagesAfterAdd } = await supabase
+          const { data: allPages } = await supabase
             .from('book_pages')
-            .select('id, page_number')
+            .select('id, page_number, text')
             .eq('book_id', bookId)
             .order('page_number', { ascending: true });
             
-          if (!allPagesAfterAdd || allPagesAfterAdd.length <= initialPageCount + i - 1) {
-            console.error('New page was not created properly');
+          if (!allPages || allPages.length <= i) {
+            console.error('Could not find enough pages');
             continue;
           }
           
-          // Find the newly created page - it should be the page with the current index
-          // This is more reliable than trying to find the last page
-          const targetPageNumber = i; // Page numbers are 0-indexed in database
-          const pageToUpdate = allPagesAfterAdd.find(page => page.page_number === targetPageNumber);
+          // Find the page with the correct page number (i)
+          const targetPage = allPages.find(page => page.page_number === i);
           
-          if (!pageToUpdate) {
-            console.error(`Could not find page with number ${targetPageNumber}`);
+          if (!targetPage) {
+            console.error(`Could not find page with number ${i}`);
             continue;
           }
           
-          const pageId = pageToUpdate.id;
+          const pageId = targetPage.id;
           
           // Skip if we've already processed this page
-          if (createdPageIds.has(pageId)) {
-            console.log(`Page ${pageId} already processed, skipping`);
+          if (processedPages.has(i)) {
+            console.log(`Page with number ${i} already processed, skipping`);
             continue;
           }
           
           // Mark this page as processed
-          createdPageIds.add(pageId);
+          processedPages.set(i, pageId);
           
-          console.log(`Applying text segment ${i+1} to page ${pageId} (page number: ${targetPageNumber})`);
+          // Get the text for this segment
+          const textToApply = segments[i] && segments[i].trim() !== '' ? segments[i] : ' ';
           
-          // Text to apply (ensure it's not empty to avoid default text)
-          const textToApply = segments[i] || ' ';
+          console.log(`Applying text segment ${i+1} to page ${pageId} (page number: ${i})`);
           
           // Update the page directly in the database
           const { error } = await supabase
@@ -221,7 +233,7 @@ export function usePageContentApplier(
           if (error) {
             console.error(`Error updating page ${pageId}:`, error);
           } else {
-            console.log(`Successfully updated page ${pageId} with text`);
+            console.log(`Successfully updated page ${pageId} with text:`, textToApply.substring(0, 50));
           }
           
           // Allow database time to process
@@ -233,11 +245,6 @@ export function usePageContentApplier(
         
         // Success message after completing all pages
         toast.success(`Created ${segments.length} pages with content`, { id: toastId });
-        
-        // Refresh the UI by reloading the page after all updates
-        // This ensures all page content is properly loaded
-        await wait(2000);
-        window.location.reload();
       } else {
         toast.success('Story applied to the current page', { id: toastId });
       }

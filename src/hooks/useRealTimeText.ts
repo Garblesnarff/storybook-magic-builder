@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 
 interface UseRealTimeTextProps {
@@ -18,14 +17,16 @@ export function useRealTimeText({
   const [isSaving, setIsSaving] = useState(false);
   // Reference to the debounce timer
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  // Keep track of whether the text has been explicitly cleared
-  const hasBeenCleared = useRef(false);
+  // Track whether an initial save has been completed
+  const initialSaveCompleted = useRef(false);
+  // Keep track of whether the text has been explicitly modified
+  const textModified = useRef(false);
 
   // Update local text when initialText prop changes (e.g., when page changes)
   useEffect(() => {
     setText(initialText);
-    // Reset the cleared flag when the page changes
-    hasBeenCleared.current = false;
+    textModified.current = false;
+    initialSaveCompleted.current = false;
   }, [initialText]);
 
   // Clean up timeout on unmount
@@ -42,38 +43,50 @@ export function useRealTimeText({
     // Update local state immediately for responsive typing
     setText(newText);
     
-    // If text is empty, mark it as cleared
-    if (newText === '') {
-      hasBeenCleared.current = true;
-    }
+    // Mark the text as modified
+    textModified.current = true;
     
     // Clear any existing timeout
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
     
-    // Always save if the text is different from the initial text or if text has been explicitly cleared
-    if (newText !== initialText || hasBeenCleared.current) {
-      // Show saving indicator
-      setIsSaving(true);
+    // Show saving indicator
+    setIsSaving(true);
+    
+    // Set a delay before saving
+    debounceTimerRef.current = setTimeout(() => {
+      // Always save the text, even if it's the same as initialText
+      // This ensures we override any default value in the database
+      console.log('Saving text:', newText);
+      onSave(newText);
+      initialSaveCompleted.current = true;
       
-      // Set a delay before saving
-      debounceTimerRef.current = setTimeout(() => {
-        // Call the save function (always save the exact text, even if empty)
-        onSave(newText);
-        
-        // Hide saving indicator after a short delay
-        setTimeout(() => {
-          setIsSaving(false);
-        }, 300);
-      }, saveDelay);
+      // Hide saving indicator after a short delay
+      setTimeout(() => {
+        setIsSaving(false);
+      }, 300);
+    }, saveDelay);
+  };
+
+  // Force an immediate save if needed
+  const forceSave = () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
+    console.log('Force saving text:', text);
+    onSave(text);
+    initialSaveCompleted.current = true;
+    setIsSaving(false);
   };
 
   return {
     text,
     setText,
     handleTextChange,
-    isSaving
+    forceSave,
+    isSaving,
+    textModified: textModified.current,
+    initialSaveCompleted: initialSaveCompleted.current
   };
 }
