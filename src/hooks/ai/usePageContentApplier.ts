@@ -60,57 +60,113 @@ export function usePageContentApplier(
   // Helper function to wait for a specific duration
   const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   
-  // New function to create a page and apply text
-  const createPageWithText = async (text: string, pageIndex: number): Promise<boolean> => {
+  // Helper function to get the current book state from the DOM
+  const getCurrentBookState = () => {
+    try {
+      const bookDataElement = document.querySelector('[data-book-state]') as HTMLElement;
+      if (bookDataElement) {
+        const bookData = bookDataElement.getAttribute('data-book-state');
+        if (bookData) {
+          return JSON.parse(bookData);
+        }
+      }
+      return null;
+    } catch (e) {
+      console.error('Error getting book state:', e);
+      return null;
+    }
+  };
+
+  // Function to directly update a page
+  const directUpdatePage = async (pageId: string, text: string): Promise<boolean> => {
+    try {
+      const bookState = getCurrentBookState();
+      if (!bookState) return false;
+      
+      const page = bookState.pages.find((p: BookPage) => p.id === pageId);
+      if (!page) return false;
+      
+      const updatedPage = { ...page, text };
+      updatePage(updatedPage);
+      console.log(`Directly updated page ${pageId} with text (${text.length} chars)`);
+      return true;
+    } catch (err) {
+      console.error(`Error directly updating page ${pageId}:`, err);
+      return false;
+    }
+  };
+  
+  // Enhanced function to create a page and apply text
+  const createPageWithText = async (text: string, pageIndex: number): Promise<string | null> => {
     console.log(`Creating page ${pageIndex+1} with text (${text.length} chars)`);
     
     try {
       // Add new page
       await onAddPage?.();
       
-      // Give more time for the page to be created and the book state to be updated
+      // Wait longer for the page to be created and the book state to be updated
+      await wait(2000);
+      
+      // Verify the book state after waiting
+      let bookState = getCurrentBookState();
+      let retries = 0;
+      const maxRetries = 3;
+      
+      // Retry getting book state if not found
+      while (!bookState && retries < maxRetries) {
+        await wait(1000);
+        bookState = getCurrentBookState();
+        retries++;
+        console.log(`Retry ${retries}: Getting book state after page creation`);
+      }
+      
+      if (!bookState) {
+        console.error('Failed to get book state after multiple attempts');
+        return null;
+      }
+      
+      // Find the latest added page (should be the last one)
+      const latestPages = bookState.pages || [];
+      if (latestPages.length === 0) {
+        console.error('No pages found in the book data');
+        return null;
+      }
+      
+      const newPage = latestPages[latestPages.length - 1];
+      console.log(`Applying text to new page ID: ${newPage.id}, pageNumber: ${newPage.pageNumber}`);
+      
+      // Update the page text with a direct update
+      const updatedPage = { ...newPage, text };
+      updatePage(updatedPage);
+      
+      // Wait to ensure the update has been processed
       await wait(1000);
       
-      // Retrieve the latest book state from the parent component
-      await wait(500);
+      // Verify the update
+      const verificationRetries = 0;
+      const maxVerificationRetries = 2;
+      let verified = false;
       
-      // Get current book state
-      const bookData = document.querySelector('[data-book-state]')?.getAttribute('data-book-state');
-      if (bookData) {
-        try {
-          const parsedData = JSON.parse(bookData);
-          const latestPages = parsedData.pages || [];
-          
-          // Find the latest added page (should be the last one)
-          if (latestPages.length > 0) {
-            const newPage = latestPages[latestPages.length - 1];
-            console.log(`Applying text to new page ID: ${newPage.id}, pageNumber: ${newPage.pageNumber}`);
-            
-            // Update the page text
-            const updatedPage = { ...newPage, text };
-            updatePage(updatedPage);
-            
-            // Optionally show specific toast for additional pages
-            if (pageIndex > 0) {
-              toast.success(`Created page ${pageIndex+1} with the next part of the story`);
-            }
-            
-            return true;
+      while (!verified && verificationRetries < maxVerificationRetries) {
+        const currentState = getCurrentBookState();
+        if (currentState) {
+          const updatedPageInState = currentState.pages.find((p: BookPage) => p.id === newPage.id);
+          if (updatedPageInState && updatedPageInState.text === text) {
+            verified = true;
+            console.log(`Page ${newPage.id} text update verified`);
           } else {
-            console.error('No pages found in the book data');
-            return false;
+            // Try updating again
+            console.log(`Retry updating page ${newPage.id} text`);
+            updatePage(updatedPage);
+            await wait(1000);
           }
-        } catch (e) {
-          console.error('Error parsing book data:', e);
-          return false;
         }
-      } else {
-        console.error('No book data attribute found');
-        return false;
       }
+      
+      return newPage.id;
     } catch (err) {
       console.error(`Error creating page ${pageIndex+1}:`, err);
-      return false;
+      return null;
     }
   };
 
@@ -140,11 +196,14 @@ export function usePageContentApplier(
       
       // Update the first page immediately
       const firstSegment = segments[0];
-      console.log(`Updating original page (${currentPageData.id}) with first segment`);
+      console.log(`Updating original page (${currentPageData.id}) with first segment (${firstSegment.length} chars)`);
       
       const updatedFirstPage = { ...currentPageData, text: firstSegment };
       updatePage(updatedFirstPage);
       setCurrentPageData(updatedFirstPage);
+      
+      // Wait to ensure first page update is complete
+      await wait(1500);
       
       toast.loading(`Creating pages: 1/${segments.length} completed...`, { id: toastId });
       
@@ -152,19 +211,40 @@ export function usePageContentApplier(
       if (segments.length > 1 && onAddPage) {
         console.log(`Starting to create ${segments.length - 1} additional pages...`);
         
+        // Track created page IDs to ensure we can update them later if needed
+        const createdPageIds: Array<string | null> = [];
+        
         // Create each page sequentially and apply text immediately
         for (let i = 1; i < segments.length; i++) {
-          const success = await createPageWithText(segments[i], i);
-          if (!success) {
-            toast.error(`Failed to create page ${i+1}`);
-            break;
-          }
+          // Create the new page and get its ID
+          const newPageId = await createPageWithText(segments[i], i);
+          createdPageIds.push(newPageId);
           
           // Update progress toast
           toast.loading(`Creating pages: ${i+1}/${segments.length} completed...`, { id: toastId });
           
-          // Wait a bit between page creations to ensure database consistency
-          await wait(1500);
+          // Wait between page creations to ensure database consistency
+          // Increase the wait time for each subsequent page to reduce race conditions
+          await wait(2000 + i * 500); 
+        }
+        
+        // Verify and retry for pages that might have failed
+        console.log('Verifying all pages have their text...');
+        const bookState = getCurrentBookState();
+        
+        if (bookState) {
+          // Check that each page has its text
+          for (let i = 1; i < segments.length; i++) {
+            const pageId = createdPageIds[i - 1];
+            if (pageId) {
+              const page = bookState.pages.find((p: BookPage) => p.id === pageId);
+              if (page && (!page.text || page.text.length < 10)) {
+                console.log(`Page ${pageId} missing text, retrying update...`);
+                await directUpdatePage(pageId, segments[i]);
+                await wait(1000);
+              }
+            }
+          }
         }
         
         toast.success(`Created ${segments.length} pages in total`, { id: toastId });
