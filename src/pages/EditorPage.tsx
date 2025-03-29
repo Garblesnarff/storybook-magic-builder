@@ -40,7 +40,7 @@ const EditorPage = () => {
     handleGenerateImage,
     handleApplyAIText,
     handleApplyAIImage
-  } = useAIOperations(currentPageData, updatePage, setCurrentPageData);
+  } = useAIOperations(currentPageData, updatePage, setCurrentPageData, handleAddPage);
 
   // Create a proper adapter function for layout changes
   const handleLayoutChange = (layout: PageLayout) => {

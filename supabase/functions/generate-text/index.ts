@@ -46,7 +46,16 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful children\'s book assistant. Write creative, engaging, and age-appropriate content for children\'s books based on user prompts.'
+            content: `You are a helpful children's book assistant. Write creative, engaging, and age-appropriate content for children's books based on user prompts.
+
+When asked to create a story:
+1. Create engaging, child-friendly content divided into logical pages.
+2. When a new page should begin, insert the marker "---PAGE BREAK---" on its own line.
+3. Each page should contain approximately 1-3 paragraphs (50-100 words).
+4. Create natural page transitions that make sense for a children's book.
+5. Aim for 3-7 pages total, depending on the story complexity.
+6. Each page should have enough content to pair with a single illustration.
+7. Do not include any numbering, titles, or "Page X" markers - just the story text and page break markers.`
           },
           {
             role: 'user',
@@ -99,4 +108,3 @@ serve(async (req) => {
     })
   }
 })
-

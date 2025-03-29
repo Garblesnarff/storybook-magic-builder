@@ -4,7 +4,12 @@ import { BookPage } from '@/types/book';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export function useAIOperations(currentPageData: BookPage | null, updatePage: (page: BookPage) => void, setCurrentPageData: (page: BookPage | null) => void) {
+export function useAIOperations(
+  currentPageData: BookPage | null, 
+  updatePage: (page: BookPage) => void, 
+  setCurrentPageData: (page: BookPage | null) => void,
+  onAddPage?: () => Promise<void>
+) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingText, setIsGeneratingText] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -49,11 +54,49 @@ export function useAIOperations(currentPageData: BookPage | null, updatePage: (p
     }
   };
 
-  const handleApplyAIText = (text: string) => {
+  const handleApplyAIText = async (text: string) => {
     if (!currentPageData) return;
-    const updatedPage = { ...currentPageData, text };
-    setCurrentPageData(updatedPage);
-    updatePage(updatedPage);
+    
+    // Define the page break marker
+    const pageBreakMarker = '---PAGE BREAK---';
+    
+    // Split the text by page break markers
+    const segments = text.split(pageBreakMarker)
+      .map(segment => segment.trim())
+      .filter(segment => segment.length > 0);
+    
+    if (segments.length === 0) {
+      toast.error('No valid content found in the generated text');
+      return;
+    }
+    
+    try {
+      // Update the current page with the first segment
+      const updatedPage = { ...currentPageData, text: segments[0] };
+      updatePage(updatedPage);
+      setCurrentPageData(updatedPage);
+      
+      // If there are more segments and we have an onAddPage function, create additional pages
+      if (segments.length > 1 && onAddPage) {
+        toast.info(`Creating ${segments.length - 1} additional pages...`);
+        
+        // Create new pages for each additional segment
+        for (let i = 1; i < segments.length; i++) {
+          // Create a new page
+          await onAddPage();
+          
+          // Wait a bit to ensure the page is created and selected
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+        
+        toast.success(`Created ${segments.length} pages in total`);
+      }
+    } catch (error) {
+      console.error('Error applying AI text:', error);
+      toast.error('Failed to create all pages', {
+        description: 'Some pages may not have been created correctly'
+      });
+    }
   };
 
   const handleApplyAIImage = (imageData: string) => {
@@ -73,11 +116,23 @@ export function useAIOperations(currentPageData: BookPage | null, updatePage: (p
     setGeneratedText('');
 
     try {
+      // Enhance the prompt with instructions for page breaks
+      const enhancedPrompt = `
+Create a children's story based on the following prompt: "${prompt}"
+
+IMPORTANT FORMATTING INSTRUCTIONS:
+1. When you want to indicate a new page in the book, insert the marker "---PAGE BREAK---" on a separate line.
+2. Place these markers at natural transition points in the story.
+3. Each page should contain approximately 1-3 paragraphs of text.
+4. The story should have 3-7 pages total, depending on its complexity.
+5. Do not include any numbering, titles, or "Page X" markers - just the story text and page break markers.
+`;
+
       const response = await supabase.functions.invoke('generate-text', {
         body: JSON.stringify({ 
-          prompt, 
+          prompt: enhancedPrompt, 
           temperature,
-          maxTokens
+          maxTokens: Math.max(maxTokens, 1500) // Ensure we have enough tokens for multi-page stories
         })
       });
 
