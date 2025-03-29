@@ -1,32 +1,24 @@
 
 # Image Placeholder Components
 
-This directory contains components related to the image placeholder functionality in the book editor.
+This directory contains components for displaying placeholders when an image hasn't been generated yet.
 
-## Files
+### Files
 
-- `ImagePlaceholder.tsx`: Main component that displays when an image hasn't been generated yet
-- `GenerateButton.tsx`: Button component for triggering image generation with loading state
-- `index.ts`: Barrel export file for easy importing
+- `GenerateButton.tsx`: Button component for triggering image generation.
+- `ImagePlaceholder.tsx`: Component that shows a placeholder UI when no image is available and provides options for generating one.
+- `index.ts`: Export file to simplify imports.
 
-## Usage
-
-Import the `ImagePlaceholder` component to show a placeholder where an image will eventually be:
+### Usage
 
 ```tsx
 import { ImagePlaceholder } from '@/components/editor/image-placeholder';
 
-function MyComponent() {
-  return (
-    <ImagePlaceholder
-      isGenerating={isGenerating}
-      onGenerate={handleGenerateImage}
-    />
-  );
-}
+// In a component
+<ImagePlaceholder
+  isGenerating={isLoading}
+  onGenerate={handleGenerateImage}
+/>
 ```
 
-## Props
-
-- `isGenerating` (boolean): Indicates whether an image is currently being generated
-- `onGenerate` (function): Callback function to trigger image generation when the button is clicked
+The `ImagePlaceholder` will display an icon and a button to generate an image. It shows a loading state when `isGenerating` is true.

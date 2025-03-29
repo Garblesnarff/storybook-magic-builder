@@ -13,12 +13,19 @@ export function useZoomableImage(
   const [position, setPosition] = useState(initialSettings?.position || { x: 0, y: 0 });
   const [fitMethod, setFitMethod] = useState<'contain' | 'cover'>(initialSettings?.fitMethod || 'contain');
   
-  // Refs
+  // Refs for more stable state during operations
   const imageRef = useRef<HTMLImageElement>(null);
   const startPanRef = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastSettingsRef = useRef<ImageSettings>({
+    scale: scale,
+    position: position,
+    fitMethod: fitMethod
+  });
+  
+  // A ref to control when settings should be saved to avoid double debouncing
+  const shouldSaveSettingsRef = useRef(false);
   const settingsChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isInitialRender = useRef(true);
   
   // State for dimensions and loading
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
@@ -43,6 +50,7 @@ export function useZoomableImage(
     if (!initialSettings) {
       setPosition({ x: 0, y: 0 });
       setScale(1);
+      shouldSaveSettingsRef.current = false;
     }
     
     return () => {
@@ -51,7 +59,7 @@ export function useZoomableImage(
         clearTimeout(settingsChangeTimeoutRef.current);
       }
     };
-  }, [src, initialSettings]);
+  }, [src]);
 
   // Apply initial settings when they change (e.g., when changing pages)
   useEffect(() => {
@@ -62,13 +70,21 @@ export function useZoomableImage(
     setPosition(initialSettings.position);
     setFitMethod(initialSettings.fitMethod);
     
-    // Mark as not the initial render for future changes
-    isInitialRender.current = false;
+    // Update the ref
+    lastSettingsRef.current = {
+      scale: initialSettings.scale,
+      position: initialSettings.position, 
+      fitMethod: initialSettings.fitMethod
+    };
+    
+    // Don't save settings right after loading them
+    shouldSaveSettingsRef.current = false;
     
     // Set as ready for interaction after a short delay
     setTimeout(() => {
       setIsInteractionReady(true);
-    }, 100);
+      shouldSaveSettingsRef.current = true;
+    }, 200);
   }, [initialSettings]);
 
   // Get container dimensions
@@ -90,26 +106,49 @@ export function useZoomableImage(
 
   // Save settings when they change, with debounce to prevent excessive updates
   const saveSettings = () => {
-    if (!onSettingsChange || !imageLoaded || !isInteractionReady) return;
+    if (!onSettingsChange || !imageLoaded || !shouldSaveSettingsRef.current) return;
+    
+    // Don't save if panning is active
+    if (isPanning) return;
     
     // Clear any pending timeout
     if (settingsChangeTimeoutRef.current) {
       clearTimeout(settingsChangeTimeoutRef.current);
     }
     
+    // Create a current snapshot of settings to save
+    const currentSettings = {
+      scale,
+      position,
+      fitMethod
+    };
+    
+    // Update ref to latest values
+    lastSettingsRef.current = currentSettings;
+    
     // Set a new timeout
     settingsChangeTimeoutRef.current = setTimeout(() => {
-      onSettingsChange({
-        scale,
-        position,
-        fitMethod
-      });
-    }, 500); // Debounce time of 500ms
+      // Compare to detect real changes before saving
+      if (onSettingsChange && shouldSaveSettingsRef.current) {
+        console.log('Saving image settings:', currentSettings);
+        onSettingsChange(currentSettings);
+      }
+    }, 250); // Use a shorter debounce time
   };
 
   // Effect to save settings when they change
   useEffect(() => {
-    if (imageLoaded && !isInitialRender.current && isInteractionReady) {
+    // Skip saving during panning - will save on pan end
+    if (isPanning) return;
+    
+    // Check if settings actually changed before saving
+    const settingsChanged = 
+      scale !== lastSettingsRef.current.scale ||
+      position.x !== lastSettingsRef.current.position.x ||
+      position.y !== lastSettingsRef.current.position.y ||
+      fitMethod !== lastSettingsRef.current.fitMethod;
+    
+    if (imageLoaded && shouldSaveSettingsRef.current && settingsChanged) {
       saveSettings();
     }
     
@@ -119,14 +158,14 @@ export function useZoomableImage(
         clearTimeout(settingsChangeTimeoutRef.current);
       }
     };
-  }, [scale, position, fitMethod, imageLoaded, isInteractionReady]);
+  }, [scale, position, fitMethod, imageLoaded, isPanning]);
 
   // Calculate initial fitting scale when image and container dimensions are available
   useEffect(() => {
     if (!initialSettings && imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
       fitImageToContainer();
     }
-  }, [imageLoaded, containerDimensions, imageDimensions, fitMethod, initialSettings]);
+  }, [imageLoaded, containerDimensions, imageDimensions, fitMethod]);
 
   const fitImageToContainer = () => {
     if (!imageLoaded || containerDimensions.width <= 0 || containerDimensions.height <= 0 || imageDimensions.width <= 0) {
@@ -144,6 +183,13 @@ export function useZoomableImage(
     
     setScale(newScale);
     setPosition({ x: 0, y: 0 });
+    
+    // Update the ref
+    lastSettingsRef.current = {
+      scale: newScale,
+      position: { x: 0, y: 0 },
+      fitMethod
+    };
   };
 
   const toggleFitMethod = () => {
@@ -163,7 +209,10 @@ export function useZoomableImage(
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!isInteractionReady) return;
     
+    // Set panning active
     setIsPanning(true);
+    
+    // Store the initial point where the user clicked
     startPanRef.current = { 
       x: e.clientX - position.x, 
       y: e.clientY - position.y 
@@ -182,6 +231,7 @@ export function useZoomableImage(
     const newX = e.clientX - startPanRef.current.x;
     const newY = e.clientY - startPanRef.current.y;
     
+    // Update position directly during panning
     setPosition({
       x: newX,
       y: newY
@@ -191,9 +241,17 @@ export function useZoomableImage(
   };
 
   const handleMouseUp = () => {
+    if (!isPanning) return;
+    
     setIsPanning(false);
+    
     if (containerRef.current) {
       containerRef.current.style.cursor = 'grab';
+    }
+    
+    // Only save settings after panning is complete
+    if (isInteractionReady && shouldSaveSettingsRef.current) {
+      saveSettings();
     }
   };
 

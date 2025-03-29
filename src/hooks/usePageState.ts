@@ -36,7 +36,8 @@ export function usePageState(bookId: string | undefined) {
     handleTextChange, 
     handleLayoutChange, 
     handleTextFormattingChange, 
-    handleImageSettingsChange 
+    handleImageSettingsChange,
+    cleanupTimeouts
   } = usePageActions(currentBook, currentPageData, updatePage, setCurrentPageData);
   
   // Handle book loading
@@ -62,8 +63,9 @@ export function usePageState(bookId: string | undefined) {
   useEffect(() => {
     return () => {
       cleanupSavingTimeout();
+      cleanupTimeouts();
     };
-  }, []);
+  }, [cleanupSavingTimeout, cleanupTimeouts]);
 
   return {
     books,
