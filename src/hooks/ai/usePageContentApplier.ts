@@ -109,31 +109,54 @@ export function usePageContentApplier(
       
       // If there are more segments and we have an onAddPage function
       if (segments.length > 1 && onAddPage) {
+        // Array to track all new pages we create
+        const createdPages: string[] = [];
+        
         // Process each additional page sequentially
         for (let i = 1; i < segments.length; i++) {
-          // 1. Create a new page
+          console.log(`Creating new page for segment ${i+1}`);
           await onAddPage();
-          console.log(`Created new page for segment ${i+1}`);
           
-          // 2. Wait for the page to be created
+          // Wait for the page to be created
           await wait(2000);
           
-          // 3. Get the newly created page ID (it will be the last page)
-          const pageId = await getLastPageId(currentPageData);
+          // Get the book ID from the current page data
+          const bookId = await getBookIdFromPage(currentPageData.id);
           
-          if (pageId) {
-            console.log(`Applying text to page ID: ${pageId}`);
+          if (!bookId) {
+            console.error('Could not retrieve book ID');
+            continue;
+          }
+          
+          // Get all pages for this book in order
+          const { data: allPages } = await supabase
+            .from('book_pages')
+            .select('id, page_number')
+            .eq('book_id', bookId)
+            .order('page_number', { ascending: true });
             
-            // 4. Apply text directly to the database
-            await savePage(pageId, segments[i]);
+          if (!allPages || allPages.length === 0) {
+            console.error('Could not retrieve pages');
+            continue;
+          }
+          
+          // Find the most recently created page (should be the last one)
+          const newPageId = allPages[allPages.length - 1].id;
+          
+          if (newPageId && !createdPages.includes(newPageId)) {
+            createdPages.push(newPageId);
+            console.log(`Applying text to page ID: ${newPageId} (segment ${i+1})`);
             
-            // 5. Wait after update to ensure consistency
+            // Apply text directly to the database
+            await savePage(newPageId, segments[i]);
+            
+            // Wait after update to ensure consistency
             await wait(1000);
             
             // Update progress toast
             toast.loading(`Processing pages: ${i+1}/${segments.length}`, { id: toastId });
           } else {
-            console.error(`Could not find page for segment ${i+1}`);
+            console.error(`Could not find or already processed page for segment ${i+1}`);
           }
         }
         
@@ -141,7 +164,6 @@ export function usePageContentApplier(
         toast.success(`Created ${segments.length} pages with content`, { id: toastId });
         
         // Refresh the UI by reloading the page after all updates
-        // This ensures all pages have their updated content showing
         await wait(1000);
         window.location.reload();
       } else {
@@ -181,41 +203,24 @@ export function usePageContentApplier(
   };
   
   /**
-   * Function to get the ID of the last page in the book
+   * Helper function to get book ID from a page ID
    */
-  const getLastPageId = async (page: BookPage): Promise<string | null> => {
-    if (!page) return null;
-    
+  const getBookIdFromPage = async (pageId: string): Promise<string | null> => {
     try {
-      // We need to access the book_id from the database based on the current page
-      const { data: pageData, error: pageError } = await supabase
-        .from('book_pages')
-        .select('book_id')
-        .eq('id', page.id)
-        .single();
-        
-      if (pageError || !pageData) {
-        console.error('Error getting book_id from page:', pageError);
-        return null;
-      }
-      
-      const bookId = pageData.book_id;
-      
       const { data, error } = await supabase
         .from('book_pages')
-        .select('id, page_number')
-        .eq('book_id', bookId)
-        .order('page_number', { ascending: false })
-        .limit(1);
+        .select('book_id')
+        .eq('id', pageId)
+        .single();
       
-      if (error || !data || data.length === 0) {
-        console.error('Error getting last page ID:', error);
+      if (error || !data) {
+        console.error('Error getting book ID from page:', error);
         return null;
       }
       
-      return data[0].id;
+      return data.book_id;
     } catch (err) {
-      console.error('Error in getLastPageId function:', err);
+      console.error('Error in getBookIdFromPage function:', err);
       return null;
     }
   };
