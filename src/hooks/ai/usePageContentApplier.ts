@@ -119,7 +119,7 @@ export function usePageContentApplier(
           await wait(2000);
           
           // 3. Get the newly created page ID (it will be the last page)
-          const pageId = await getLastPageId();
+          const pageId = await getLastPageId(currentPageData);
           
           if (pageId) {
             console.log(`Applying text to page ID: ${pageId}`);
@@ -183,14 +183,28 @@ export function usePageContentApplier(
   /**
    * Function to get the ID of the last page in the book
    */
-  const getLastPageId = async (): Promise<string | null> => {
-    if (!currentPageData) return null;
+  const getLastPageId = async (page: BookPage): Promise<string | null> => {
+    if (!page) return null;
     
     try {
+      // We need to access the book_id from the database based on the current page
+      const { data: pageData, error: pageError } = await supabase
+        .from('book_pages')
+        .select('book_id')
+        .eq('id', page.id)
+        .single();
+        
+      if (pageError || !pageData) {
+        console.error('Error getting book_id from page:', pageError);
+        return null;
+      }
+      
+      const bookId = pageData.book_id;
+      
       const { data, error } = await supabase
         .from('book_pages')
         .select('id, page_number')
-        .eq('book_id', currentPageData.bookId)
+        .eq('book_id', bookId)
         .order('page_number', { ascending: false })
         .limit(1);
       
