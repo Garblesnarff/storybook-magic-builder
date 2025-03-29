@@ -52,7 +52,8 @@ export function useZoomableImage(
     fitMethod,
     fitMethodRef,
     toggleFitMethod,
-    fitImageToContainer
+    fitImageToContainer,
+    setFitMethod
   } = useImageFit(initialSettings, onSettingsChange);
   
   const { saveSettings } = useSettingsSync(
