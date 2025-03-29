@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
@@ -18,13 +19,15 @@ export function useImageFit(
     fitMethodRef.current = fitMethod;
   }, [fitMethod]);
 
-  // Toggle fit method
+  // Toggle fit method with animation frame for better performance
   const toggleFitMethod = useCallback(() => {
-    const newMethod = fitMethodRef.current === 'contain' ? 'cover' : 'contain';
-    setFitMethod(newMethod);
+    requestAnimationFrame(() => {
+      const newMethod = fitMethodRef.current === 'contain' ? 'cover' : 'contain';
+      setFitMethod(newMethod);
+    });
   }, []);
 
-  // Auto-fit when dimensions are available
+  // Auto-fit when dimensions are available - optimized version
   const fitImageToContainer = useCallback((
     imageLoaded: boolean,
     containerDimensions: Dimensions,
@@ -47,19 +50,23 @@ export function useImageFit(
       ? Math.min(widthRatio, heightRatio) 
       : Math.max(widthRatio, heightRatio);
     
-    setScale(newScale);
-    setPosition({ x: 0, y: 0 });
-    
-    // Save settings after fit
-    setTimeout(() => {
+    // Use requestAnimationFrame for smoother transitions
+    requestAnimationFrame(() => {
+      setScale(newScale);
+      setPosition({ x: 0, y: 0 });
+      
+      // Save settings after fit
       if (onSettingsChange && isInteractionReady) {
-        onSettingsChange({
-          scale: newScale,
-          position: { x: 0, y: 0 },
-          fitMethod: fitMethodRef.current
-        });
+        // Short delay to ensure state is updated before saving
+        setTimeout(() => {
+          onSettingsChange({
+            scale: newScale,
+            position: { x: 0, y: 0 },
+            fitMethod: fitMethodRef.current
+          });
+        }, 50);
       }
-    }, 50);
+    });
   }, [onSettingsChange]);
 
   return {

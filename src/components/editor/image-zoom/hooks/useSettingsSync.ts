@@ -12,7 +12,10 @@ export function useSettingsSync(
   initialSettings?: ImageSettings,
   onSettingsChange?: (settings: ImageSettings) => void
 ) {
-  // Save settings function
+  // Ref to track the last saved settings to avoid unnecessary updates
+  const lastSavedSettingsRef = useRef<string>('');
+  
+  // Save settings function with debounce mechanism built-in
   const saveSettings = useCallback(() => {
     if (!onSettingsChange || !imageLoaded || !isInteractionReady) return;
     
@@ -26,20 +29,40 @@ export function useSettingsSync(
       fitMethod
     };
     
-    console.log('Saving image settings:', currentSettings);
-    onSettingsChange(currentSettings);
+    // Stringify for comparison
+    const currentSettingsString = JSON.stringify(currentSettings);
+    
+    // Only save if settings changed
+    if (currentSettingsString !== lastSavedSettingsRef.current) {
+      console.log('Saving image settings:', currentSettings);
+      lastSavedSettingsRef.current = currentSettingsString;
+      onSettingsChange(currentSettings);
+    }
   }, [imageLoaded, isInteractionReady, onSettingsChange, scale, position, fitMethod, isPanning]);
 
   // Save settings when they change (except during panning)
+  // Use a more efficient debounced approach
+  const saveSettingsTimeoutRef = useRef<number | null>(null);
+  
   useEffect(() => {
     if (!isPanning && imageLoaded && isInteractionReady) {
-      // Use timeout to avoid saving too frequently
-      const timeout = setTimeout(() => {
-        saveSettings();
-      }, 100);
+      // Clear any pending timeout
+      if (saveSettingsTimeoutRef.current !== null) {
+        window.clearTimeout(saveSettingsTimeoutRef.current);
+      }
       
-      return () => clearTimeout(timeout);
+      // Set new timeout for debouncing
+      saveSettingsTimeoutRef.current = window.setTimeout(() => {
+        saveSettings();
+        saveSettingsTimeoutRef.current = null;
+      }, 200); // Increased debounce time for better performance
     }
+    
+    return () => {
+      if (saveSettingsTimeoutRef.current !== null) {
+        window.clearTimeout(saveSettingsTimeoutRef.current);
+      }
+    };
   }, [scale, position, fitMethod, imageLoaded, isPanning, isInteractionReady, saveSettings]);
 
   // Apply initial settings when they change (e.g., when changing pages)
@@ -55,11 +78,6 @@ export function useSettingsSync(
     
     console.log('Applying new initial settings:', initialSettings);
     lastInitialSettingsRef.current = initialSettings;
-    
-    // Set as ready for interaction after a short delay
-    setTimeout(() => {
-      console.log('Interaction ready after applying initial settings');
-    }, 200);
   }, [initialSettings]);
 
   return {

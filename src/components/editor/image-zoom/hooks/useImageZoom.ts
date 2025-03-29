@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
+
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
 export function useImageZoom(
@@ -12,14 +13,18 @@ export function useImageZoom(
     scaleRef.current = scale;
   }, [scale]);
 
-  // Zoom in
+  // Zoom in with requestAnimationFrame for smoother transitions
   const handleZoomIn = useCallback(() => {
-    setScale(prev => Math.min(prev + 0.25, 4));
+    requestAnimationFrame(() => {
+      setScale(prev => Math.min(prev + 0.25, 4));
+    });
   }, []);
 
-  // Zoom out
+  // Zoom out with requestAnimationFrame for smoother transitions
   const handleZoomOut = useCallback(() => {
-    setScale(prev => Math.max(prev - 0.25, 0.5));
+    requestAnimationFrame(() => {
+      setScale(prev => Math.max(prev - 0.25, 0.5));
+    });
   }, []);
 
   return {
@@ -30,6 +35,3 @@ export function useImageZoom(
     handleZoomOut
   };
 }
-
-// Don't forget to import useEffect for the ref sync
-import { useEffect } from 'react';

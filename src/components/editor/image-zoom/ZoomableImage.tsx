@@ -1,11 +1,12 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, memo } from 'react';
 import { cn } from '@/lib/utils';
 import { ZoomableImageProps } from './types';
 import { ZoomControls } from './ZoomControls';
 import { useZoomableImage } from './useZoomableImage';
 
-export const ZoomableImage: React.FC<ZoomableImageProps> = ({ 
+// Using memo to prevent unnecessary re-renders
+export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({ 
   src, 
   alt,
   className = '',
@@ -51,14 +52,14 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
             src={src}
             alt={alt}
             className={cn(
-              "select-none",
+              "select-none will-change-transform",
               fitMethod === 'contain' ? "object-contain" : "object-cover",
               isPanning ? "cursor-grabbing" : "cursor-grab",
               className
             )}
             style={{ 
               transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-              transition: isPanning ? 'none' : 'transform 0.2s ease-out',
+              transition: isPanning ? 'none' : 'transform 0.15s ease-out',
               transformOrigin: 'center',
               maxWidth: "none", // Remove max-width constraint to allow proper scaling
               maxHeight: "none", // Remove max-height constraint to allow proper scaling
@@ -80,4 +81,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
       />
     </div>
   );
-};
+});
+
+ZoomableImage.displayName = 'ZoomableImage';
+

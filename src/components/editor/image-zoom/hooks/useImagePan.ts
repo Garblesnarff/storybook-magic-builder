@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
 export function useImagePan(
@@ -41,7 +41,7 @@ export function useImagePan(
     e.preventDefault();
   }, []);
 
-  // Handle mouse move for panning
+  // Handle mouse move for panning - use requestAnimationFrame for smoother updates
   const handleMouseMove = useCallback((e: React.MouseEvent, isInteractionReady: boolean) => {
     if (!isPanningRef.current || !isInteractionReady) return;
     
@@ -49,10 +49,12 @@ export function useImagePan(
     const newX = e.clientX - startPanRef.current.x;
     const newY = e.clientY - startPanRef.current.y;
     
-    // Update position during panning
-    setPosition({
-      x: newX,
-      y: newY
+    // Use requestAnimationFrame for smoother updates
+    requestAnimationFrame(() => {
+      setPosition({
+        x: newX,
+        y: newY
+      });
     });
     
     e.preventDefault();
@@ -86,15 +88,13 @@ export function useImagePan(
     });
     
     // Save settings after panning ends
-    setTimeout(() => {
-      if (isInteractionReady && onSettingsChange && scaleRef && fitMethodRef) {
-        onSettingsChange({
-          scale: scaleRef.current,
-          position: { x: finalX, y: finalY },
-          fitMethod: fitMethodRef.current
-        });
-      }
-    }, 50);
+    if (isInteractionReady && onSettingsChange && scaleRef && fitMethodRef) {
+      onSettingsChange({
+        scale: scaleRef.current,
+        position: { x: finalX, y: finalY },
+        fitMethod: fitMethodRef.current
+      });
+    }
   }, []);
 
   return {
@@ -109,6 +109,3 @@ export function useImagePan(
     handleMouseUp
   };
 }
-
-// Don't forget to import useEffect for the ref sync
-import { useEffect } from 'react';

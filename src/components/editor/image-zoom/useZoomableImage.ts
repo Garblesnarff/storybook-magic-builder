@@ -67,9 +67,18 @@ export function useZoomableImage(
     const handleResize = () => updateContainerSize(containerRef);
     
     handleResize();
-    window.addEventListener('resize', handleResize);
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(handleResize);
+    });
     
-    return () => window.removeEventListener('resize', handleResize);
+    resizeObserver.observe(containerRef.current);
+    
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+      resizeObserver.disconnect();
+    };
   }, [updateContainerSize]);
 
   // Apply initial settings when they change (e.g., when changing pages)
@@ -113,17 +122,13 @@ export function useZoomableImage(
   // Enhance base handlers with additional functionality
   const handleZoomIn = useCallback(() => {
     baseHandleZoomIn();
-    
-    // Save settings after zoom
-    setTimeout(() => saveSettings(), 50);
-  }, [baseHandleZoomIn, saveSettings]);
+    // Debounced save will happen via useSettingsSync
+  }, [baseHandleZoomIn]);
 
   const handleZoomOut = useCallback(() => {
     baseHandleZoomOut();
-    
-    // Save settings after zoom
-    setTimeout(() => saveSettings(), 50);
-  }, [baseHandleZoomOut, saveSettings]);
+    // Debounced save will happen via useSettingsSync
+  }, [baseHandleZoomOut]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     baseHandleMouseDown(e, isInteractionReady, containerRef);
