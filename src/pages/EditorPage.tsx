@@ -43,9 +43,9 @@ const EditorPage = () => {
   
   useEffect(() => {
     if (currentBook) {
-      let dataElement = document.querySelector('[data-book-state]');
+      let dataElement = document.querySelector('[data-book-state]') as HTMLElement;
       if (!dataElement) {
-        dataElement = document.createElement('div') as HTMLDivElement;
+        dataElement = document.createElement('div') as HTMLElement;
         dataElement.setAttribute('data-book-state', '{}');
         dataElement.style.display = 'none';
         document.body.appendChild(dataElement);
@@ -55,7 +55,7 @@ const EditorPage = () => {
     }
     
     return () => {
-      const dataElement = document.querySelector('[data-book-state]');
+      const dataElement = document.querySelector('[data-book-state]') as HTMLElement;
       if (dataElement) {
         document.body.removeChild(dataElement);
       }
