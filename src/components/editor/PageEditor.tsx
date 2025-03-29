@@ -1,75 +1,93 @@
 
-import React, { useState, useEffect } from 'react';
-import { BookPage, PageLayout, TextFormatting } from '@/types/book';
-import {
-  TextLeftImageRight,
-  ImageLeftTextRight,
-  TextTopImageBottom,
-  ImageTopTextBottom,
-  FullPageImage,
-  FullPageText,
-  EmptyPagePlaceholder
-} from './layouts';
+import React from 'react';
+import { BookPage, PageLayout } from '@/types/book';
+import { TextLeftImageRight } from './layouts/TextLeftImageRight';
+import { ImageLeftTextRight } from './layouts/ImageLeftTextRight';
+import { TextTopImageBottom } from './layouts/TextTopImageBottom';
+import { ImageTopTextBottom } from './layouts/ImageTopTextBottom';
+import { FullPageText } from './layouts/FullPageText';
+import { FullPageImage } from './layouts/FullPageImage';
+import { EmptyPagePlaceholder } from './layouts/EmptyPagePlaceholder';
 
 interface PageEditorProps {
   currentPageData: BookPage | null;
   handleTextChange: (value: string) => void;
   handleLayoutChange: (layout: PageLayout) => void;
-  handleTextFormattingChange: (key: keyof TextFormatting, value: any) => void;
+  handleTextFormattingChange: (key: any, value: any) => void;
   handleGenerateImage: () => Promise<void>;
   isGenerating?: boolean;
-  previewText?: string; // New prop for real-time text preview
+  previewText?: string; // Add previewText prop
 }
 
 export const PageEditor: React.FC<PageEditorProps> = ({
   currentPageData,
+  handleTextChange,
+  handleLayoutChange,
+  handleTextFormattingChange,
   handleGenerateImage,
   isGenerating = false,
-  previewText
+  previewText // Receive previewText prop
 }) => {
   if (!currentPageData) {
     return <EmptyPagePlaceholder />;
   }
 
+  // Logic to determine which layout component to render
+  const layout = currentPageData.layout || 'text-left-image-right';
+
   return (
-    <div className="flex-grow flex items-center justify-center p-4 md:p-8 bg-gray-50">
-      <div 
-        className="aspect-[3/4] bg-white rounded-xl shadow-lg border overflow-hidden max-h-[80vh]" 
-        style={{ width: 'auto', height: '80vh' }}
-      >
-        {renderLayoutComponent(currentPageData, handleGenerateImage, isGenerating, previewText)}
-      </div>
+    <div className="flex-grow h-full overflow-hidden border-r relative">
+      {layout === 'text-left-image-right' && (
+        <TextLeftImageRight
+          page={currentPageData}
+          handleGenerateImage={handleGenerateImage}
+          isGenerating={isGenerating}
+          previewText={previewText} // Pass previewText to layout
+        />
+      )}
+      
+      {layout === 'image-left-text-right' && (
+        <ImageLeftTextRight
+          page={currentPageData}
+          handleGenerateImage={handleGenerateImage}
+          isGenerating={isGenerating}
+          previewText={previewText} // Pass previewText to layout
+        />
+      )}
+      
+      {layout === 'text-top-image-bottom' && (
+        <TextTopImageBottom
+          page={currentPageData}
+          handleGenerateImage={handleGenerateImage}
+          isGenerating={isGenerating}
+          previewText={previewText} // Pass previewText to layout
+        />
+      )}
+      
+      {layout === 'image-top-text-bottom' && (
+        <ImageTopTextBottom
+          page={currentPageData}
+          handleGenerateImage={handleGenerateImage}
+          isGenerating={isGenerating}
+          previewText={previewText} // Pass previewText to layout
+        />
+      )}
+      
+      {layout === 'full-page-text' && (
+        <FullPageText
+          page={currentPageData}
+          previewText={previewText} // Pass previewText to layout
+        />
+      )}
+      
+      {layout === 'full-page-image' && (
+        <FullPageImage
+          page={currentPageData}
+          handleGenerateImage={handleGenerateImage}
+          isGenerating={isGenerating}
+          previewText={previewText} // Pass previewText to layout
+        />
+      )}
     </div>
   );
 };
-
-function renderLayoutComponent(
-  page: BookPage, 
-  handleGenerateImage: () => Promise<void>, 
-  isGenerating: boolean = false,
-  previewText?: string
-) {
-  const props = {
-    page,
-    handleGenerateImage,
-    isGenerating,
-    previewText
-  };
-
-  switch (page.layout) {
-    case 'text-left-image-right':
-      return <TextLeftImageRight {...props} />;
-    case 'image-left-text-right':
-      return <ImageLeftTextRight {...props} />;
-    case 'text-top-image-bottom':
-      return <TextTopImageBottom {...props} />;
-    case 'image-top-text-bottom':
-      return <ImageTopTextBottom {...props} />;
-    case 'full-page-image':
-      return <FullPageImage {...props} />;
-    case 'full-page-text':
-      return <FullPageText {...props} />;
-    default:
-      return <TextLeftImageRight {...props} />;
-  }
-}
