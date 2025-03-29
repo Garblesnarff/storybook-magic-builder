@@ -1,0 +1,2 @@
+
+export { ZoomableImage } from './ZoomableImage';

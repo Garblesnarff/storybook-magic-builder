@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
-import { ZoomableImage } from '../ZoomableImage';
+import { ZoomableImage } from '../image-zoom';
 import { ImagePlaceholder } from '../ImagePlaceholder';
 import { BookTextRenderer } from '../BookTextRenderer';
 
