@@ -1,4 +1,3 @@
-
 export interface Book {
   id: string;
   title: string;
@@ -23,6 +22,13 @@ export interface BookPage {
   layout: PageLayout;
   backgroundColor?: string;
   textFormatting?: TextFormatting;
+  imageSettings?: ImageSettings;
+}
+
+export interface ImageSettings {
+  scale: number;
+  position: { x: number, y: number };
+  fitMethod: 'contain' | 'cover';
 }
 
 export type PageLayout = 
@@ -48,8 +54,7 @@ export interface ImageStyle {
   description: string;
 }
 
-// Define the default text as a constant for reuse and a single source of truth
-export const DEFAULT_PAGE_TEXT = ''; // Changed from 'Once upon a time...' to empty string
+export const DEFAULT_PAGE_TEXT = '';
 
 export const DEFAULT_BOOK: Omit<Book, 'id'> = {
   title: 'Untitled Book',
@@ -66,7 +71,7 @@ export const DEFAULT_BOOK: Omit<Book, 'id'> = {
 };
 
 export const DEFAULT_PAGE: Omit<BookPage, 'id' | 'pageNumber'> = {
-  text: DEFAULT_PAGE_TEXT, // Use the constant here
+  text: DEFAULT_PAGE_TEXT,
   layout: 'text-left-image-right',
   textFormatting: {
     fontFamily: 'Inter',
@@ -74,6 +79,11 @@ export const DEFAULT_PAGE: Omit<BookPage, 'id' | 'pageNumber'> = {
     fontColor: '#000000',
     isBold: false,
     isItalic: false
+  },
+  imageSettings: {
+    scale: 1,
+    position: { x: 0, y: 0 },
+    fitMethod: 'contain'
   }
 };
 
@@ -84,7 +94,6 @@ export const IMAGE_STYLES: ImageStyle[] = [
   { id: 'ANIME', name: 'Anime', description: 'Japanese animation-inspired style' }
 ];
 
-// Add the missing layoutNames constant that maps layout types to display names
 export const layoutNames: Record<PageLayout, string> = {
   'text-left-image-right': 'Text Left, Image Right',
   'image-left-text-right': 'Image Left, Text Right',

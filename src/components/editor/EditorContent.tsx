@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { BookPage } from '@/types/book';
+import { BookPage, ImageSettings } from '@/types/book';
 import { PageEditor } from './PageEditor';
 import { PageSettings } from './PageSettings';
 
@@ -10,6 +10,7 @@ interface EditorContentProps {
   handleLayoutChange: (value: any) => void;
   handleTextFormattingChange: (key: any, value: any) => void;
   handleGenerateImage: () => Promise<void>;
+  handleImageSettingsChange?: (settings: ImageSettings) => void;
   isGenerating?: boolean;
 }
 
@@ -19,6 +20,7 @@ export const EditorContent: React.FC<EditorContentProps> = ({
   handleLayoutChange,
   handleTextFormattingChange,
   handleGenerateImage,
+  handleImageSettingsChange,
   isGenerating = false
 }) => {
   // State for real-time text preview
@@ -42,6 +44,13 @@ export const EditorContent: React.FC<EditorContentProps> = ({
     setPreviewText(value);
   };
 
+  // Handle image settings changes
+  const handleImageSettings = (settings: ImageSettings) => {
+    if (handleImageSettingsChange) {
+      handleImageSettingsChange(settings);
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row flex-grow">
       <PageEditor
@@ -52,6 +61,7 @@ export const EditorContent: React.FC<EditorContentProps> = ({
         handleGenerateImage={handleGenerateImage}
         isGenerating={isGenerating}
         previewText={previewText}
+        onImageSettingsChange={handleImageSettings}
       />
       
       <PageSettings

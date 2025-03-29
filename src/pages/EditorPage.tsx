@@ -10,7 +10,7 @@ import { usePageState } from '@/hooks/usePageState';
 import { useAIOperations } from '@/hooks/useAIOperations';
 import { exportBookToPdf, generatePdfFilename } from '@/services/pdfExport';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PageLayout } from '@/types/book';
+import { PageLayout, ImageSettings } from '@/types/book';
 
 const EditorPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,10 +28,11 @@ const EditorPage = () => {
     handleTextChange,
     handleLayoutChange: handlePageLayoutChange,
     handleTextFormattingChange,
+    handleImageSettingsChange,
     updatePage,
     setCurrentPageData,
     handleReorderPage,
-    handleDeletePage // Add the delete page handler from usePageState
+    handleDeletePage
   } = usePageState(id);
   
   const {
@@ -80,13 +81,11 @@ const EditorPage = () => {
     }
   };
 
-  if (!id || (books.length > 0 && !books.some(book => book.id === id))) {
-    return <Navigate to="/books" />;
-  }
-
-  if (!currentBook) {
-    return (
-      <Layout>
+  return (
+    <Layout fullWidth>
+      {!id || (books.length > 0 && !books.some(book => book.id === id)) ? (
+        <Navigate to="/books" />
+      ) : !currentBook ? (
         <div className="flex flex-col space-y-4 p-8 w-full max-w-5xl mx-auto">
           <Skeleton className="h-12 w-3/4" />
           <div className="flex space-x-4">
@@ -100,46 +99,43 @@ const EditorPage = () => {
           </div>
           <Skeleton className="h-64 w-full" />
         </div>
-      </Layout>
-    );
-  }
-
-  return (
-    <Layout fullWidth>
-      <div className="min-h-screen flex flex-col">
-        <EditorHeader 
-          book={currentBook}
-          onExportPDF={handleExportPDF}
-          onApplyAIText={handleApplyAIText}
-          onApplyAIImage={handleApplyAIImage}
-          initialPrompt={currentPageData?.text}
-          isExporting={isExporting}
-          isSaving={isSaving}
-        />
-        
-        <div className="border-b bg-white/50 backdrop-blur-sm">
-          <div className="container mx-auto">
-            <PageList
-              pages={currentBook.pages}
-              selectedPageId={selectedPageId}
-              onPageSelect={handlePageSelect}
-              onAddPage={handleAddPage}
-              onDuplicatePage={handleDuplicatePage}
-              onDeletePage={handleDeletePage} // Pass the delete page handler
-              onReorderPage={handleReorderPage}
-            />
+      ) : (
+        <div className="min-h-screen flex flex-col">
+          <EditorHeader 
+            book={currentBook}
+            onExportPDF={handleExportPDF}
+            onApplyAIText={handleApplyAIText}
+            onApplyAIImage={handleApplyAIImage}
+            initialPrompt={currentPageData?.text}
+            isExporting={isExporting}
+            isSaving={isSaving}
+          />
+          
+          <div className="border-b bg-white/50 backdrop-blur-sm">
+            <div className="container mx-auto">
+              <PageList
+                pages={currentBook.pages}
+                selectedPageId={selectedPageId}
+                onPageSelect={handlePageSelect}
+                onAddPage={handleAddPage}
+                onDuplicatePage={handleDuplicatePage}
+                onDeletePage={handleDeletePage}
+                onReorderPage={handleReorderPage}
+              />
+            </div>
           </div>
+          
+          <EditorContent 
+            currentPageData={currentPageData}
+            handleTextChange={handleTextChange}
+            handleLayoutChange={handleLayoutChange}
+            handleTextFormattingChange={handleTextFormattingChange}
+            handleGenerateImage={handleGenerateImage}
+            handleImageSettingsChange={handleImageSettingsChange}
+            isGenerating={isGenerating}
+          />
         </div>
-        
-        <EditorContent 
-          currentPageData={currentPageData}
-          handleTextChange={handleTextChange}
-          handleLayoutChange={handleLayoutChange}
-          handleTextFormattingChange={handleTextFormattingChange}
-          handleGenerateImage={handleGenerateImage}
-          isGenerating={isGenerating}
-        />
-      </div>
+      )}
     </Layout>
   );
 };

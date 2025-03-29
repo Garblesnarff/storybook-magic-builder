@@ -1,30 +1,35 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Move, MoveHorizontal, RefreshCw } from 'lucide-react';
+import { ZoomIn, ZoomOut, Move, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { ImageSettings } from '@/types/book';
 
 interface ZoomableImageProps {
   src: string;
   alt: string;
   className?: string;
+  initialSettings?: ImageSettings;
+  onSettingsChange?: (settings: ImageSettings) => void;
 }
 
 export const ZoomableImage: React.FC<ZoomableImageProps> = ({ 
   src, 
   alt,
-  className = ''
+  className = '',
+  initialSettings,
+  onSettingsChange
 }) => {
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(initialSettings?.scale || 1);
   const [isPanning, setIsPanning] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState(initialSettings?.position || { x: 0, y: 0 });
+  const [fitMethod, setFitMethod] = useState<'contain' | 'cover'>(initialSettings?.fitMethod || 'contain');
   const imageRef = useRef<HTMLImageElement>(null);
   const startPanRef = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [fitMethod, setFitMethod] = useState<'contain' | 'cover'>('contain');
 
   // Load image dimensions when source changes
   useEffect(() => {
@@ -35,10 +40,12 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
     };
     img.src = src;
     
-    // Reset position and scale when image changes
-    setPosition({ x: 0, y: 0 });
-    setScale(1);
-  }, [src]);
+    // Reset position and scale when image changes if no initial settings
+    if (!initialSettings) {
+      setPosition({ x: 0, y: 0 });
+      setScale(1);
+    }
+  }, [src, initialSettings]);
 
   // Get container dimensions
   useEffect(() => {
@@ -56,12 +63,23 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
     }
   }, []);
 
+  // Save settings when they change
+  useEffect(() => {
+    if (onSettingsChange && imageLoaded) {
+      onSettingsChange({
+        scale,
+        position,
+        fitMethod
+      });
+    }
+  }, [scale, position, fitMethod, imageLoaded, onSettingsChange]);
+
   // Calculate initial fitting scale when image and container dimensions are available
   useEffect(() => {
-    if (imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
+    if (!initialSettings && imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
       fitImageToContainer();
     }
-  }, [imageLoaded, containerDimensions, imageDimensions, fitMethod]);
+  }, [imageLoaded, containerDimensions, imageDimensions, fitMethod, initialSettings]);
 
   const fitImageToContainer = () => {
     if (!imageLoaded || containerDimensions.width <= 0 || containerDimensions.height <= 0 || imageDimensions.width <= 0) {

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BookPage, PageLayout } from '@/types/book';
+import { BookPage, PageLayout, ImageSettings } from '@/types/book';
 import { TextLeftImageRight } from './layouts/TextLeftImageRight';
 import { ImageLeftTextRight } from './layouts/ImageLeftTextRight';
 import { TextTopImageBottom } from './layouts/TextTopImageBottom';
@@ -16,7 +16,8 @@ interface PageEditorProps {
   handleTextFormattingChange: (key: any, value: any) => void;
   handleGenerateImage: () => Promise<void>;
   isGenerating?: boolean;
-  previewText?: string; // Add previewText prop
+  previewText?: string;
+  onImageSettingsChange?: (settings: ImageSettings) => void;
 }
 
 export const PageEditor: React.FC<PageEditorProps> = ({
@@ -26,7 +27,8 @@ export const PageEditor: React.FC<PageEditorProps> = ({
   handleTextFormattingChange,
   handleGenerateImage,
   isGenerating = false,
-  previewText // Receive previewText prop
+  previewText,
+  onImageSettingsChange
 }) => {
   if (!currentPageData) {
     return <EmptyPagePlaceholder />;
@@ -46,7 +48,8 @@ export const PageEditor: React.FC<PageEditorProps> = ({
             page={currentPageData}
             handleGenerateImage={handleGenerateImage}
             isGenerating={isGenerating}
-            previewText={previewText} // Pass previewText to layout
+            previewText={previewText}
+            onImageSettingsChange={onImageSettingsChange}
           />
         )}
         
@@ -55,7 +58,8 @@ export const PageEditor: React.FC<PageEditorProps> = ({
             page={currentPageData}
             handleGenerateImage={handleGenerateImage}
             isGenerating={isGenerating}
-            previewText={previewText} // Pass previewText to layout
+            previewText={previewText}
+            onImageSettingsChange={onImageSettingsChange}
           />
         )}
         
@@ -64,7 +68,8 @@ export const PageEditor: React.FC<PageEditorProps> = ({
             page={currentPageData}
             handleGenerateImage={handleGenerateImage}
             isGenerating={isGenerating}
-            previewText={previewText} // Pass previewText to layout
+            previewText={previewText}
+            onImageSettingsChange={onImageSettingsChange}
           />
         )}
         
@@ -73,14 +78,15 @@ export const PageEditor: React.FC<PageEditorProps> = ({
             page={currentPageData}
             handleGenerateImage={handleGenerateImage}
             isGenerating={isGenerating}
-            previewText={previewText} // Pass previewText to layout
+            previewText={previewText}
+            onImageSettingsChange={onImageSettingsChange}
           />
         )}
         
         {layout === 'full-page-text' && (
           <FullPageText
             page={currentPageData}
-            previewText={previewText} // Pass previewText to layout
+            previewText={previewText}
           />
         )}
         
@@ -89,7 +95,8 @@ export const PageEditor: React.FC<PageEditorProps> = ({
             page={currentPageData}
             handleGenerateImage={handleGenerateImage}
             isGenerating={isGenerating}
-            previewText={previewText} // Pass previewText to layout
+            previewText={previewText}
+            onImageSettingsChange={onImageSettingsChange}
           />
         )}
       </div>

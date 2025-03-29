@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BookPage } from '@/types/book';
+import { BookPage, ImageSettings } from '@/types/book';
 import { ZoomableImage } from '../ZoomableImage';
 import { ImagePlaceholder } from '../ImagePlaceholder';
 import { BookTextRenderer } from '../BookTextRenderer';
@@ -10,13 +10,15 @@ interface LayoutProps {
   handleGenerateImage: () => Promise<void>;
   isGenerating?: boolean;
   previewText?: string;
+  onImageSettingsChange?: (settings: ImageSettings) => void;
 }
 
 export const FullPageImage: React.FC<LayoutProps> = ({ 
   page, 
   handleGenerateImage,
   isGenerating = false,
-  previewText
+  previewText,
+  onImageSettingsChange
 }) => {
   return (
     <div className="relative h-full">
@@ -25,6 +27,8 @@ export const FullPageImage: React.FC<LayoutProps> = ({
           <ZoomableImage 
             src={page.image} 
             alt="Page illustration"
+            initialSettings={page.imageSettings}
+            onSettingsChange={onImageSettingsChange}
           />
         </div>
       ) : (

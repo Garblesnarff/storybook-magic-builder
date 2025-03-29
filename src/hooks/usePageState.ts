@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useRef } from 'react';
-import { BookPage, PageLayout } from '@/types/book';
+import { BookPage, PageLayout, ImageSettings } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
 import { toast } from 'sonner';
 
@@ -135,7 +136,7 @@ export function usePageState(bookId: string | undefined) {
     }, 300);
   };
 
-  // Fixed function for layout changes (single parameter)
+  // Function for layout changes
   const handleLayoutChange = (value: PageLayout) => {
     if (!currentPageData) return;
     
@@ -160,6 +161,23 @@ export function usePageState(bookId: string | undefined) {
     const updatedPage = { 
       ...currentPageData, 
       textFormatting: updatedFormatting 
+    };
+    setCurrentPageData(updatedPage);
+    updatePage(updatedPage);
+    // Show saved indicator briefly after saving
+    setTimeout(() => {
+      setIsSaving(false);
+    }, 500);
+  };
+
+  // Add function to handle image settings changes
+  const handleImageSettingsChange = (settings: ImageSettings) => {
+    if (!currentPageData) return;
+    
+    setIsSaving(true);
+    const updatedPage = { 
+      ...currentPageData, 
+      imageSettings: settings 
     };
     setCurrentPageData(updatedPage);
     updatePage(updatedPage);
@@ -198,6 +216,7 @@ export function usePageState(bookId: string | undefined) {
     handleTextChange,
     handleLayoutChange,
     handleTextFormattingChange,
+    handleImageSettingsChange,
     updatePage,
     setCurrentPageData,
     handleReorderPage
