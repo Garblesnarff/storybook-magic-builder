@@ -52,6 +52,7 @@ const EditorPage = () => {
       if (!dataElement) {
         dataElement = document.createElement('div');
         dataElement.setAttribute('data-book-state', '{}');
+        // Fix: Correctly type the element as HTMLElement before accessing style property
         dataElement.style.display = 'none';
         document.body.appendChild(dataElement);
       }
