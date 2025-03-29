@@ -79,7 +79,7 @@ export const PageList: React.FC<PageListProps> = ({
           </Droppable>
         </DragDropContext>
         
-        <Button variant="ghost" size="icon" onClick={onAddPage} className="flex-shrink-0 h-20 w-16 border border-dashed border-muted-foreground/50 hover:bg-muted">
+        <Button variant="ghost" size="icon" onClick={onAddPage} className="flex-shrink-0 h-20 w-16 border border-dashed border-muted-foreground/50 bg-slate-500 hover:bg-slate-400 rounded-xl">
           <Plus className="h-4 w-4" />
           <span className="sr-only">Add page</span>
         </Button>
