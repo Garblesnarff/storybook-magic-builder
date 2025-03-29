@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface UseRealTimeTextProps {
   initialText: string;
@@ -21,27 +22,22 @@ export function useRealTimeText({
   const initialSaveCompleted = useRef(false);
   // Keep track of whether the text has been explicitly modified
   const textModified = useRef(false);
+  // Store latest value to use in cleanup
+  const latestTextRef = useRef(initialText);
 
   // Update local text when initialText prop changes (e.g., when page changes)
   useEffect(() => {
     setText(initialText);
+    latestTextRef.current = initialText; 
     textModified.current = false;
     initialSaveCompleted.current = false;
   }, [initialText]);
 
-  // Clean up timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
-
   // Handle text change with immediate update and debounced save
-  const handleTextChange = (newText: string) => {
+  const handleTextChange = useCallback((newText: string) => {
     // Update local state immediately for responsive typing
     setText(newText);
+    latestTextRef.current = newText;
     
     // Mark the text as modified
     textModified.current = true;
@@ -56,8 +52,6 @@ export function useRealTimeText({
     
     // Set a delay before saving
     debounceTimerRef.current = setTimeout(() => {
-      // Always save the text, even if it's the same as initialText
-      // This ensures we override any default value in the database
       console.log('Saving text:', newText);
       onSave(newText);
       initialSaveCompleted.current = true;
@@ -67,18 +61,35 @@ export function useRealTimeText({
         setIsSaving(false);
       }, 300);
     }, saveDelay);
-  };
+  }, [onSave, saveDelay]);
 
   // Force an immediate save if needed
-  const forceSave = () => {
+  const forceSave = useCallback(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
     }
-    console.log('Force saving text:', text);
-    onSave(text);
-    initialSaveCompleted.current = true;
-    setIsSaving(false);
-  };
+    
+    // Only save if the text has changed
+    if (textModified.current) {
+      console.log('Force saving text:', latestTextRef.current);
+      onSave(latestTextRef.current);
+      initialSaveCompleted.current = true;
+      textModified.current = false; 
+      setIsSaving(false);
+    }
+  }, [onSave]);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      // Ensure we save any pending changes on unmount
+      if (textModified.current && debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        onSave(latestTextRef.current);
+      }
+    };
+  }, [onSave]);
 
   return {
     text,

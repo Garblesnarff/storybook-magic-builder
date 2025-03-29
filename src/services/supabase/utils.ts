@@ -1,5 +1,5 @@
 
-import { Book, BookPage, DEFAULT_PAGE_TEXT } from '../../types/book';
+import { Book, BookPage } from '../../types/book';
 
 // Function to convert BookPage type to database schema
 export const bookPageToDatabasePage = (bookPage: BookPage, bookId: string) => {
@@ -8,17 +8,12 @@ export const bookPageToDatabasePage = (bookPage: BookPage, bookId: string) => {
     ? JSON.stringify(bookPage.imageSettings) 
     : null;
   
-  console.log('Converting page to database format. Image settings:', 
-    bookPage.imageSettings, 
-    'Stringified:', imageSettingsJson
-  );
-  
   return {
     id: bookPage.id,
     book_id: bookId,
     page_number: bookPage.pageNumber,
-    text: bookPage.text, // We'll use the exact text value, even if empty
-    image_url: bookPage.image, // This will be updated to store image URLs
+    text: bookPage.text || '', // Always use the page's actual text value
+    image_url: bookPage.image,
     layout: bookPage.layout,
     background_color: bookPage.backgroundColor,
     font_family: bookPage.textFormatting?.fontFamily,
@@ -27,7 +22,6 @@ export const bookPageToDatabasePage = (bookPage: BookPage, bookId: string) => {
     is_bold: bookPage.textFormatting?.isBold,
     is_italic: bookPage.textFormatting?.isItalic,
     image_style: bookPage.textFormatting?.imageStyle,
-    // Add image_settings to save position and scale
     image_settings: imageSettingsJson
   };
 };
@@ -43,15 +37,10 @@ export const databasePageToBookPage = (dbPage: any): BookPage => {
     imageSettings = null;
   }
   
-  console.log('Converting database page to BookPage. Image settings from DB:', 
-    dbPage.image_settings,
-    'Parsed:', imageSettings
-  );
-  
   return {
     id: dbPage.id,
     pageNumber: dbPage.page_number,
-    text: dbPage.text ?? '', // Use empty string if null, don't insert default text
+    text: dbPage.text || '', // Use empty string if null, not default text
     image: dbPage.image_url,
     layout: dbPage.layout,
     backgroundColor: dbPage.background_color,
