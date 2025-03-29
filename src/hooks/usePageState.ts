@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { BookPage } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
@@ -86,28 +85,27 @@ export function usePageState(bookId: string | undefined) {
     }
   };
 
-  // This function handles text changes without debouncing 
-  // since we now debounce in the TextSettings component
+  // This handler receives debounced text from the TextSettings component
   const handleTextChange = (value: string) => {
     if (!currentPageData) return;
-    
-    // Update both local state and save to backend
-    setCurrentPageData(prevState => {
-      if (!prevState) return null;
-      return { ...prevState, text: value };
-    });
     
     // Show saving indicator
     setIsSaving(true);
     
-    // Save the changes to the database
-    const updatedPage = { ...currentPageData, text: value };
-    updatePage(updatedPage);
+    // Update local state and save to backend
+    setCurrentPageData(prevState => {
+      if (!prevState) return null;
+      const updatedPage = { ...prevState, text: value };
+      
+      // Save the changes to the database
+      updatePage(updatedPage);
+      return updatedPage;
+    });
     
     // Hide saving indicator after a short delay
     setTimeout(() => {
       setIsSaving(false);
-    }, 500);
+    }, 300);
   };
 
   const handleLayoutChange = (value: any) => {

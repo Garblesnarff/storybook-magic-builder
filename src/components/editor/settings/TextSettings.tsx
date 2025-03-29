@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { BookPage, TextFormatting } from '@/types/book';
 import { Label } from '@/components/ui/label';
@@ -31,12 +30,8 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
     setLocalText(currentPageData.text || "");
   }, [currentPageData.id, currentPageData.text]);
   
-  // Efficient text change handler
+  // Efficient text change handler with better debouncing
   const onTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Update local state immediately for responsive typing
     const newValue = e.target.value;
     setLocalText(newValue);
     
@@ -45,10 +40,13 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
       clearTimeout(debounceTimerRef.current);
     }
     
-    // Set a delay before sending the update to the parent
+    // Set a much longer delay before sending the update to the parent
     debounceTimerRef.current = setTimeout(() => {
-      handleTextChange(newValue);
-    }, 800); // Wait for typing to pause before saving
+      // Only update if value actually changed
+      if (newValue !== currentPageData.text) {
+        handleTextChange(newValue);
+      }
+    }, 1000); // Wait 1 second after typing stops before saving
   };
   
   // Clean up timeout on unmount
