@@ -1,85 +1,104 @@
 
-import { BookPage, PageLayout, ImageSettings, TextFormatting } from '@/types/book';
-import { toast } from 'sonner';
-import { useSavingState } from './useSavingState';
+import { useState, useEffect } from 'react';
+import { BookPage, PageLayout, TextFormatting, ImageSettings } from '@/types/book';
 
 export function usePageActions(
-  currentBook: any,
+  currentBook: any, 
   currentPageData: BookPage | null,
   updatePage: (page: BookPage) => Promise<void>,
   setCurrentPageData: (page: BookPage | null) => void
 ) {
-  const { trackSavingOperation, completeSavingOperation } = useSavingState();
-
+  // Local state for tracking when we should save changes
+  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Handle text changes
   const handleTextChange = (value: string) => {
     if (!currentPageData) return;
     
-    // Always update the page, even with empty text
-    console.log('Updating page text to:', value);
+    // Update local state immediately
+    setCurrentPageData({
+      ...currentPageData,
+      text: value
+    });
     
-    trackSavingOperation();
-    
-    // Create updated page object
-    const updatedPage = { ...currentPageData, text: value };
-    
-    // Update local state first
-    setCurrentPageData(updatedPage);
-    
-    // Then save to backend
-    updatePage(updatedPage)
-      .then(() => completeSavingOperation())
-      .catch(() => completeSavingOperation());
+    // Debounce the save to the backend
+    if (saveTimeout) clearTimeout(saveTimeout);
+    const timeout = setTimeout(() => {
+      updatePage({
+        ...currentPageData,
+        text: value
+      });
+    }, 1000);
+    setSaveTimeout(timeout);
   };
-
-  // Function for layout changes
-  const handleLayoutChange = (value: PageLayout) => {
+  
+  // Handle layout changes
+  const handleLayoutChange = (layout: PageLayout) => {
     if (!currentPageData) return;
     
-    trackSavingOperation();
-    const updatedPage = { ...currentPageData, layout: value };
-    setCurrentPageData(updatedPage);
+    // Update local state immediately
+    setCurrentPageData({
+      ...currentPageData,
+      layout
+    });
     
-    updatePage(updatedPage)
-      .then(() => completeSavingOperation())
-      .catch(() => completeSavingOperation());
+    // Save to the backend
+    updatePage({
+      ...currentPageData,
+      layout
+    });
   };
-
+  
+  // Handle text formatting changes
   const handleTextFormattingChange = (key: keyof TextFormatting, value: any) => {
     if (!currentPageData) return;
     
-    trackSavingOperation();
-    const updatedFormatting = { 
+    const updatedTextFormatting = {
       ...currentPageData.textFormatting,
-      [key]: value 
+      [key]: value
     };
-    const updatedPage = { 
-      ...currentPageData, 
-      textFormatting: updatedFormatting 
-    };
-    setCurrentPageData(updatedPage);
     
-    updatePage(updatedPage)
-      .then(() => completeSavingOperation())
-      .catch(() => completeSavingOperation());
+    // Update local state immediately
+    setCurrentPageData({
+      ...currentPageData,
+      textFormatting: updatedTextFormatting
+    });
+    
+    // Save to the backend
+    updatePage({
+      ...currentPageData,
+      textFormatting: updatedTextFormatting
+    });
   };
-
-  // Function to handle image settings changes
+  
+  // Handle image settings changes
   const handleImageSettingsChange = (settings: ImageSettings) => {
     if (!currentPageData) return;
     
-    console.log('Saving image settings:', settings);
-    trackSavingOperation();
+    // Update local state immediately
+    setCurrentPageData({
+      ...currentPageData,
+      imageSettings: settings
+    });
     
-    // Create a deep clone of the current page data to prevent reference issues
-    const updatedPage = JSON.parse(JSON.stringify(currentPageData));
-    updatedPage.imageSettings = settings;
-    
-    setCurrentPageData(updatedPage);
-    updatePage(updatedPage)
-      .then(() => completeSavingOperation())
-      .catch(() => completeSavingOperation());
+    // Debounce the save to the backend
+    if (saveTimeout) clearTimeout(saveTimeout);
+    const timeout = setTimeout(() => {
+      updatePage({
+        ...currentPageData,
+        imageSettings: settings
+      });
+    }, 500); // Use a shorter timeout for image settings to feel more responsive
+    setSaveTimeout(timeout);
   };
-
+  
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeout) clearTimeout(saveTimeout);
+    };
+  }, [saveTimeout]);
+  
   return {
     handleTextChange,
     handleLayoutChange,
