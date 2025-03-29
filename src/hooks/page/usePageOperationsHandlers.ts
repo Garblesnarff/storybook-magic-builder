@@ -6,6 +6,7 @@ import { useSavingState } from './useSavingState';
 
 export function usePageOperationsHandlers(
   currentBook: Book | null,
+  selectedPageId: string | undefined,
   addPage: () => Promise<void>,
   duplicatePage: (id: string) => Promise<string | undefined>,
   deletePage: (id: string) => Promise<void>,

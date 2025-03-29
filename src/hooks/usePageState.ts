@@ -37,7 +37,7 @@ export function usePageState(bookId: string | undefined) {
     handleLayoutChange, 
     handleTextFormattingChange, 
     handleImageSettingsChange 
-  } = usePageActions(currentBook, updatePage, setCurrentPageData);
+  } = usePageActions(currentBook, currentPageData, updatePage, setCurrentPageData);
   
   // Handle book loading
   useBookLoading(bookId, books, loadBook);
@@ -49,7 +49,8 @@ export function usePageState(bookId: string | undefined) {
     handleDeletePage, 
     handleReorderPage 
   } = usePageOperationsHandlers(
-    currentBook, 
+    currentBook,
+    selectedPageId,
     addPage, 
     duplicatePage, 
     deletePage, 

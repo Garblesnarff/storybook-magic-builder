@@ -1,10 +1,11 @@
 
-import { BookPage, PageLayout, ImageSettings } from '@/types/book';
+import { BookPage, PageLayout, ImageSettings, TextFormatting } from '@/types/book';
 import { toast } from 'sonner';
 import { useSavingState } from './useSavingState';
 
 export function usePageActions(
   currentBook: any,
+  currentPageData: BookPage | null,
   updatePage: (page: BookPage) => Promise<void>,
   setCurrentPageData: (page: BookPage | null) => void
 ) {
@@ -18,18 +19,16 @@ export function usePageActions(
     
     trackSavingOperation();
     
-    // Update local state and save to backend
-    setCurrentPageData(prevState => {
-      if (!prevState) return null;
-      const updatedPage = { ...prevState, text: value };
-      
-      // Save the changes to the database
-      updatePage(updatedPage)
-        .then(() => completeSavingOperation())
-        .catch(() => completeSavingOperation());
-        
-      return updatedPage;
-    });
+    // Create updated page object
+    const updatedPage = { ...currentPageData, text: value };
+    
+    // Update local state first
+    setCurrentPageData(updatedPage);
+    
+    // Then save to backend
+    updatePage(updatedPage)
+      .then(() => completeSavingOperation())
+      .catch(() => completeSavingOperation());
   };
 
   // Function for layout changes
@@ -45,7 +44,7 @@ export function usePageActions(
       .catch(() => completeSavingOperation());
   };
 
-  const handleTextFormattingChange = (key: any, value: any) => {
+  const handleTextFormattingChange = (key: keyof TextFormatting, value: any) => {
     if (!currentPageData) return;
     
     trackSavingOperation();
