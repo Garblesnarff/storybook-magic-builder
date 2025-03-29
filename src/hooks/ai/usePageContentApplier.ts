@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { BookPage } from '@/types/book';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export function usePageContentApplier(
   currentPageData: BookPage | null,
@@ -59,128 +60,14 @@ export function usePageContentApplier(
 
   // Helper function to wait for a specific duration
   const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-  
-  // Helper function to get the current book state from the DOM
-  const getCurrentBookState = () => {
-    try {
-      const bookDataElement = document.querySelector('[data-book-state]') as HTMLElement;
-      if (bookDataElement) {
-        const bookData = bookDataElement.getAttribute('data-book-state');
-        if (bookData) {
-          return JSON.parse(bookData);
-        }
-      }
-      return null;
-    } catch (e) {
-      console.error('Error getting book state:', e);
-      return null;
-    }
-  };
 
-  // Function to directly update a page
-  const directUpdatePage = async (pageId: string, text: string): Promise<boolean> => {
-    try {
-      const bookState = getCurrentBookState();
-      if (!bookState) return false;
-      
-      const page = bookState.pages.find((p: BookPage) => p.id === pageId);
-      if (!page) return false;
-      
-      const updatedPage = { ...page, text };
-      updatePage(updatedPage);
-      console.log(`Directly updated page ${pageId} with text (${text.length} chars)`);
-      return true;
-    } catch (err) {
-      console.error(`Error directly updating page ${pageId}:`, err);
-      return false;
-    }
-  };
-  
-  // Function to find a page by page number
-  const findPageByPageNumber = (bookState: any, pageNumber: number): BookPage | null => {
-    if (!bookState || !bookState.pages) return null;
-    return bookState.pages.find((p: BookPage) => p.pageNumber === pageNumber) || null;
-  };
-  
-  // Function to verify all pages have content
-  const verifyAllPagesHaveContent = async (bookState: any, segments: string[]) => {
-    console.log("Verifying all pages have their text content...");
-    if (!bookState || !bookState.pages) return;
-    
-    // Loop through all expected page numbers
-    for (let i = 0; i < segments.length; i++) {
-      const expectedPage = findPageByPageNumber(bookState, i);
-      if (expectedPage) {
-        // Check if page has proper content
-        if (!expectedPage.text || expectedPage.text.length < 10) {
-          console.log(`Page ${i} (ID: ${expectedPage.id}) missing text, applying segment...`);
-          await directUpdatePage(expectedPage.id, segments[i]);
-          await wait(1500); // Wait after updating to ensure it's processed
-        } else {
-          console.log(`Page ${i} already has content: "${expectedPage.text.substring(0, 30)}..."`);
-        }
-      } else {
-        console.log(`Could not find page with page number ${i}`);
-      }
-    }
-  };
-  
-  // Enhanced function to create a page and apply text
-  const createPageWithText = async (text: string, pageIndex: number): Promise<string | null> => {
-    console.log(`Creating page ${pageIndex+1} with text (${text.length} chars)`);
-    
-    try {
-      // Add new page
-      await onAddPage?.();
-      
-      // Wait longer for the page to be created and the book state to be updated
-      await wait(3000); // Increased wait time for page creation
-      
-      // Verify the book state after waiting
-      let bookState = getCurrentBookState();
-      let retries = 0;
-      const maxRetries = 5; // Increased max retries
-      
-      // Retry getting book state if not found
-      while ((!bookState || !bookState.pages) && retries < maxRetries) {
-        await wait(1000);
-        bookState = getCurrentBookState();
-        retries++;
-        console.log(`Retry ${retries}: Getting book state after page creation`);
-      }
-      
-      if (!bookState || !bookState.pages) {
-        console.error('Failed to get book state after multiple attempts');
-        return null;
-      }
-      
-      // Find page by page number (most reliable method)
-      const pageNumber = bookState.pages.length - 1;
-      const newPage = findPageByPageNumber(bookState, pageNumber);
-      
-      if (!newPage) {
-        console.error(`Could not find newly created page with page number ${pageNumber}`);
-        return null;
-      }
-      
-      console.log(`Applying text to new page ID: ${newPage.id}, pageNumber: ${newPage.pageNumber}`);
-      
-      // Update the page text with a direct update
-      const updatedPage = { ...newPage, text };
-      updatePage(updatedPage);
-      
-      // Wait to ensure the update has been processed
-      await wait(2000); // Increased wait time after update
-      
-      // Return the page ID for verification later
-      return newPage.id;
-    } catch (err) {
-      console.error(`Error creating page ${pageIndex+1}:`, err);
-      return null;
-    }
-  };
-
-  // Enhanced function to handle multi-page stories
+  /**
+   * A completely new approach to multi-page story application:
+   * 1. Update the first page immediately (synchronously)
+   * 2. Create and process each additional page one at a time
+   * 3. Use direct API calls to Supabase for saving pages
+   * 4. Apply consistent wait times between operations
+   */
   const handleApplyAIText = async (text: string) => {
     if (!currentPageData) return;
     
@@ -202,54 +89,61 @@ export function usePageContentApplier(
     
     try {
       // Start progress toast
-      const toastId = toast.loading(`Creating pages: 0/${segments.length} completed...`);
+      const toastId = toast.loading(`Processing pages: 0/${segments.length}`);
       
-      // Update the first page immediately
+      // Update the first page immediately with the first segment
       const firstSegment = segments[0];
-      console.log(`Updating original page (${currentPageData.id}) with first segment (${firstSegment.length} chars)`);
+      console.log(`Updating current page (${currentPageData.id}) with first segment`);
       
       const updatedFirstPage = { ...currentPageData, text: firstSegment };
       updatePage(updatedFirstPage);
       setCurrentPageData(updatedFirstPage);
       
-      // Wait to ensure first page update is complete
-      await wait(2000); // Increased wait time for first page update
+      // Direct database update for the first page to ensure it's saved
+      await savePage(currentPageData.id, firstSegment);
       
-      toast.loading(`Creating pages: 1/${segments.length} completed...`, { id: toastId });
+      // Wait to ensure first page update is complete
+      await wait(1500);
+      
+      toast.loading(`Processing pages: 1/${segments.length}`, { id: toastId });
       
       // If there are more segments and we have an onAddPage function
       if (segments.length > 1 && onAddPage) {
-        console.log(`Starting to create ${segments.length - 1} additional pages...`);
-        
-        // Track created page IDs to ensure we can update them later if needed
-        const createdPageIds: Array<string | null> = [];
-        
-        // Create each page sequentially and apply text immediately
+        // Process each additional page sequentially
         for (let i = 1; i < segments.length; i++) {
-          // Create the new page and get its ID
-          const newPageId = await createPageWithText(segments[i], i);
-          createdPageIds.push(newPageId);
+          // 1. Create a new page
+          await onAddPage();
+          console.log(`Created new page for segment ${i+1}`);
           
-          // Update progress toast
-          toast.loading(`Creating pages: ${i+1}/${segments.length} completed...`, { id: toastId });
+          // 2. Wait for the page to be created
+          await wait(2000);
           
-          // Wait between page creations to ensure database consistency
-          // Increase the wait time for each subsequent page to reduce race conditions
-          await wait(3000 + i * 800); 
+          // 3. Get the newly created page ID (it will be the last page)
+          const pageId = await getLastPageId();
+          
+          if (pageId) {
+            console.log(`Applying text to page ID: ${pageId}`);
+            
+            // 4. Apply text directly to the database
+            await savePage(pageId, segments[i]);
+            
+            // 5. Wait after update to ensure consistency
+            await wait(1000);
+            
+            // Update progress toast
+            toast.loading(`Processing pages: ${i+1}/${segments.length}`, { id: toastId });
+          } else {
+            console.error(`Could not find page for segment ${i+1}`);
+          }
         }
         
-        // Wait an additional time after all pages are created before verification
-        await wait(2000);
+        // Success message after completing all pages
+        toast.success(`Created ${segments.length} pages with content`, { id: toastId });
         
-        // Verify and retry for pages that might have failed
-        console.log('Verifying all pages have their text...');
-        const bookState = getCurrentBookState();
-        
-        if (bookState) {
-          await verifyAllPagesHaveContent(bookState, segments);
-        }
-        
-        toast.success(`Created ${segments.length} pages in total`, { id: toastId });
+        // Refresh the UI by reloading the page after all updates
+        // This ensures all pages have their updated content showing
+        await wait(1000);
+        window.location.reload();
       } else {
         toast.success('Story applied to the current page', { id: toastId });
       }
@@ -260,6 +154,55 @@ export function usePageContentApplier(
       });
     } finally {
       setProcessingStory(false);
+    }
+  };
+
+  /**
+   * Function to save page text directly to the database
+   */
+  const savePage = async (pageId: string, text: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('book_pages')
+        .update({ text })
+        .eq('id', pageId);
+      
+      if (error) {
+        console.error('Error saving page text:', error);
+        return false;
+      }
+      
+      console.log(`Successfully saved text for page ID: ${pageId}`);
+      return true;
+    } catch (err) {
+      console.error('Error in savePage function:', err);
+      return false;
+    }
+  };
+  
+  /**
+   * Function to get the ID of the last page in the book
+   */
+  const getLastPageId = async (): Promise<string | null> => {
+    if (!currentPageData) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('book_pages')
+        .select('id, page_number')
+        .eq('book_id', currentPageData.bookId)
+        .order('page_number', { ascending: false })
+        .limit(1);
+      
+      if (error || !data || data.length === 0) {
+        console.error('Error getting last page ID:', error);
+        return null;
+      }
+      
+      return data[0].id;
+    } catch (err) {
+      console.error('Error in getLastPageId function:', err);
+      return null;
     }
   };
 
