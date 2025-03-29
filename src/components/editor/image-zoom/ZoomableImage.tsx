@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { ZoomableImageProps } from './types';
 import { ZoomControls } from './ZoomControls';
@@ -30,9 +30,10 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
     handleReset
   } = useZoomableImage(src, initialSettings, onSettingsChange);
 
-  const handleMouseLeave = (e: React.MouseEvent) => {
+  // Handle mouse events in component to ensure we have access to current state
+  const handleMouseLeave = useCallback((e: React.MouseEvent) => {
     handleMouseUp(e);
-  };
+  }, [handleMouseUp]);
 
   return (
     <div 

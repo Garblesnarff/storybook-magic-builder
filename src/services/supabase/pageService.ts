@@ -11,6 +11,13 @@ export const addPageToSupabase = async (bookId: string, pageNumber: number): Pro
   try {
     const pageId = uuidv4();
     
+    // Initial imageSettings with default values
+    const defaultImageSettings = {
+      scale: 1,
+      position: { x: 0, y: 0 },
+      fitMethod: 'contain'
+    };
+    
     // Insert the new page (use empty text by default)
     const { data, error } = await supabase
       .from('book_pages')
@@ -19,7 +26,8 @@ export const addPageToSupabase = async (bookId: string, pageNumber: number): Pro
         book_id: bookId,
         page_number: pageNumber,
         text: DEFAULT_PAGE_TEXT, // Use empty text by default
-        layout: 'text-left-image-right'
+        layout: 'text-left-image-right',
+        image_settings: JSON.stringify(defaultImageSettings) // Store default image settings
       })
       .select()
       .single();
@@ -41,16 +49,23 @@ export const addPageToSupabase = async (bookId: string, pageNumber: number): Pro
 // Function to update a page in a book in Supabase
 export const updatePageInSupabase = async (bookId: string, page: BookPage): Promise<boolean> => {
   try {
+    console.log('Updating page in Supabase. Page data:', page);
+    
     // If page has a base64 image, upload it to storage
     if (page.image && page.image.startsWith('data:image')) {
       const imageUrl = await uploadImage(page.image, bookId, page.id);
       page.image = imageUrl || undefined;
     }
     
+    // Convert page to database format
+    const dbPage = bookPageToDatabasePage(page, bookId);
+    
+    console.log('Converted page for database:', dbPage);
+    
     // Update the page data
     const { error } = await supabase
       .from('book_pages')
-      .update(bookPageToDatabasePage(page, bookId))
+      .update(dbPage)
       .eq('id', page.id);
     
     if (error) {

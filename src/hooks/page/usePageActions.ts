@@ -93,44 +93,36 @@ export function usePageActions(
   const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
     if (!currentPageData) return;
     
-    console.log('Image settings change received:', settings);
+    console.log('handleImageSettingsChange called with:', settings);
     
-    // Make a deep clone to avoid reference issues
-    const updatedPageData = {
-      ...JSON.parse(JSON.stringify(currentPageData)),
-      imageSettings: settings
+    // Create a completely new object to avoid any reference issues
+    const updatedPage = {
+      ...currentPageData,
+      imageSettings: { ...settings } // Create a new object to avoid reference issues
     };
     
-    // Update local state immediately
-    setCurrentPageData(updatedPageData);
+    // Update UI immediately
+    setCurrentPageData(updatedPage);
     
-    // Use the settings directly from parameter to avoid stale closures
     // Cancel any pending timeouts to prevent race conditions
     if (imageSettingsTimeoutRef.current) {
       clearTimeout(imageSettingsTimeoutRef.current);
     }
     
-    imageSettingsTimeoutRef.current = setTimeout(() => {
-      trackSavingOperation();
-      console.log('Saving image settings to backend:', settings);
-      
-      // Use the latest page data but with the settings parameter
-      const latestPageData = {
-        ...currentPageData, // Use reference for latest
-        imageSettings: settings // Use parameter directly
-      };
-      
-      updatePage(latestPageData)
-        .then(() => {
-          console.log('Image settings saved successfully');
-          completeSavingOperation();
-        })
-        .catch((error) => {
-          console.error('Failed to save image settings:', error);
-          completeSavingOperation();
-        });
-    }, 250); // Shorter timeout for better responsiveness
+    // Directly save without debouncing to ensure changes persist
+    trackSavingOperation();
+    console.log('Saving image settings to backend:', settings);
     
+    // Use the updated page with the new settings
+    updatePage(updatedPage)
+      .then(() => {
+        console.log('Image settings saved successfully');
+        completeSavingOperation();
+      })
+      .catch((error) => {
+        console.error('Failed to save image settings:', error);
+        completeSavingOperation();
+      });
   }, [currentPageData, setCurrentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
   
   // Clean up timeouts to prevent memory leaks
