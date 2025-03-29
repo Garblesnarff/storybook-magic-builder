@@ -35,12 +35,17 @@ const EditorPage = () => {
     handleDeletePage
   } = usePageState(id);
   
+  // Create a Promise-returning wrapper for handleAddPage
+  const handleAddPageAsync = async () => {
+    return handleAddPage();
+  };
+  
   const {
     isGenerating,
     handleGenerateImage,
     handleApplyAIText,
     handleApplyAIImage
-  } = useAIOperations(currentPageData, updatePage, setCurrentPageData, handleAddPage);
+  } = useAIOperations(currentPageData, updatePage, setCurrentPageData, handleAddPageAsync);
 
   // Create a proper adapter function for layout changes
   const handleLayoutChange = (layout: PageLayout) => {
