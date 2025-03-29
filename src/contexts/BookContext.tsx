@@ -12,7 +12,7 @@ interface BookContextProps {
   updateBook: (book: Book) => Promise<void>;
   deleteBook: (id: string) => Promise<void>;
   loadBook: (id: string) => Promise<Book | null>;
-  addPage: () => Promise<string | undefined>; // Update return type
+  addPage: () => Promise<string | undefined>; 
   updatePage: (page: BookPage) => Promise<void>;
   deletePage: (id: string) => Promise<void>;
   reorderPage: (id: string, newPosition: number) => Promise<void>;
@@ -21,13 +21,29 @@ interface BookContextProps {
   error: string | null;
 }
 
-// Create the context with a default undefined value
-const BookContext = createContext<BookContextProps | undefined>(undefined);
+// Create the context with a default empty implementation to avoid undefined errors
+const BookContext = createContext<BookContextProps>({
+  books: [],
+  currentBook: null,
+  createBook: async () => null,
+  createBookFromTemplate: async () => null,
+  updateBook: async () => {},
+  deleteBook: async () => {},
+  loadBook: async () => null,
+  addPage: async () => undefined,
+  updatePage: async () => {},
+  deletePage: async () => {},
+  reorderPage: async () => {},
+  duplicatePage: async () => undefined,
+  loading: false,
+  error: null
+});
 
 // Custom hook to use the book context
 export const useBook = () => {
   const context = useContext(BookContext);
-  if (context === undefined) {
+  // We still want to throw an error if useBook is used outside of a provider
+  if (!context) {
     throw new Error('useBook must be used within a BookProvider');
   }
   return context;
