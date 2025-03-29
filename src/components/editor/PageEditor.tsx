@@ -36,58 +36,63 @@ export const PageEditor: React.FC<PageEditorProps> = ({
   const layout = currentPageData.layout || 'text-left-image-right';
 
   return (
-    <div className="flex-grow h-full overflow-hidden border-r relative">
-      {layout === 'text-left-image-right' && (
-        <TextLeftImageRight
-          page={currentPageData}
-          handleGenerateImage={handleGenerateImage}
-          isGenerating={isGenerating}
-          previewText={previewText} // Pass previewText to layout
-        />
-      )}
-      
-      {layout === 'image-left-text-right' && (
-        <ImageLeftTextRight
-          page={currentPageData}
-          handleGenerateImage={handleGenerateImage}
-          isGenerating={isGenerating}
-          previewText={previewText} // Pass previewText to layout
-        />
-      )}
-      
-      {layout === 'text-top-image-bottom' && (
-        <TextTopImageBottom
-          page={currentPageData}
-          handleGenerateImage={handleGenerateImage}
-          isGenerating={isGenerating}
-          previewText={previewText} // Pass previewText to layout
-        />
-      )}
-      
-      {layout === 'image-top-text-bottom' && (
-        <ImageTopTextBottom
-          page={currentPageData}
-          handleGenerateImage={handleGenerateImage}
-          isGenerating={isGenerating}
-          previewText={previewText} // Pass previewText to layout
-        />
-      )}
-      
-      {layout === 'full-page-text' && (
-        <FullPageText
-          page={currentPageData}
-          previewText={previewText} // Pass previewText to layout
-        />
-      )}
-      
-      {layout === 'full-page-image' && (
-        <FullPageImage
-          page={currentPageData}
-          handleGenerateImage={handleGenerateImage}
-          isGenerating={isGenerating}
-          previewText={previewText} // Pass previewText to layout
-        />
-      )}
+    <div className="flex-grow flex items-center justify-center p-4 md:p-8 bg-gray-50">
+      <div 
+        className="aspect-[3/4] bg-white rounded-xl shadow-lg border overflow-hidden max-h-[80vh]" 
+        style={{ width: 'auto', height: '80vh' }}
+      >
+        {layout === 'text-left-image-right' && (
+          <TextLeftImageRight
+            page={currentPageData}
+            handleGenerateImage={handleGenerateImage}
+            isGenerating={isGenerating}
+            previewText={previewText} // Pass previewText to layout
+          />
+        )}
+        
+        {layout === 'image-left-text-right' && (
+          <ImageLeftTextRight
+            page={currentPageData}
+            handleGenerateImage={handleGenerateImage}
+            isGenerating={isGenerating}
+            previewText={previewText} // Pass previewText to layout
+          />
+        )}
+        
+        {layout === 'text-top-image-bottom' && (
+          <TextTopImageBottom
+            page={currentPageData}
+            handleGenerateImage={handleGenerateImage}
+            isGenerating={isGenerating}
+            previewText={previewText} // Pass previewText to layout
+          />
+        )}
+        
+        {layout === 'image-top-text-bottom' && (
+          <ImageTopTextBottom
+            page={currentPageData}
+            handleGenerateImage={handleGenerateImage}
+            isGenerating={isGenerating}
+            previewText={previewText} // Pass previewText to layout
+          />
+        )}
+        
+        {layout === 'full-page-text' && (
+          <FullPageText
+            page={currentPageData}
+            previewText={previewText} // Pass previewText to layout
+          />
+        )}
+        
+        {layout === 'full-page-image' && (
+          <FullPageImage
+            page={currentPageData}
+            handleGenerateImage={handleGenerateImage}
+            isGenerating={isGenerating}
+            previewText={previewText} // Pass previewText to layout
+          />
+        )}
+      </div>
     </div>
   );
 };

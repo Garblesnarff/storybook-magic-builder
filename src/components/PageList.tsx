@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { PagePreview } from './PagePreview';
 
 interface PageListProps {
   pages: BookPage[];
@@ -97,6 +98,7 @@ export const PageList: React.FC<PageListProps> = ({
                               e.stopPropagation();
                               onDuplicatePage(page.id);
                             }}
+                            title="Duplicate page"
                           >
                             <Copy className="h-3 w-3" />
                             <span className="sr-only">Duplicate page</span>
@@ -110,6 +112,7 @@ export const PageList: React.FC<PageListProps> = ({
                                 e.stopPropagation();
                                 handleDeletePage(page.id);
                               }}
+                              title="Delete page"
                             >
                               <Trash2 className="h-3 w-3" />
                               <span className="sr-only">Delete page</span>
