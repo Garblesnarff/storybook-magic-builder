@@ -42,6 +42,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [imageStyle, setImageStyle] = useState('REALISTIC');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
+  // Create an async wrapper function for updatePage that returns a Promise
+  const handleUpdatePage = async (page: BookPage): Promise<void> => {
+    if (updatePage) {
+      updatePage(page);
+    }
+    return Promise.resolve();
+  };
+
   // Initialize the hook with null values since we're not operating on a specific page
   const {
     isGeneratingText,
@@ -52,7 +60,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setGeneratedImage,
     generateText,
     generateImage
-  } = useAIOperations(null, () => {}, () => {});
+  } = useAIOperations(null, handleUpdatePage, () => {});
 
   const handleGenerateText = async () => {
     await generateText(prompt, temperature, maxTokens);
@@ -118,3 +126,4 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     </Sheet>
   );
 };
+

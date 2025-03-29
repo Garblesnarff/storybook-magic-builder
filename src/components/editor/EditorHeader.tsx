@@ -15,7 +15,7 @@ interface EditorHeaderProps {
   isExporting: boolean;
   isSaving?: boolean;
   currentBook?: Book | null;
-  updatePage?: (page: BookPage) => void;
+  updatePage?: (page: BookPage) => Promise<void>;
 }
 
 export const EditorHeader: React.FC<EditorHeaderProps> = ({
