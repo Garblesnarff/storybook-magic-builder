@@ -17,15 +17,25 @@ export function useZoomableImage(
   const imageRef = useRef<HTMLImageElement>(null);
   const startPanRef = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const positionRef = useRef(position); // Keep a ref to latest position
+  const scaleRef = useRef(scale); // Keep a ref to latest scale
+  
+  // Save refs to current state for stable callbacks
+  useEffect(() => {
+    positionRef.current = position;
+    scaleRef.current = scale;
+  }, [position, scale]);
+  
+  // Track settings to avoid saving unnecessarily
   const lastSettingsRef = useRef<ImageSettings>({
-    scale: scale,
-    position: position,
-    fitMethod: fitMethod
+    scale,
+    position,
+    fitMethod
   });
   
-  // A ref to control when settings should be saved to avoid double debouncing
+  // Control when settings should be saved to avoid unnecessary updates
   const shouldSaveSettingsRef = useRef(false);
-  const settingsChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const settingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // State for dimensions and loading
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
@@ -38,11 +48,18 @@ export function useZoomableImage(
   // Load image dimensions when source changes
   useEffect(() => {
     setImageLoaded(false);
+    setIsInteractionReady(false);
     
     const img = new Image();
     img.onload = () => {
       setImageDimensions({ width: img.width, height: img.height });
       setImageLoaded(true);
+      
+      // Set as ready for interaction after image loads
+      setTimeout(() => {
+        setIsInteractionReady(true);
+        shouldSaveSettingsRef.current = true;
+      }, 200);
     };
     img.src = src;
     
@@ -55,8 +72,8 @@ export function useZoomableImage(
     
     return () => {
       // Cleanup on unmount or when src changes
-      if (settingsChangeTimeoutRef.current) {
-        clearTimeout(settingsChangeTimeoutRef.current);
+      if (settingsTimeoutRef.current) {
+        clearTimeout(settingsTimeoutRef.current);
       }
     };
   }, [src]);
@@ -64,6 +81,8 @@ export function useZoomableImage(
   // Apply initial settings when they change (e.g., when changing pages)
   useEffect(() => {
     if (!initialSettings) return;
+    
+    console.log('Applying initial settings:', initialSettings);
     
     // Always apply settings when they change from outside
     setScale(initialSettings.scale);
@@ -104,7 +123,7 @@ export function useZoomableImage(
     return () => window.removeEventListener('resize', updateContainerSize);
   }, []);
 
-  // Save settings when they change, with debounce to prevent excessive updates
+  // Save settings function with debounce
   const saveSettings = () => {
     if (!onSettingsChange || !imageLoaded || !shouldSaveSettingsRef.current) return;
     
@@ -112,8 +131,8 @@ export function useZoomableImage(
     if (isPanning) return;
     
     // Clear any pending timeout
-    if (settingsChangeTimeoutRef.current) {
-      clearTimeout(settingsChangeTimeoutRef.current);
+    if (settingsTimeoutRef.current) {
+      clearTimeout(settingsTimeoutRef.current);
     }
     
     // Create a current snapshot of settings to save
@@ -123,44 +142,34 @@ export function useZoomableImage(
       fitMethod
     };
     
-    // Update ref to latest values
-    lastSettingsRef.current = currentSettings;
+    // Compare with last saved settings to detect changes
+    const hasChanged = 
+      currentSettings.scale !== lastSettingsRef.current.scale ||
+      currentSettings.position.x !== lastSettingsRef.current.position.x ||
+      currentSettings.position.y !== lastSettingsRef.current.position.y ||
+      currentSettings.fitMethod !== lastSettingsRef.current.fitMethod;
+      
+    // Only save if there are actual changes
+    if (!hasChanged) return;
     
-    // Set a new timeout
-    settingsChangeTimeoutRef.current = setTimeout(() => {
-      // Compare to detect real changes before saving
-      if (onSettingsChange && shouldSaveSettingsRef.current) {
-        console.log('Saving image settings:', currentSettings);
-        onSettingsChange(currentSettings);
-      }
-    }, 250); // Use a shorter debounce time
+    // Update ref to latest values
+    lastSettingsRef.current = { ...currentSettings };
+    
+    // Set a new timeout for debounced save
+    settingsTimeoutRef.current = setTimeout(() => {
+      console.log('Saving image settings:', currentSettings);
+      onSettingsChange(currentSettings);
+    }, 250);
   };
 
-  // Effect to save settings when they change
+  // Save settings when they change (except during panning)
   useEffect(() => {
-    // Skip saving during panning - will save on pan end
-    if (isPanning) return;
-    
-    // Check if settings actually changed before saving
-    const settingsChanged = 
-      scale !== lastSettingsRef.current.scale ||
-      position.x !== lastSettingsRef.current.position.x ||
-      position.y !== lastSettingsRef.current.position.y ||
-      fitMethod !== lastSettingsRef.current.fitMethod;
-    
-    if (imageLoaded && shouldSaveSettingsRef.current && settingsChanged) {
+    if (!isPanning && imageLoaded && isInteractionReady && shouldSaveSettingsRef.current) {
       saveSettings();
     }
-    
-    return () => {
-      // Clean up timeout on unmount
-      if (settingsChangeTimeoutRef.current) {
-        clearTimeout(settingsChangeTimeoutRef.current);
-      }
-    };
-  }, [scale, position, fitMethod, imageLoaded, isPanning]);
+  }, [scale, position.x, position.y, fitMethod, imageLoaded, isPanning, isInteractionReady]);
 
-  // Calculate initial fitting scale when image and container dimensions are available
+  // Auto-fit when dimensions are available
   useEffect(() => {
     if (!initialSettings && imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
       fitImageToContainer();
@@ -213,9 +222,10 @@ export function useZoomableImage(
     setIsPanning(true);
     
     // Store the initial point where the user clicked
+    // Use current position from ref for stability
     startPanRef.current = { 
-      x: e.clientX - position.x, 
-      y: e.clientY - position.y 
+      x: e.clientX - positionRef.current.x, 
+      y: e.clientY - positionRef.current.y 
     };
     
     if (containerRef.current) {
@@ -228,6 +238,7 @@ export function useZoomableImage(
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isPanning || !isInteractionReady) return;
     
+    // Calculate new position
     const newX = e.clientX - startPanRef.current.x;
     const newY = e.clientY - startPanRef.current.y;
     
@@ -240,7 +251,7 @@ export function useZoomableImage(
     e.preventDefault();
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: React.MouseEvent) => {
     if (!isPanning) return;
     
     setIsPanning(false);
@@ -249,9 +260,37 @@ export function useZoomableImage(
       containerRef.current.style.cursor = 'grab';
     }
     
-    // Only save settings after panning is complete
+    // Calculate final position
+    const finalX = e.clientX - startPanRef.current.x;
+    const finalY = e.clientY - startPanRef.current.y;
+    
+    // Update position one more time to ensure we have the final position
+    setPosition({
+      x: finalX,
+      y: finalY
+    });
+    
+    // Force save settings after panning ends
     if (isInteractionReady && shouldSaveSettingsRef.current) {
-      saveSettings();
+      // Update lastSettingsRef before saving
+      lastSettingsRef.current = {
+        scale: scaleRef.current,
+        position: { x: finalX, y: finalY },
+        fitMethod
+      };
+      
+      // Clear any existing timeout
+      if (settingsTimeoutRef.current) {
+        clearTimeout(settingsTimeoutRef.current);
+      }
+      
+      // Save with a short delay
+      settingsTimeoutRef.current = setTimeout(() => {
+        if (onSettingsChange) {
+          console.log('Saving image settings after panning:', lastSettingsRef.current);
+          onSettingsChange(lastSettingsRef.current);
+        }
+      }, 50);
     }
   };
 

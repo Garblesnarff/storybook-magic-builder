@@ -66,6 +66,13 @@ export function usePageState(bookId: string | undefined) {
       cleanupTimeouts();
     };
   }, [cleanupSavingTimeout, cleanupTimeouts]);
+  
+  // Additional effect to clean up timeouts when the page changes
+  useEffect(() => {
+    if (selectedPageId) {
+      cleanupTimeouts();
+    }
+  }, [selectedPageId, cleanupTimeouts]);
 
   return {
     books,

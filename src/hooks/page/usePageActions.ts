@@ -1,5 +1,5 @@
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { BookPage, PageLayout, TextFormatting, ImageSettings } from '@/types/book';
 import { useSavingState } from './useSavingState';
 
@@ -89,33 +89,47 @@ export function usePageActions(
     
   }, [currentPageData, setCurrentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
   
-  // Handle image settings changes with optimized debounce
+  // Handle image settings changes with improved reliability
   const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
     if (!currentPageData) return;
     
     console.log('Image settings change received:', settings);
     
     // Make a deep clone to avoid reference issues
-    const updatedPageData = JSON.parse(JSON.stringify(currentPageData));
-    updatedPageData.imageSettings = settings;
+    const updatedPageData = {
+      ...JSON.parse(JSON.stringify(currentPageData)),
+      imageSettings: settings
+    };
     
-    // Update local state immediately with the cloned object
+    // Update local state immediately
     setCurrentPageData(updatedPageData);
     
-    // Debounce the save to the backend with a short timeout
-    if (imageSettingsTimeoutRef.current) clearTimeout(imageSettingsTimeoutRef.current);
+    // Use the settings directly from parameter to avoid stale closures
+    // Cancel any pending timeouts to prevent race conditions
+    if (imageSettingsTimeoutRef.current) {
+      clearTimeout(imageSettingsTimeoutRef.current);
+    }
     
     imageSettingsTimeoutRef.current = setTimeout(() => {
       trackSavingOperation();
       console.log('Saving image settings to backend:', settings);
       
-      updatePage(updatedPageData)
-        .then(() => completeSavingOperation())
+      // Use the latest page data but with the settings parameter
+      const latestPageData = {
+        ...currentPageData, // Use reference for latest
+        imageSettings: settings // Use parameter directly
+      };
+      
+      updatePage(latestPageData)
+        .then(() => {
+          console.log('Image settings saved successfully');
+          completeSavingOperation();
+        })
         .catch((error) => {
           console.error('Failed to save image settings:', error);
           completeSavingOperation();
         });
-    }, 300); // Use a shorter timeout for better responsiveness
+    }, 250); // Shorter timeout for better responsiveness
     
   }, [currentPageData, setCurrentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
   
@@ -124,6 +138,13 @@ export function usePageActions(
     if (textChangeTimeoutRef.current) clearTimeout(textChangeTimeoutRef.current);
     if (imageSettingsTimeoutRef.current) clearTimeout(imageSettingsTimeoutRef.current);
   }, []);
+  
+  // Clean up timeouts on unmount or when currentPageData changes
+  useEffect(() => {
+    return () => {
+      cleanupTimeouts();
+    };
+  }, [cleanupTimeouts]);
   
   return {
     handleTextChange,

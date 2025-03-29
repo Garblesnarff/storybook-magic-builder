@@ -30,6 +30,10 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
     handleReset
   } = useZoomableImage(src, initialSettings, onSettingsChange);
 
+  const handleMouseLeave = (e: React.MouseEvent) => {
+    handleMouseUp(e);
+  };
+
   return (
     <div 
       ref={containerRef}
@@ -37,7 +41,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
     >
       {imageLoaded && (
         <div className="absolute inset-0 flex items-center justify-center w-full h-full">
