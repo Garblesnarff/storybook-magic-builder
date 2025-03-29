@@ -7,7 +7,7 @@ import { usePageContentApplier } from './ai/usePageContentApplier';
 
 export function useAIOperations(
   currentPageData: BookPage | null, 
-  updatePage: (page: BookPage) => void, 
+  updatePage: (page: BookPage) => Promise<void>, 
   setCurrentPageData: (page: BookPage | null) => void,
   onAddPage?: () => Promise<void>
 ) {
@@ -29,8 +29,6 @@ export function useAIOperations(
   const {
     isGenerating,
     processingStory,
-    pendingTextSegments,
-    getPendingTextSegments,
     handleGenerateImage,
     handleApplyAIText,
     handleApplyAIImage
@@ -40,8 +38,6 @@ export function useAIOperations(
     // Original functions for direct page updates
     isGenerating,
     processingStory,
-    pendingTextSegments,
-    getPendingTextSegments,
     handleGenerateImage,
     handleApplyAIText,
     handleApplyAIImage,

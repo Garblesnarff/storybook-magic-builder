@@ -45,7 +45,7 @@ export function usePageContentApplier(
         image: `data:image/png;base64,${data.image}` 
       };
       
-      updatePage(updatedPage);
+      await updatePage(updatedPage);
       setCurrentPageData(updatedPage);
       toast.success('Image generated successfully!');
     } catch (error) {
@@ -213,11 +213,11 @@ export function usePageContentApplier(
   }, [currentPageData, updatePage, setCurrentPageData, getBookIdForPage, wait, onAddPage]);
 
   // Handle AI image application
-  const handleApplyAIImage = useCallback((imageData: string) => {
+  const handleApplyAIImage = useCallback(async (imageData: string) => {
     if (!currentPageData) return;
     const updatedPage = { ...currentPageData, image: imageData };
     setCurrentPageData(updatedPage);
-    updatePage(updatedPage);
+    await updatePage(updatedPage);
   }, [currentPageData, setCurrentPageData, updatePage]);
 
   return {
