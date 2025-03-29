@@ -81,19 +81,19 @@ export const PageList: React.FC<PageListProps> = ({
                         <div
                           onClick={() => onPageSelect(page.id)}
                           className={cn(
-                            "h-16 w-12 flex flex-col items-center justify-center rounded border text-sm font-medium transition-colors cursor-pointer overflow-hidden",
+                            "h-20 w-16 rounded border transition-colors cursor-pointer overflow-hidden",
                             selectedPageId === page.id
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-background text-muted-foreground border-border hover:text-foreground"
+                              ? "border-primary shadow-md"
+                              : "border-border hover:border-gray-400"
                           )}
                         >
-                          <span className="mb-1">{index + 1}</span>
-                          <div className="w-full h-8 overflow-hidden">
-                            <PagePreview 
-                              page={page} 
-                              selected={selectedPageId === page.id}
-                            />
+                          <div className="absolute left-0 top-0 z-10 w-full bg-white/70 backdrop-blur-sm py-0.5 px-2 text-center text-xs font-medium border-b">
+                            {index + 1}
                           </div>
+                          <PagePreview 
+                            page={page} 
+                            selected={selectedPageId === page.id}
+                          />
                         </div>
                         <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
                           <Button
@@ -139,7 +139,7 @@ export const PageList: React.FC<PageListProps> = ({
           variant="ghost"
           size="icon"
           onClick={onAddPage}
-          className="flex-shrink-0 h-16 w-12 border border-dashed border-muted-foreground/50 hover:bg-muted"
+          className="flex-shrink-0 h-20 w-16 border border-dashed border-muted-foreground/50 hover:bg-muted"
         >
           <Plus className="h-4 w-4" />
           <span className="sr-only">Add page</span>
