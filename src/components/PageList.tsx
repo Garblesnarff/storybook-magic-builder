@@ -51,7 +51,7 @@ export const PageList: React.FC<PageListProps> = ({
                 {pages.map((page, index) => <Draggable key={page.id} draggableId={page.id} index={index}>
                     {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("flex-shrink-0 group relative", snapshot.isDragging && "z-10")}>
                         <div onClick={() => onPageSelect(page.id)} className={cn("h-20 w-16 rounded border transition-colors cursor-pointer overflow-hidden", selectedPageId === page.id ? "border-primary shadow-md" : "border-border hover:border-gray-400")}>
-                          <div className="absolute left-0 top-0 z-10 w-full bg-white/70 backdrop-blur-sm py-0.5 px-2 text-center text-xs font-medium border-b">
+                          <div className="absolute left-0 top-0 z-10 w-full backdrop-blur-sm py-0.5 px-2 text-center text-xs font-medium border-b my-[5px] bg-transparent">
                             {index + 1}
                           </div>
                           <PagePreview page={page} selected={selectedPageId === page.id} />
