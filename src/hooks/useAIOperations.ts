@@ -28,6 +28,8 @@ export function useAIOperations(
   
   const {
     isGenerating,
+    pendingTextSegments,
+    getPendingTextSegments,
     handleGenerateImage,
     handleApplyAIText,
     handleApplyAIImage
@@ -36,6 +38,8 @@ export function useAIOperations(
   return {
     // Original functions for direct page updates
     isGenerating,
+    pendingTextSegments,
+    getPendingTextSegments,
     handleGenerateImage,
     handleApplyAIText,
     handleApplyAIImage,

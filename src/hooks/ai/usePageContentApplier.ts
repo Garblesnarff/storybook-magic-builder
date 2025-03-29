@@ -10,6 +10,7 @@ export function usePageContentApplier(
   onAddPage?: () => Promise<void>
 ) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [pendingTextSegments, setPendingTextSegments] = useState<string[]>([]);
 
   const handleGenerateImage = async () => {
     if (!currentPageData) return;
@@ -70,43 +71,36 @@ export function usePageContentApplier(
       toast.error('No valid content found in the generated text');
       return;
     }
+
+    console.log('Processing AI text with segments:', segments.length);
     
     try {
-      // Store the original page to update
-      const originalPage = { ...currentPageData };
+      // Update the first page immediately
+      const firstSegment = segments[0];
+      console.log(`Updating original page (${currentPageData.id}) with first segment`);
       
-      // Update the original page with the first segment
-      const updatedFirstPage = { ...originalPage, text: segments[0] };
+      const updatedFirstPage = { ...currentPageData, text: firstSegment };
       updatePage(updatedFirstPage);
       setCurrentPageData(updatedFirstPage);
       
-      // If there are more segments and we have an onAddPage function, create additional pages
+      // If there are more segments and we have an onAddPage function
       if (segments.length > 1 && onAddPage) {
+        console.log(`Starting to create ${segments.length - 1} additional pages...`);
         toast.info(`Creating ${segments.length - 1} additional pages...`);
         
-        // Create an array to store the promises for page creation
-        const pageCreationPromises = [];
+        // Store segments that need to be applied to new pages
+        setPendingTextSegments(segments.slice(1));
         
-        // Create new pages for each additional segment
+        // Create each page one at a time and apply the text
         for (let i = 1; i < segments.length; i++) {
-          // Add a page creation promise to our array
-          pageCreationPromises.push(
-            new Promise<void>(async (resolve) => {
-              // Wait for the page to be created
-              await onAddPage();
-              
-              // After short delay to ensure the page is created and available in the book
-              setTimeout(resolve, 100);
-            })
-          );
+          console.log(`Creating page ${i} of ${segments.length - 1}`);
+          
+          // Add a new page
+          await onAddPage();
+          
+          // Short delay to ensure the page is fully created and available
+          await new Promise(resolve => setTimeout(resolve, 250));
         }
-        
-        // Wait for all pages to be created
-        await Promise.all(pageCreationPromises);
-        
-        // After all pages are created, update the book context to get the latest book data
-        // The actual page updates will be handled in the AIAssistant component
-        // which has access to the currentBook and updatePage function
         
         toast.success(`Created ${segments.length} pages in total`);
       }
@@ -118,6 +112,12 @@ export function usePageContentApplier(
     }
   };
 
+  const getPendingTextSegments = () => {
+    const segments = [...pendingTextSegments];
+    setPendingTextSegments([]);
+    return segments;
+  };
+
   const handleApplyAIImage = (imageData: string) => {
     if (!currentPageData) return;
     const updatedPage = { ...currentPageData, image: imageData };
@@ -127,6 +127,8 @@ export function usePageContentApplier(
 
   return {
     isGenerating,
+    pendingTextSegments,
+    getPendingTextSegments,
     handleGenerateImage,
     handleApplyAIText,
     handleApplyAIImage
