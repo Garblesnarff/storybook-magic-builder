@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BookPage, TextFormatting } from '@/types/book';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,13 +22,43 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
   handleTextChange,
   handleTextFormattingChange
 }) => {
-  // Create a direct onChange handler that doesn't use timeouts
+  // Local state for the textarea
+  const [localText, setLocalText] = useState(currentPageData.text || "");
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Update local text when page changes
+  useEffect(() => {
+    setLocalText(currentPageData.text || "");
+  }, [currentPageData.id, currentPageData.text]);
+  
+  // Efficient text change handler
   const onTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    const value = e.target.value;
-    handleTextChange(value);
+    
+    // Update local state immediately for responsive typing
+    const newValue = e.target.value;
+    setLocalText(newValue);
+    
+    // Clear any existing timeout
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Set a delay before sending the update to the parent
+    debounceTimerRef.current = setTimeout(() => {
+      handleTextChange(newValue);
+    }, 800); // Wait for typing to pause before saving
   };
+  
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -38,7 +68,7 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
           id="pageText"
           placeholder="Once upon a time..."
           className="h-40"
-          value={currentPageData.text || ""}
+          value={localText}
           onChange={onTextChange}
         />
       </div>
