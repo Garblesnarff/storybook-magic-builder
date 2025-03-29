@@ -9,7 +9,7 @@ interface LayoutProps {
   page: BookPage;
   handleGenerateImage: () => Promise<void>;
   isGenerating?: boolean;
-  previewText?: string; // New prop for real-time text preview
+  previewText?: string;
 }
 
 export const ImageLeftTextRight: React.FC<LayoutProps> = ({ 
@@ -20,12 +20,14 @@ export const ImageLeftTextRight: React.FC<LayoutProps> = ({
 }) => {
   return (
     <div className="flex h-full">
-      <div className="w-1/2 bg-gray-100 flex items-center justify-center">
+      <div className="w-1/2 h-full bg-gray-100 flex items-center justify-center">
         {page.image ? (
-          <ZoomableImage 
-            src={page.image} 
-            alt="Page illustration"
-          />
+          <div className="w-full h-full">
+            <ZoomableImage 
+              src={page.image} 
+              alt="Page illustration"
+            />
+          </div>
         ) : (
           <ImagePlaceholder
             isGenerating={isGenerating}

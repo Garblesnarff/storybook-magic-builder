@@ -9,7 +9,7 @@ interface LayoutProps {
   page: BookPage;
   handleGenerateImage: () => Promise<void>;
   isGenerating?: boolean;
-  previewText?: string; // New prop for real-time text preview
+  previewText?: string;
 }
 
 export const FullPageImage: React.FC<LayoutProps> = ({ 
@@ -21,10 +21,12 @@ export const FullPageImage: React.FC<LayoutProps> = ({
   return (
     <div className="relative h-full">
       {page.image ? (
-        <ZoomableImage 
-          src={page.image} 
-          alt="Page illustration"
-        />
+        <div className="w-full h-full">
+          <ZoomableImage 
+            src={page.image} 
+            alt="Page illustration"
+          />
+        </div>
       ) : (
         <div className="h-full bg-gray-100 flex items-center justify-center">
           <ImagePlaceholder
