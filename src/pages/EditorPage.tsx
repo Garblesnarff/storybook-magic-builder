@@ -30,7 +30,8 @@ const EditorPage = () => {
     handleTextFormattingChange,
     updatePage,
     setCurrentPageData,
-    handleReorderPage
+    handleReorderPage,
+    handleDeletePage // Add the delete page handler from usePageState
   } = usePageState(id);
   
   const {
@@ -124,6 +125,7 @@ const EditorPage = () => {
               onPageSelect={handlePageSelect}
               onAddPage={handleAddPage}
               onDuplicatePage={handleDuplicatePage}
+              onDeletePage={handleDeletePage} // Pass the delete page handler
               onReorderPage={handleReorderPage}
             />
           </div>

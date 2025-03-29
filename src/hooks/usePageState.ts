@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { BookPage, PageLayout } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
@@ -83,6 +82,30 @@ export function usePageState(bookId: string | undefined) {
     } catch (error) {
       console.error('Error duplicating page:', error);
       toast.error('Failed to duplicate page');
+    }
+  };
+
+  // Handle page deletion
+  const handleDeletePage = async (pageId: string) => {
+    if (!currentBook) return;
+    
+    try {
+      setIsSaving(true);
+      await deletePage(pageId);
+      
+      // After deleting, select the first page or the previous page
+      if (pageId === selectedPageId && currentBook.pages.length > 0) {
+        const deletedPageIndex = currentBook.pages.findIndex(page => page.id === pageId);
+        const newSelectedPageIndex = Math.max(0, deletedPageIndex - 1);
+        setSelectedPageId(currentBook.pages[newSelectedPageIndex]?.id);
+      }
+      
+      toast.success('Page deleted');
+    } catch (error) {
+      console.error('Error deleting page:', error);
+      toast.error('Failed to delete page');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -171,6 +194,7 @@ export function usePageState(bookId: string | undefined) {
     handlePageSelect,
     handleAddPage,
     handleDuplicatePage,
+    handleDeletePage,
     handleTextChange,
     handleLayoutChange,
     handleTextFormattingChange,
