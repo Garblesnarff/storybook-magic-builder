@@ -18,7 +18,7 @@ interface PageListProps {
   onPageSelect: (id: string) => void;
   onAddPage: () => void;
   onDuplicatePage: (id: string) => void;
-  onDeletePage?: (id: string) => void; // Add delete page handler
+  onDeletePage?: (id: string) => void;
   onReorderPage: (sourceIndex: number, destinationIndex: number) => void;
 }
 
@@ -28,7 +28,7 @@ export const PageList: React.FC<PageListProps> = ({
   onPageSelect,
   onAddPage,
   onDuplicatePage,
-  onDeletePage, // Add delete page handler
+  onDeletePage,
   onReorderPage,
 }) => {
   const handleDragEnd = (result: any) => {
@@ -78,17 +78,23 @@ export const PageList: React.FC<PageListProps> = ({
                           snapshot.isDragging && "z-10"
                         )}
                       >
-                        <button
+                        <div
                           onClick={() => onPageSelect(page.id)}
                           className={cn(
-                            "h-16 w-12 flex items-center justify-center rounded border text-sm font-medium transition-colors",
+                            "h-16 w-12 flex flex-col items-center justify-center rounded border text-sm font-medium transition-colors cursor-pointer overflow-hidden",
                             selectedPageId === page.id
                               ? "bg-primary text-primary-foreground border-primary"
                               : "bg-background text-muted-foreground border-border hover:text-foreground"
                           )}
                         >
-                          {index + 1}
-                        </button>
+                          <span className="mb-1">{index + 1}</span>
+                          <div className="w-full h-8 overflow-hidden">
+                            <PagePreview 
+                              page={page} 
+                              selected={selectedPageId === page.id}
+                            />
+                          </div>
+                        </div>
                         <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
                           <Button
                             variant="secondary"
