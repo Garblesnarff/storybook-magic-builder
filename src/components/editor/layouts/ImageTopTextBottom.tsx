@@ -2,7 +2,7 @@
 import React from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
 import { ZoomableImage } from '../image-zoom';
-import { ImagePlaceholder } from '../ImagePlaceholder';
+import { ImagePlaceholder } from '../image-placeholder';
 import { BookTextRenderer } from '../BookTextRenderer';
 
 interface LayoutProps {
