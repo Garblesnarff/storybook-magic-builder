@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { BookPage } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
@@ -88,6 +89,10 @@ export function usePageState(bookId: string | undefined) {
   // This handler receives debounced text from the TextSettings component
   const handleTextChange = (value: string) => {
     if (!currentPageData) return;
+    
+    // Only perform update if the text has actually changed
+    // This prevents the default text from being restored when deleting all text
+    if (value === currentPageData.text) return;
     
     // Show saving indicator
     setIsSaving(true);

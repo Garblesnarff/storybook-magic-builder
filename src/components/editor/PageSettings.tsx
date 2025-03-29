@@ -19,6 +19,7 @@ interface PageSettingsProps {
   handleTextFormattingChange: (key: keyof TextFormatting, value: any) => void;
   handleGenerateImage: () => Promise<void>;
   isGenerating?: boolean;
+  onPreviewTextChange?: (value: string) => void; // New prop for real-time preview
 }
 
 export const PageSettings: React.FC<PageSettingsProps> = ({
@@ -27,7 +28,8 @@ export const PageSettings: React.FC<PageSettingsProps> = ({
   handleLayoutChange,
   handleTextFormattingChange,
   handleGenerateImage,
-  isGenerating = false
+  isGenerating = false,
+  onPreviewTextChange
 }) => {
   if (!currentPageData) return null;
 
@@ -54,6 +56,7 @@ export const PageSettings: React.FC<PageSettingsProps> = ({
             currentPageData={currentPageData}
             handleTextChange={handleTextChange}
             handleTextFormattingChange={handleTextFormattingChange}
+            onPreviewTextChange={onPreviewTextChange}
           />
         </TabsContent>
         

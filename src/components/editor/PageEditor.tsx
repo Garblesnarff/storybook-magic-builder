@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookPage, PageLayout, TextFormatting } from '@/types/book';
 import {
   TextLeftImageRight,
@@ -18,12 +18,14 @@ interface PageEditorProps {
   handleTextFormattingChange: (key: keyof TextFormatting, value: any) => void;
   handleGenerateImage: () => Promise<void>;
   isGenerating?: boolean;
+  previewText?: string; // New prop for real-time text preview
 }
 
 export const PageEditor: React.FC<PageEditorProps> = ({
   currentPageData,
   handleGenerateImage,
-  isGenerating = false
+  isGenerating = false,
+  previewText
 }) => {
   if (!currentPageData) {
     return <EmptyPagePlaceholder />;
@@ -35,7 +37,7 @@ export const PageEditor: React.FC<PageEditorProps> = ({
         className="aspect-[3/4] bg-white rounded-xl shadow-lg border overflow-hidden max-h-[80vh]" 
         style={{ width: 'auto', height: '80vh' }}
       >
-        {renderLayoutComponent(currentPageData, handleGenerateImage, isGenerating)}
+        {renderLayoutComponent(currentPageData, handleGenerateImage, isGenerating, previewText)}
       </div>
     </div>
   );
@@ -44,22 +46,30 @@ export const PageEditor: React.FC<PageEditorProps> = ({
 function renderLayoutComponent(
   page: BookPage, 
   handleGenerateImage: () => Promise<void>, 
-  isGenerating: boolean = false
+  isGenerating: boolean = false,
+  previewText?: string
 ) {
+  const props = {
+    page,
+    handleGenerateImage,
+    isGenerating,
+    previewText
+  };
+
   switch (page.layout) {
     case 'text-left-image-right':
-      return <TextLeftImageRight page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
+      return <TextLeftImageRight {...props} />;
     case 'image-left-text-right':
-      return <ImageLeftTextRight page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
+      return <ImageLeftTextRight {...props} />;
     case 'text-top-image-bottom':
-      return <TextTopImageBottom page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
+      return <TextTopImageBottom {...props} />;
     case 'image-top-text-bottom':
-      return <ImageTopTextBottom page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
+      return <ImageTopTextBottom {...props} />;
     case 'full-page-image':
-      return <FullPageImage page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
+      return <FullPageImage {...props} />;
     case 'full-page-text':
-      return <FullPageText page={page} />;
+      return <FullPageText {...props} />;
     default:
-      return <TextLeftImageRight page={page} handleGenerateImage={handleGenerateImage} isGenerating={isGenerating} />;
+      return <TextLeftImageRight {...props} />;
   }
 }

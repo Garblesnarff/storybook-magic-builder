@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useEffect } from 'react';
 import { BookPage, TextFormatting } from '@/types/book';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useRealTimeText } from '@/hooks/useRealTimeText';
 
 interface TextSettingsProps {
   currentPageData: BookPage;
@@ -21,43 +23,15 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
   handleTextChange,
   handleTextFormattingChange
 }) => {
-  // Local state for the textarea
-  const [localText, setLocalText] = useState(currentPageData.text || "");
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const { 
+    text, 
+    handleTextChange: onTextChange,
+    isSaving 
+  } = useRealTimeText({
+    initialText: currentPageData.text || "",
+    onSave: handleTextChange
+  });
   
-  // Update local text when page changes
-  useEffect(() => {
-    setLocalText(currentPageData.text || "");
-  }, [currentPageData.id, currentPageData.text]);
-  
-  // Efficient text change handler with better debouncing
-  const onTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    setLocalText(newValue);
-    
-    // Clear any existing timeout
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    
-    // Set a much longer delay before sending the update to the parent
-    debounceTimerRef.current = setTimeout(() => {
-      // Only update if value actually changed
-      if (newValue !== currentPageData.text) {
-        handleTextChange(newValue);
-      }
-    }, 1000); // Wait 1 second after typing stops before saving
-  };
-  
-  // Clean up timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
-
   return (
     <div className="space-y-4">
       <div>
@@ -66,9 +40,12 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
           id="pageText"
           placeholder="Once upon a time..."
           className="h-40"
-          value={localText}
-          onChange={onTextChange}
+          value={text}
+          onChange={(e) => onTextChange(e.target.value)}
         />
+        {isSaving && (
+          <div className="text-xs text-muted-foreground mt-1">Saving...</div>
+        )}
       </div>
       
       <div className="grid grid-cols-2 gap-4">

@@ -5,20 +5,25 @@ import { TextFormatting } from '@/types/book';
 interface BookTextRendererProps {
   text: string;
   textFormatting?: TextFormatting;
+  previewText?: string; // New prop for displaying text in real-time
 }
 
 export const BookTextRenderer: React.FC<BookTextRendererProps> = ({ 
   text, 
-  textFormatting 
+  textFormatting,
+  previewText
 }) => {
+  // Use previewText if provided, otherwise use the saved text
+  const displayText = previewText !== undefined ? previewText : text;
+  
   // Convert newlines to <br> tags for proper display
   const renderText = () => {
-    if (!text) return null;
+    if (!displayText) return null;
     
-    return text.split('\n').map((line, i) => (
+    return displayText.split('\n').map((line, i) => (
       <React.Fragment key={i}>
         {line}
-        {i < text.split('\n').length - 1 && <br />}
+        {i < displayText.split('\n').length - 1 && <br />}
       </React.Fragment>
     ));
   };

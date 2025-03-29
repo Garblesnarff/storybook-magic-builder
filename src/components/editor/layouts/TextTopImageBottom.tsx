@@ -9,12 +9,14 @@ interface LayoutProps {
   page: BookPage;
   handleGenerateImage: () => Promise<void>;
   isGenerating?: boolean;
+  previewText?: string; // New prop for real-time text preview
 }
 
 export const TextTopImageBottom: React.FC<LayoutProps> = ({ 
   page, 
   handleGenerateImage,
-  isGenerating = false
+  isGenerating = false,
+  previewText
 }) => {
   return (
     <div className="flex flex-col h-full">
@@ -22,6 +24,7 @@ export const TextTopImageBottom: React.FC<LayoutProps> = ({
         <BookTextRenderer 
           text={page.text} 
           textFormatting={page.textFormatting}
+          previewText={previewText}
         />
       </div>
       <div className="h-1/2 bg-gray-100 flex items-center justify-center">

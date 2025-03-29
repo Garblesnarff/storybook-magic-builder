@@ -9,12 +9,14 @@ interface LayoutProps {
   page: BookPage;
   handleGenerateImage: () => Promise<void>;
   isGenerating?: boolean;
+  previewText?: string; // New prop for real-time text preview
 }
 
 export const FullPageImage: React.FC<LayoutProps> = ({ 
   page, 
   handleGenerateImage,
-  isGenerating = false
+  isGenerating = false,
+  previewText
 }) => {
   return (
     <div className="relative h-full">
@@ -39,6 +41,7 @@ export const FullPageImage: React.FC<LayoutProps> = ({
               ...page.textFormatting,
               fontColor: '#FFFFFF' // Override color for visibility
             }}
+            previewText={previewText}
           />
         </div>
       </div>
