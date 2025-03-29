@@ -184,7 +184,9 @@ export function usePageState(bookId: string | undefined) {
   const handleImageSettingsChange = (settings: ImageSettings) => {
     if (!currentPageData) return;
     
+    console.log('Saving image settings:', settings);
     showSavingIndicator();
+    
     const updatedPage = { 
       ...currentPageData, 
       imageSettings: settings 

@@ -123,6 +123,7 @@ export type Database = {
           font_family: string | null
           font_size: number | null
           id: string
+          image_settings: Json | null
           image_style: string | null
           image_url: string | null
           is_bold: boolean | null
@@ -140,6 +141,7 @@ export type Database = {
           font_family?: string | null
           font_size?: number | null
           id?: string
+          image_settings?: Json | null
           image_style?: string | null
           image_url?: string | null
           is_bold?: boolean | null
@@ -157,6 +159,7 @@ export type Database = {
           font_family?: string | null
           font_size?: number | null
           id?: string
+          image_settings?: Json | null
           image_style?: string | null
           image_url?: string | null
           is_bold?: boolean | null

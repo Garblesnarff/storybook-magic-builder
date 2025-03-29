@@ -16,7 +16,9 @@ export const bookPageToDatabasePage = (bookPage: BookPage, bookId: string) => {
     font_color: bookPage.textFormatting?.fontColor,
     is_bold: bookPage.textFormatting?.isBold,
     is_italic: bookPage.textFormatting?.isItalic,
-    image_style: bookPage.textFormatting?.imageStyle
+    image_style: bookPage.textFormatting?.imageStyle,
+    // Add image_settings to save position and scale
+    image_settings: bookPage.imageSettings ? JSON.stringify(bookPage.imageSettings) : null
   };
 };
 
@@ -36,6 +38,12 @@ export const databasePageToBookPage = (dbPage: any): BookPage => {
       isBold: dbPage.is_bold || false,
       isItalic: dbPage.is_italic || false,
       imageStyle: dbPage.image_style
+    },
+    // Parse image settings from the database or use default settings
+    imageSettings: dbPage.image_settings ? JSON.parse(dbPage.image_settings) : {
+      scale: 1,
+      position: { x: 0, y: 0 },
+      fitMethod: 'contain'
     }
   };
 };

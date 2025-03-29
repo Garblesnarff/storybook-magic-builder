@@ -31,7 +31,8 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
   const [imageLoaded, setImageLoaded] = useState(false);
   const settingsChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
+  const isInitialRender = useRef(true);
+  
   // Load image dimensions when source changes
   useEffect(() => {
     const img = new Image();
@@ -47,6 +48,16 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
       setScale(1);
     }
   }, [src, initialSettings]);
+
+  // Apply initial settings when they change (e.g., when changing pages)
+  useEffect(() => {
+    if (initialSettings && !isInitialRender.current) {
+      setScale(initialSettings.scale);
+      setPosition(initialSettings.position);
+      setFitMethod(initialSettings.fitMethod);
+    }
+    isInitialRender.current = false;
+  }, [initialSettings]);
 
   // Get container dimensions
   useEffect(() => {
@@ -79,13 +90,13 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
           position,
           fitMethod
         });
-      }, 300); // Debounce for 300ms
+      }, 500); // Increased debounce time to 500ms
     }
   };
 
   // Effect to save settings when they change
   useEffect(() => {
-    if (imageLoaded) {
+    if (imageLoaded && !isInitialRender.current) {
       saveSettings();
     }
     
