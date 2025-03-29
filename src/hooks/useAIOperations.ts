@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { BookPage } from '@/types/book';
 import { supabase } from '@/integrations/supabase/client';
@@ -76,26 +77,35 @@ export function useAIOperations(
       // Update the original page with the first segment
       const updatedFirstPage = { ...originalPage, text: segments[0] };
       updatePage(updatedFirstPage);
+      setCurrentPageData(updatedFirstPage);
       
       // If there are more segments and we have an onAddPage function, create additional pages
       if (segments.length > 1 && onAddPage) {
         toast.info(`Creating ${segments.length - 1} additional pages...`);
         
-        // Array to store the IDs of created pages
-        const createdPages = [];
+        // Create an array to store the promises for page creation
+        const pageCreationPromises = [];
         
         // Create new pages for each additional segment
         for (let i = 1; i < segments.length; i++) {
-          // Create a new page
-          await onAddPage();
-          
-          // Store that we created a page (we'll update it later)
-          createdPages.push(i);
+          // Add a page creation promise to our array
+          pageCreationPromises.push(
+            new Promise<void>(async (resolve) => {
+              // Wait for the page to be created
+              await onAddPage();
+              
+              // After short delay to ensure the page is created and available in the book
+              setTimeout(resolve, 100);
+            })
+          );
         }
         
-        // Update the original page again to ensure it has the correct content
-        // (in case it got changed during page creation)
-        setCurrentPageData(updatedFirstPage);
+        // Wait for all pages to be created
+        await Promise.all(pageCreationPromises);
+        
+        // After all pages are created, update the book context to get the latest book data
+        // The actual page updates will be handled in the AIAssistant component
+        // which has access to the currentBook and updatePage function
         
         toast.success(`Created ${segments.length} pages in total`);
       }

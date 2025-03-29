@@ -73,17 +73,31 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           .map(segment => segment.trim())
           .filter(segment => segment.length > 0);
         
-        // If we have enough segments and pages, update each page
-        if (segments.length > 1 && currentBook.pages.length >= segments.length) {
+        console.log('AIAssistant: applying text segments to pages', {
+          segments,
+          pageCount: segments.length,
+          bookPageCount: currentBook.pages.length
+        });
+        
+        // If we have enough pages, update each page with its corresponding text segment
+        if (segments.length > 0 && currentBook.pages.length >= segments.length) {
           // Distribute text segments to pages
           segments.forEach((segment, index) => {
             if (index < currentBook.pages.length) {
               const page = currentBook.pages[index];
+              console.log(`Updating page ${index} with segment:`, { pageId: page.id, textLength: segment.length });
               updatePage({
                 ...page,
                 text: segment
               });
             }
+          });
+          
+          console.log('All page texts updated successfully');
+        } else {
+          console.warn('Not enough pages to distribute all text segments', {
+            segments: segments.length,
+            availablePages: currentBook.pages.length
           });
         }
       }

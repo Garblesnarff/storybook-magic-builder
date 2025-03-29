@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { PageList } from '@/components/PageList';
@@ -38,7 +39,7 @@ const EditorPage = () => {
   const handleAddPageAsync = async () => {
     return new Promise<void>((resolve) => {
       handleAddPage();
-      setTimeout(resolve, 100); // Give time for the page to be added
+      setTimeout(resolve, 500); // Give more time for the page to be added
     });
   };
   
