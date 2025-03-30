@@ -10,7 +10,7 @@ interface EditorContentProps {
   handleLayoutChange: (value: any) => void;
   handleTextFormattingChange: (key: any, value: any) => void;
   handleGenerateImage: () => Promise<void>;
-  handleImageSettingsChange?: (settings: ImageSettings) => void;
+  handleImageSettingsChange: (settings: ImageSettings) => void;
   isGenerating?: boolean;
 }
 

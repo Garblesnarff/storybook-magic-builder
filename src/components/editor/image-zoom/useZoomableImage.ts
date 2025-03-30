@@ -139,13 +139,11 @@ export function useZoomableImage(
   }, [baseHandleZoomOut, saveSettings]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // No save needed on mouse down
     setHasInteracted(true);
     baseHandleMouseDown(e, isInteractionReady, containerRef);
   }, [baseHandleMouseDown, isInteractionReady]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    // No save needed while moving
     baseHandleMouseMove(e, isInteractionReady);
   }, [baseHandleMouseMove, isInteractionReady]);
 
@@ -217,6 +215,7 @@ export function useZoomableImage(
     handleZoomIn,
     handleZoomOut,
     toggleFitMethod,
-    handleReset
+    handleReset,
+    saveSettings // Expose saveSettings function
   };
 }

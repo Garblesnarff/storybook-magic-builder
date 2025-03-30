@@ -21,7 +21,7 @@ export function useImagePan(
     isPanningRef.current = isPanning;
   }, [isPanning]);
 
-  // Handle mouse down for panning
+  // Handle mouse down for panning - improved to ensure reliable tracking
   const handleMouseDown = useCallback((e: React.MouseEvent, isInteractionReady: boolean, containerRef: React.RefObject<HTMLDivElement>) => {
     if (!isInteractionReady) return;
     
@@ -60,41 +60,35 @@ export function useImagePan(
     e.preventDefault();
   }, []);
 
-  // Handle mouse up to end panning
+  // Handle mouse up to end panning - improved to ensure position is updated
   const handleMouseUp = useCallback((
     e: React.MouseEvent, 
     isInteractionReady: boolean, 
-    containerRef: React.RefObject<HTMLDivElement>,
-    onSettingsChange?: (settings: ImageSettings) => void,
-    scaleRef?: React.MutableRefObject<number>,
-    fitMethodRef?: React.MutableRefObject<'contain' | 'cover'>
+    containerRef: React.RefObject<HTMLDivElement>
   ) => {
     if (!isPanningRef.current) return;
     
+    const wasPanning = isPanningRef.current;
     setIsPanning(false);
     
     if (containerRef.current) {
       containerRef.current.style.cursor = 'grab';
     }
     
-    // Calculate final position
-    const finalX = e.clientX - startPanRef.current.x;
-    const finalY = e.clientY - startPanRef.current.y;
-    
-    // Update position one more time to ensure we have the final position
-    setPosition({
-      x: finalX,
-      y: finalY
-    });
-    
-    // Save settings after panning ends
-    if (isInteractionReady && onSettingsChange && scaleRef && fitMethodRef) {
-      onSettingsChange({
-        scale: scaleRef.current,
-        position: { x: finalX, y: finalY },
-        fitMethod: fitMethodRef.current
+    // Only update position if we were actually panning
+    if (wasPanning) {
+      // Calculate final position
+      const finalX = e.clientX - startPanRef.current.x;
+      const finalY = e.clientY - startPanRef.current.y;
+      
+      // Update position one more time to ensure we have the final position
+      setPosition({
+        x: finalX,
+        y: finalY
       });
     }
+    
+    e.preventDefault();
   }, []);
 
   return {

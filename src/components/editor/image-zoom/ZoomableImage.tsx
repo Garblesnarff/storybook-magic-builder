@@ -1,5 +1,5 @@
 
-import React, { useCallback, memo } from 'react';
+import React, { useCallback, memo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { ZoomableImageProps } from './types';
 import { ZoomControls } from './ZoomControls';
@@ -28,13 +28,28 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     handleZoomIn,
     handleZoomOut,
     toggleFitMethod,
-    handleReset
+    handleReset,
+    saveSettings
   } = useZoomableImage(src, initialSettings, onSettingsChange);
 
-  // Handle mouse events in component to ensure we have access to current state
+  // Enhanced mouse event handlers to ensure proper event propagation
   const handleMouseLeave = useCallback((e: React.MouseEvent) => {
     handleMouseUp(e);
-  }, [handleMouseUp]);
+    
+    // Explicitly save settings when mouse leaves
+    if (isInteractionReady && imageLoaded) {
+      saveSettings();
+    }
+  }, [handleMouseUp, isInteractionReady, imageLoaded, saveSettings]);
+  
+  // Add an effect to save settings on unmount
+  useEffect(() => {
+    return () => {
+      if (isInteractionReady && imageLoaded) {
+        saveSettings();
+      }
+    };
+  }, [isInteractionReady, imageLoaded, saveSettings]);
 
   return (
     <div 
@@ -84,4 +99,3 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
 });
 
 ZoomableImage.displayName = 'ZoomableImage';
-

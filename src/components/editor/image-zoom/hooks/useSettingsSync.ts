@@ -14,10 +14,16 @@ export function useSettingsSync(
 ) {
   // Ref to track the last saved settings to avoid unnecessary updates
   const lastSavedSettingsRef = useRef<string>('');
+  const saveTimeoutRef = useRef<number | null>(null);
   
-  // Save settings function with debounce mechanism built-in
+  // Enhanced save settings function with debounce mechanism
   const saveSettings = useCallback(() => {
     if (!onSettingsChange || !imageLoaded || !isInteractionReady) return;
+    
+    // Clear any existing timeout to prevent multiple saves
+    if (saveTimeoutRef.current) {
+      window.clearTimeout(saveTimeoutRef.current);
+    }
     
     // Create settings object from current state
     const currentSettings: ImageSettings = {
@@ -31,16 +37,26 @@ export function useSettingsSync(
     
     // Only save if settings changed
     if (currentSettingsString !== lastSavedSettingsRef.current) {
-      console.log('Saving image settings:', currentSettings);
-      lastSavedSettingsRef.current = currentSettingsString;
-      onSettingsChange(currentSettings);
+      // Use a short timeout to avoid too frequent updates
+      saveTimeoutRef.current = window.setTimeout(() => {
+        console.log('Saving image settings:', currentSettings);
+        lastSavedSettingsRef.current = currentSettingsString;
+        if (onSettingsChange) {
+          onSettingsChange(currentSettings);
+        }
+      }, 50);
     }
-  }, [imageLoaded, isInteractionReady, onSettingsChange, scale, position, fitMethod, isPanning]);
+  }, [imageLoaded, isInteractionReady, onSettingsChange, scale, position, fitMethod]);
 
   // Set up an auto-save effect when component unmounts
   useEffect(() => {
     return () => {
-      // Save settings on unmount if they've changed
+      // Clean up timeout
+      if (saveTimeoutRef.current) {
+        window.clearTimeout(saveTimeoutRef.current);
+      }
+      
+      // Final save on unmount
       saveSettings();
     };
   }, [saveSettings]);
