@@ -120,6 +120,15 @@ const EditorPage = () => {
     }
   };
 
+  // Create an adapter function to convert between the interface expected by PageList
+  // and the actual handleReorderPage function signature
+  const handleReorderAdapter = (sourceIndex: number, destinationIndex: number) => {
+    if (!currentBook || !currentBook.pages[sourceIndex]) return;
+    
+    const pageId = currentBook.pages[sourceIndex].id;
+    handleReorderPage(pageId, destinationIndex);
+  };
+
   return (
     <Layout fullWidth>
       {!id || (books.length > 0 && !books.some(book => book.id === id)) ? (
@@ -162,7 +171,7 @@ const EditorPage = () => {
                 onAddPage={handleAddPage}
                 onDuplicatePage={handleDuplicatePage}
                 onDeletePage={handleDeletePage}
-                onReorderPage={handleReorderPage}
+                onReorderPage={handleReorderAdapter}
               />
             </div>
           </div>

@@ -156,16 +156,21 @@ export const usePageState = (bookId?: string) => {
     }
   }, [currentPageData, updatePage]);
   
-  // Handle updating image settings
+  // Handle updating image settings - FIXED to ensure all required properties are present
   const handleImageSettingsChange = useCallback(async (imageSettings: Partial<ImageSettings>) => {
     if (currentPageData) {
+      // Ensure all required fields from ImageSettings are present
+      const updatedImageSettings: ImageSettings = {
+        scale: imageSettings.scale ?? currentPageData.imageSettings?.scale ?? 1,
+        position: imageSettings.position ?? currentPageData.imageSettings?.position ?? { x: 0, y: 0 },
+        fitMethod: imageSettings.fitMethod ?? currentPageData.imageSettings?.fitMethod ?? 'contain'
+      };
+      
       const updatedPage = {
         ...currentPageData,
-        imageSettings: {
-          ...(currentPageData.imageSettings || {}),
-          ...imageSettings
-        }
+        imageSettings: updatedImageSettings
       };
+      
       setCurrentPageData(updatedPage);
       
       try {
