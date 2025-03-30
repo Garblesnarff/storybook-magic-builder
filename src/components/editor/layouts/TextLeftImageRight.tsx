@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, memo } from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
 import { ZoomableImage } from '../image-zoom';
 import { ImagePlaceholder } from '../image-placeholder';
@@ -13,7 +13,7 @@ interface LayoutProps {
   onImageSettingsChange?: (settings: ImageSettings) => void;
 }
 
-export const TextLeftImageRight: React.FC<LayoutProps> = ({ 
+export const TextLeftImageRight: React.FC<LayoutProps> = memo(({ 
   page, 
   handleGenerateImage,
   isGenerating = false,
@@ -55,4 +55,6 @@ export const TextLeftImageRight: React.FC<LayoutProps> = ({
       </div>
     </div>
   );
-};
+});
+
+TextLeftImageRight.displayName = 'TextLeftImageRight';

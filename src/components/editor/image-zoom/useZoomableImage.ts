@@ -14,8 +14,6 @@ export function useZoomableImage(
   initialSettings?: ImageSettings, 
   onSettingsChange?: (settings: ImageSettings) => void
 ) {
-  console.log('useZoomableImage: initializing with settings:', initialSettings);
-  
   // Refs for DOM elements
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -56,9 +54,6 @@ export function useZoomableImage(
     setFitMethod
   } = useImageFit(initialSettings);
   
-  // Track if user has interacted with the image
-  const [hasInteracted, setHasInteracted] = useState(false);
-  
   // Get the saveSettings function from useSettingsSync
   const { saveSettings } = useSettingsSync(
     scale, position, fitMethod, imageLoaded, isPanning, isInteractionReady, initialSettings, onSettingsChange
@@ -88,8 +83,6 @@ export function useZoomableImage(
   // Apply initial settings when they change (e.g., when changing pages)
   useEffect(() => {
     if (!initialSettings) return;
-    
-    console.log('Applying initial settings from main useZoomableImage:', initialSettings);
     
     // Apply settings when they change from outside
     setScale(initialSettings.scale || 1);
@@ -123,51 +116,36 @@ export function useZoomableImage(
     scaleRef
   ]);
 
-  // Enhance base handlers to call saveSettings explicitly after interaction
+  // Enhance base handlers - but DO NOT save immediately
   const handleZoomIn = useCallback(() => {
-    setHasInteracted(true);
     baseHandleZoomIn();
-    // Save settings after zoom operation
-    setTimeout(() => saveSettings(), 50);
-  }, [baseHandleZoomIn, saveSettings]);
+    // Don't save immediately to prevent update loops
+  }, [baseHandleZoomIn]);
 
   const handleZoomOut = useCallback(() => {
-    setHasInteracted(true);
     baseHandleZoomOut();
-    // Save settings after zoom operation
-    setTimeout(() => saveSettings(), 50);
-  }, [baseHandleZoomOut, saveSettings]);
+    // Don't save immediately to prevent update loops
+  }, [baseHandleZoomOut]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    setHasInteracted(true);
     baseHandleMouseDown(e, isInteractionReady, containerRef);
-  }, [baseHandleMouseDown, isInteractionReady]);
+  }, [baseHandleMouseDown, isInteractionReady, containerRef]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     baseHandleMouseMove(e, isInteractionReady);
   }, [baseHandleMouseMove, isInteractionReady]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    // Call base mouse up logic first
     baseHandleMouseUp(e, isInteractionReady, containerRef);
-    
-    // Then explicitly save settings if panning occurred
-    if (isPanningRef.current) {
-      setTimeout(() => saveSettings(), 50);
-    }
-  }, [baseHandleMouseUp, isInteractionReady, containerRef, saveSettings, isPanningRef]);
+    // Don't save here - saveSettings will be called by ZoomableImage after mouse up
+  }, [baseHandleMouseUp, isInteractionReady, containerRef]);
 
-  // Enhance toggleFitMethod to save settings
   const toggleFitMethod = useCallback(() => {
-    setHasInteracted(true);
     baseToggleFitMethod();
-    // Save settings after toggling fit method
-    setTimeout(() => saveSettings(), 50);
-  }, [baseToggleFitMethod, saveSettings]);
+    // Don't save immediately to prevent update loops
+  }, [baseToggleFitMethod]);
 
-  // Reset function - should also save the reset state
   const handleReset = useCallback(() => {
-    setHasInteracted(true);
     fitImageToContainer(
       imageLoaded,
       containerDimensions,
@@ -177,8 +155,7 @@ export function useZoomableImage(
       setPosition,
       scaleRef
     );
-    // Save settings after reset
-    setTimeout(() => saveSettings(), 50);
+    // Don't save immediately to prevent update loops
   }, [
     fitImageToContainer, 
     imageLoaded, 
@@ -187,18 +164,8 @@ export function useZoomableImage(
     isInteractionReady,
     setScale,
     setPosition,
-    scaleRef,
-    saveSettings
+    scaleRef
   ]);
-
-  // Save settings on unmount if user has interacted
-  useEffect(() => {
-    return () => {
-      if (hasInteracted) {
-        saveSettings();
-      }
-    };
-  }, [saveSettings, hasInteracted]);
 
   return {
     scale,

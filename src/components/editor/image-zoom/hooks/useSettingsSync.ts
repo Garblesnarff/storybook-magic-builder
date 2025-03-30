@@ -16,18 +16,18 @@ export function useSettingsSync(
   const lastSavedSettingsRef = useRef<string>('');
   const saveTimeoutRef = useRef<number | null>(null);
   
-  // Flag to track if a save operation is currently pending
-  const saveIsPendingRef = useRef(false);
-  
-  // Enhanced save settings function with debounce mechanism and proper cleanup
+  // Save settings function that can be called externally
   const saveSettings = useCallback(() => {
     if (!onSettingsChange || !imageLoaded || !isInteractionReady) return;
     
-    // Avoid saving during active panning to prevent UI jumps
+    // Don't initiate saves during active panning to prevent UI jumps
     if (isPanning) return;
     
-    // Don't save if already pending to avoid redundant operations
-    if (saveIsPendingRef.current) return;
+    // Clear any existing timeout
+    if (saveTimeoutRef.current !== null) {
+      window.clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
     
     // Create settings object from current state
     const currentSettings: ImageSettings = {
@@ -41,40 +41,25 @@ export function useSettingsSync(
     
     // Only save if settings changed
     if (currentSettingsString !== lastSavedSettingsRef.current) {
-      // Clear any existing timeout to prevent multiple saves
-      if (saveTimeoutRef.current) {
-        window.clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = null;
-      }
-      
-      // Mark save as pending
-      saveIsPendingRef.current = true;
-      
-      // Use a short delay before saving to batch rapid updates
       saveTimeoutRef.current = window.setTimeout(() => {
         if (onSettingsChange) {
-          console.log('Saving image settings:', currentSettings);
           lastSavedSettingsRef.current = currentSettingsString;
           onSettingsChange(currentSettings);
         }
-        // Reset pending flag after save
-        saveIsPendingRef.current = false;
         saveTimeoutRef.current = null;
-      }, 250);
+      }, 300); // Use a longer debounce time
     }
-  }, [imageLoaded, isInteractionReady, onSettingsChange, scale, position, fitMethod, isPanning]);
+  }, [scale, position, fitMethod, imageLoaded, isInteractionReady, onSettingsChange, isPanning]);
 
   // Clean up timeout on unmount
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef.current) {
+      if (saveTimeoutRef.current !== null) {
         window.clearTimeout(saveTimeoutRef.current);
         
-        // Final save on unmount if there was a pending save
-        if (saveIsPendingRef.current && 
-            isInteractionReady && 
-            imageLoaded && 
-            onSettingsChange) {
+        // Final save on unmount if there were changes
+        if (isInteractionReady && imageLoaded && onSettingsChange && 
+            JSON.stringify({scale, position, fitMethod}) !== lastSavedSettingsRef.current) {
           onSettingsChange({
             scale,
             position, 
@@ -83,21 +68,7 @@ export function useSettingsSync(
         }
       }
     };
-  }, [scale, position, fitMethod, isInteractionReady, imageLoaded, onSettingsChange]);
-
-  // Track initial settings changes
-  const lastInitialSettingsRef = useRef<ImageSettings | undefined>(initialSettings);
-  
-  useEffect(() => {
-    // Skip if settings haven't changed or are undefined
-    if (!initialSettings || 
-        (lastInitialSettingsRef.current && 
-         JSON.stringify(lastInitialSettingsRef.current) === JSON.stringify(initialSettings))) {
-      return;
-    }
-    
-    lastInitialSettingsRef.current = initialSettings;
-  }, [initialSettings]);
+  }, [scale, position, fitMethod, isInteractionReady, imageLoaded, onSettingsChange, lastSavedSettingsRef]);
 
   return {
     saveSettings

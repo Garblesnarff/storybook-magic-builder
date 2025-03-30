@@ -22,12 +22,13 @@ export function useImagePan(
     isPanningRef.current = isPanning;
   }, [isPanning]);
 
-  // Handle mouse down for panning - improved to ensure reliable tracking
+  // Handle mouse down for panning
   const handleMouseDown = useCallback((e: React.MouseEvent, isInteractionReady: boolean, containerRef: React.RefObject<HTMLDivElement>) => {
     if (!isInteractionReady) return;
     
     // Set panning active
     setIsPanning(true);
+    isPanningRef.current = true;
     
     // Store the initial point where the user clicked
     startPanRef.current = { 
@@ -42,7 +43,7 @@ export function useImagePan(
     e.preventDefault();
   }, []);
 
-  // Handle mouse move for panning - avoid frequent state updates
+  // Handle mouse move for panning
   const handleMouseMove = useCallback((e: React.MouseEvent, isInteractionReady: boolean) => {
     if (!isPanningRef.current || !isInteractionReady) return;
     
@@ -50,7 +51,7 @@ export function useImagePan(
     const newX = e.clientX - startPanRef.current.x;
     const newY = e.clientY - startPanRef.current.y;
     
-    // Use requestAnimationFrame for smoother updates without triggering too many React renders
+    // Use requestAnimationFrame for smoother updates
     requestAnimationFrame(() => {
       setPosition({
         x: newX,
@@ -70,6 +71,7 @@ export function useImagePan(
     if (!isPanningRef.current) return;
     
     setIsPanning(false);
+    isPanningRef.current = false;
     
     if (containerRef.current) {
       containerRef.current.style.cursor = 'grab';
@@ -79,9 +81,8 @@ export function useImagePan(
     const finalX = e.clientX - startPanRef.current.x;
     const finalY = e.clientY - startPanRef.current.y;
     
-    // Use requestAnimationFrame for the final position update
+    // Update position one last time
     requestAnimationFrame(() => {
-      // Only set position if the component is still mounted
       setPosition({
         x: finalX,
         y: finalY

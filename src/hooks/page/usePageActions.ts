@@ -13,6 +13,7 @@ export function usePageActions(
   
   // Use refs for debounce timeouts
   const textChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const imageSettingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handle text changes with more robust saving
   const handleTextChange = useCallback(async (value: string) => {
@@ -74,12 +75,13 @@ export function usePageActions(
     .catch(() => completeSavingOperation());
   }, [currentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
 
-  // Handle image settings changes - Save immediately when called
+  // Handle image settings changes - with improved debouncing
   const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
     if (!currentPageData) return;
 
     console.log('handleImageSettingsChange called with settings:', settings);
 
+    // No need to debounce again as the ZoomableImage component already handles this
     // Track the saving operation
     trackSavingOperation(); 
 
@@ -101,6 +103,7 @@ export function usePageActions(
   // Clean up timeouts to prevent memory leaks
   const cleanupTimeouts = useCallback(() => {
     if (textChangeTimeoutRef.current) clearTimeout(textChangeTimeoutRef.current);
+    if (imageSettingsTimeoutRef.current) clearTimeout(imageSettingsTimeoutRef.current);
   }, []);
 
   // Clean up timeouts on unmount or when currentPageData changes

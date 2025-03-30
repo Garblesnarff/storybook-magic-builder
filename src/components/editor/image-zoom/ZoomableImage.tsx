@@ -1,5 +1,5 @@
 
-import React, { useCallback, memo, useEffect } from 'react';
+import React, { useCallback, memo } from 'react';
 import { cn } from '@/lib/utils';
 import { ZoomableImageProps } from './types';
 import { ZoomControls } from './ZoomControls';
@@ -32,15 +32,16 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     saveSettings
   } = useZoomableImage(src, initialSettings, onSettingsChange);
 
-  // Handler for saving settings after user actions (when component unmounts or leaves)
+  // Handler for mouse up which also saves settings
   const handleMouseUpWithSave = useCallback((e: React.MouseEvent) => {
     handleMouseUp(e);
     
-    // Only save settings after interaction has fully completed
-    if (isInteractionReady && imageLoaded) {
-      // Use setTimeout to ensure mouse up is fully processed first
-      setTimeout(() => saveSettings(), 100);
-    }
+    // Only save settings after the interaction is fully complete
+    setTimeout(() => {
+      if (isInteractionReady && imageLoaded) {
+        saveSettings();
+      }
+    }, 100);
   }, [handleMouseUp, isInteractionReady, imageLoaded, saveSettings]);
   
   // Save settings when mouse leaves the component
@@ -48,20 +49,12 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     handleMouseUp(e);
     
     // Save settings when mouse leaves the component
-    if (isInteractionReady && imageLoaded) {
-      // Use setTimeout to ensure mouse up is fully processed first
-      setTimeout(() => saveSettings(), 100);
-    }
-  }, [handleMouseUp, isInteractionReady, imageLoaded, saveSettings]);
-
-  // Add an effect to save settings on unmount
-  useEffect(() => {
-    return () => {
+    setTimeout(() => {
       if (isInteractionReady && imageLoaded) {
         saveSettings();
       }
-    };
-  }, [src, isInteractionReady, imageLoaded, saveSettings]);
+    }, 100);
+  }, [handleMouseUp, isInteractionReady, imageLoaded, saveSettings]);
 
   return (
     <div 
@@ -101,22 +94,10 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
         scale={scale}
         fitMethod={fitMethod}
         isInteractionReady={isInteractionReady}
-        onZoomIn={() => {
-          handleZoomIn();
-          // Don't save immediately after zoom to avoid update conflicts
-        }}
-        onZoomOut={() => {
-          handleZoomOut();
-          // Don't save immediately after zoom to avoid update conflicts
-        }}
-        onToggleFitMethod={() => {
-          toggleFitMethod();
-          // Don't save immediately after fit method change to avoid update conflicts
-        }}
-        onReset={() => {
-          handleReset();
-          // Don't save immediately after reset to avoid update conflicts
-        }}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onToggleFitMethod={toggleFitMethod}
+        onReset={handleReset}
       />
     </div>
   );

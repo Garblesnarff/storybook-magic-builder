@@ -23,10 +23,11 @@ export const EditorContent: React.FC<EditorContentProps> = ({
   handleImageSettingsChange,
   isGenerating = false
 }) => {
-  // Memoized image settings change handler to prevent excessive updates
-  const debouncedImageSettingsChange = useCallback((settings: ImageSettings) => {
-    // We can now trust the settings data as it's properly managed
-    console.log("Image settings change requested", settings);
+  // Use a memoized handler with a significant debounce
+  const imageSettingsChangeHandler = useCallback((settings: ImageSettings) => {
+    console.log("EditorContent: Image settings change requested");
+    // We pass the settings directly to the handler, since the save debouncing
+    // is now handled in the ZoomableImage component
     handleImageSettingsChange(settings);
   }, [handleImageSettingsChange]);
 
@@ -39,7 +40,7 @@ export const EditorContent: React.FC<EditorContentProps> = ({
         handleTextFormattingChange={handleTextFormattingChange}
         handleGenerateImage={handleGenerateImage}
         isGenerating={isGenerating}
-        onImageSettingsChange={debouncedImageSettingsChange}
+        onImageSettingsChange={imageSettingsChangeHandler}
       />
 
       <PageSettings
