@@ -1,7 +1,7 @@
-
+// src/components/editor/image-zoom/useZoomableImage.ts
 import { useRef, useEffect, useCallback, useState } from 'react';
-import { ImageSettings } from '@/types/book';
-import { 
+import { ImageSettings } from '@/types/book'; // Corrected import path
+import {
   useImageDimensions,
   useImageFit,
   useImageZoom,
@@ -10,19 +10,28 @@ import {
 } from './hooks';
 
 export function useZoomableImage(
-  src: string, 
-  initialSettings?: ImageSettings, 
+  src: string,
+  initialSettings?: ImageSettings,
   onSettingsChange?: (settings: ImageSettings) => void
 ) {
+  console.log('useZoomableImage: initializing with settings:', initialSettings);
+
   // Refs for DOM elements
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  
+  // Ref to prevent triggering saves during reset/fit operations
+  const inSaveTriggeredOperationRef = useRef(false);
+  // *** ADD THIS REF ***
+  // Flag to indicate that an internal interaction just triggered a settings change request
+  const internalUpdateTriggeredRef = useRef(false);
+  // *******************
+
+
   // Use our custom hooks
-  const { 
+  const {
     imageDimensions,
     containerDimensions,
-    imageLoaded, 
+    imageLoaded,
     isInteractionReady,
     updateContainerSize
   } = useImageDimensions(src);
@@ -53,28 +62,20 @@ export function useZoomableImage(
     fitImageToContainer,
     setFitMethod
   } = useImageFit(initialSettings);
-  
-  // Track if we're in a save-triggered operation to avoid circular updates
-  const inSaveTriggeredOperationRef = useRef(false);
-  
-  // Get the saveSettings function from useSettingsSync
+
   const { saveSettings } = useSettingsSync(
-    scale, position, fitMethod, imageLoaded, isPanning, isInteractionReady, initialSettings, onSettingsChange
+    scale, position, fitMethod, imageLoaded, isInteractionReady, initialSettings, onSettingsChange
   );
 
   // Get container dimensions
   useEffect(() => {
     if (!containerRef.current) return;
-    
     const handleResize = () => updateContainerSize(containerRef);
-    
     handleResize();
     const resizeObserver = new ResizeObserver(() => {
       requestAnimationFrame(handleResize);
     });
-    
     resizeObserver.observe(containerRef.current);
-    
     return () => {
       if (containerRef.current) {
         resizeObserver.unobserve(containerRef.current);
@@ -83,143 +84,183 @@ export function useZoomableImage(
     };
   }, [updateContainerSize]);
 
-  // Apply initial settings when they change (e.g., when changing pages)
+
+  // --- Modify useEffect watching initialSettings ---
   useEffect(() => {
-    if (!initialSettings) return;
-    
-    // Avoid triggering saves when applying initial settings
-    inSaveTriggeredOperationRef.current = true;
-    
-    // Apply settings when they change from outside
-    setScale(initialSettings.scale || 1);
-    setPosition(initialSettings.position || { x: 0, y: 0 });
-    setFitMethod(initialSettings.fitMethod || 'contain');
-    
-    // Reset the flag after a delay to allow state updates to complete
-    setTimeout(() => {
-      inSaveTriggeredOperationRef.current = false;
-    }, 100);
-  }, [initialSettings, setPosition, setScale, setFitMethod]);
+    // If the flag is set, it means the potential prop change is due to our own recent action.
+    // Ignore the prop for this cycle and reset the flag.
+    if (internalUpdateTriggeredRef.current) {
+      console.log("useEffect[initialSettings]: Skipping update check because internal update was just triggered.");
+      internalUpdateTriggeredRef.current = false; // Reset the flag
+      return;
+    }
+
+    // --- Keep the previous checks ---
+    if (!initialSettings || inSaveTriggeredOperationRef.current || isPanningRef.current) {
+       if (isPanningRef.current) console.log("useEffect[initialSettings]: Skipping update because panning is active.");
+       // Add check for inSaveTriggeredOperationRef (used during reset/init)
+       if (inSaveTriggeredOperationRef.current) console.log("useEffect[initialSettings]: Skipping update because save-triggered operation is in progress.");
+       return;
+    }
+    // --- End previous checks ---
+
+
+    console.log("useEffect[initialSettings]: Checking if external settings differ (update not internally triggered).");
+    console.log("  Incoming Settings:", initialSettings);
+    console.log("  Internal State:", { scale: scaleRef.current, position: positionRef.current, fitMethod: fitMethodRef.current });
+
+    const tolerance = 0.01;
+    let stateChanged = false;
+
+    // Compare scale
+    if (initialSettings.scale !== undefined && Math.abs(initialSettings.scale - scaleRef.current) > tolerance) {
+      console.log(`  Scale differs (${initialSettings.scale} vs ${scaleRef.current}), updating internal state.`);
+      setScale(initialSettings.scale);
+      stateChanged = true;
+    }
+
+    // Compare position
+    if (initialSettings.position &&
+        (Math.abs(initialSettings.position.x - positionRef.current.x) > tolerance ||
+         Math.abs(initialSettings.position.y - positionRef.current.y) > tolerance)) {
+        console.log(`  Position differs (${JSON.stringify(initialSettings.position)} vs ${JSON.stringify(positionRef.current)}), updating internal state.`);
+        setPosition(initialSettings.position);
+        stateChanged = true;
+    }
+
+    // Compare fitMethod
+    if (initialSettings.fitMethod && initialSettings.fitMethod !== fitMethodRef.current) {
+      console.log(`  FitMethod differs (${initialSettings.fitMethod} vs ${fitMethodRef.current}), updating internal state.`);
+      setFitMethod(initialSettings.fitMethod);
+      stateChanged = true;
+    }
+
+    if (!stateChanged) {
+       console.log("useEffect[initialSettings]: No significant difference found, internal state not changed.");
+    }
+
+  // *** SIMPLIFY DEPENDENCIES ***
+  }, [initialSettings, setScale, setPosition, setFitMethod, isPanningRef]);
+  // *****************************
+  // --- End of Modified useEffect ---
+
 
   // Apply auto-fit when relevant properties change
   useEffect(() => {
-    if (!initialSettings && imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
-      // Avoid triggering saves when auto-fitting
-      inSaveTriggeredOperationRef.current = true;
-      
-      fitImageToContainer(
-        imageLoaded,
-        containerDimensions,
-        imageDimensions,
-        isInteractionReady,
-        setScale,
-        setPosition,
-        scaleRef
-      );
-      
-      // Reset the flag after a delay
-      setTimeout(() => {
-        inSaveTriggeredOperationRef.current = false;
-      }, 100);
-    }
-  }, [
-    imageLoaded, 
-    containerDimensions, 
-    imageDimensions, 
-    fitMethod, 
-    initialSettings, 
-    fitImageToContainer,
-    isInteractionReady,
-    setScale,
-    setPosition,
-    scaleRef
-  ]);
+     if (!initialSettings && imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
+       fitImageToContainer(
+         imageLoaded,
+         containerDimensions,
+         imageDimensions,
+         isInteractionReady,
+         setScale,
+         setPosition,
+         scaleRef
+       );
+     }
+   }, [
+     imageLoaded,
+     containerDimensions,
+     imageDimensions,
+     fitMethod,
+     initialSettings,
+     fitImageToContainer,
+     isInteractionReady,
+     setScale,
+     setPosition,
+     scaleRef
+   ]);
 
-  // Handle mouse down for panning - directly implemented here for better control
+
+  // --- Modify Interaction Handlers to set the flag ---
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // No change needed here, saving happens on mouseUp
     if (!isInteractionReady || inSaveTriggeredOperationRef.current) return;
     baseHandleMouseDown(e, isInteractionReady, containerRef);
+    console.log("ZoomableImage: Mouse Down");
   }, [baseHandleMouseDown, isInteractionReady, containerRef]);
 
-  // Handle mouse move for panning - directly implemented here for better control
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isInteractionReady || inSaveTriggeredOperationRef.current) return;
+    // No change needed here, saving happens on mouseUp
+    if (!isInteractionReady || inSaveTriggeredOperationRef.current || !isPanningRef.current) return;
     baseHandleMouseMove(e, isInteractionReady);
-    // Don't save during mouse move
-  }, [baseHandleMouseMove, isInteractionReady]);
+  }, [baseHandleMouseMove, isInteractionReady, isPanningRef]);
 
-  // Handle mouse up - only save after completed
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     if (!isInteractionReady) return;
+    const wasPanning = isPanningRef.current;
     baseHandleMouseUp(e, isInteractionReady, containerRef);
-    
-    // Only save when panning is complete and a mouse up occurs
-    setTimeout(() => {
-      if (!isPanningRef.current) {
+
+    if (wasPanning) {
+        console.log("ZoomableImage: Mouse Up after panning - setting internal flag and calling saveSettings");
+        internalUpdateTriggeredRef.current = true; // *** SET FLAG ***
         saveSettings();
-      }
-    }, 50);
+    } else {
+        console.log("ZoomableImage: Mouse Up without panning - no save needed here");
+    }
   }, [baseHandleMouseUp, isInteractionReady, containerRef, saveSettings, isPanningRef]);
 
-  // Handle zoom in - carefully control when settings are saved
   const handleZoomIn = useCallback(() => {
     if (inSaveTriggeredOperationRef.current) return;
+    console.log("ZoomableImage: Zoom In - setting internal flag and calling saveSettings");
+    internalUpdateTriggeredRef.current = true; // *** SET FLAG ***
     baseHandleZoomIn();
-    // Only save after zoom completes
-    setTimeout(saveSettings, 50);
+    saveSettings();
   }, [baseHandleZoomIn, saveSettings]);
 
-  // Handle zoom out - carefully control when settings are saved
   const handleZoomOut = useCallback(() => {
     if (inSaveTriggeredOperationRef.current) return;
+    console.log("ZoomableImage: Zoom Out - setting internal flag and calling saveSettings");
+    internalUpdateTriggeredRef.current = true; // *** SET FLAG ***
     baseHandleZoomOut();
-    // Only save after zoom completes
-    setTimeout(saveSettings, 50);
+    saveSettings();
   }, [baseHandleZoomOut, saveSettings]);
 
-  // Toggle fit method with controlled saving
   const toggleFitMethod = useCallback(() => {
     if (inSaveTriggeredOperationRef.current) return;
+    console.log("ZoomableImage: Toggle Fit - setting internal flag and calling saveSettings");
+    internalUpdateTriggeredRef.current = true; // *** SET FLAG ***
     baseToggleFitMethod();
-    // Save after fit method changes
-    setTimeout(saveSettings, 50);
+    saveSettings();
   }, [baseToggleFitMethod, saveSettings]);
 
-  // Reset function with controlled saving
   const handleReset = useCallback(() => {
     if (!isInteractionReady) return;
-    
-    // Avoid triggering saves during reset
-    inSaveTriggeredOperationRef.current = true;
-    
+    console.log("ZoomableImage: Reset - fitting image, setting internal flag, and scheduling save");
+
+    inSaveTriggeredOperationRef.current = true; // Flag for external reset source
+    internalUpdateTriggeredRef.current = true; // *** SET FLAG *** (as reset also triggers save)
+
     fitImageToContainer(
+       imageLoaded,
+       containerDimensions,
+       imageDimensions,
+       isInteractionReady,
+       setScale,
+       setPosition,
+       scaleRef
+     );
+
+    requestAnimationFrame(() => {
+      inSaveTriggeredOperationRef.current = false;
+      console.log("ZoomableImage: Reset - calling saveSettings after RAF");
+      saveSettings();
+    });
+  }, [
+      fitImageToContainer,
       imageLoaded,
       containerDimensions,
       imageDimensions,
       isInteractionReady,
       setScale,
       setPosition,
-      scaleRef
-    );
-    
-    // Save after reset with a delay to prevent circular updates
-    setTimeout(() => {
-      inSaveTriggeredOperationRef.current = false;
-      saveSettings();
-    }, 100);
-  }, [
-    fitImageToContainer, 
-    imageLoaded, 
-    containerDimensions, 
-    imageDimensions, 
-    isInteractionReady,
-    setScale,
-    setPosition,
-    scaleRef,
-    saveSettings
+      scaleRef,
+      saveSettings // Added saveSettings dependency
   ]);
 
-  return {
+
+   return {
     scale,
     position,
     fitMethod,

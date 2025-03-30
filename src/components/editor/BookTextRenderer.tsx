@@ -27,10 +27,12 @@ export const BookTextRenderer: React.FC<BookTextRendererProps> = ({
     if (!displayText) return null;
     
     return displayText.split('\n').map((line, i) => (
-      <React.Fragment key={i}>
+      // *** Changed React.Fragment to span ***
+      <span key={i}>
         {line}
         {i < displayText.split('\n').length - 1 && <br />}
-      </React.Fragment>
+      </span>
+      // ************************************
     ));
   };
   
