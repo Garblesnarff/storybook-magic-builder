@@ -46,8 +46,9 @@ export function usePageContentApplier(
         image: `data:image/png;base64,${data.image}` 
       };
       
-      await updatePage(updatedPage);
-      setCurrentPageData(updatedPage);
+      // Call updatePage (which handles optimistic update)
+      await updatePage(updatedPage); 
+      // Removed the direct call to setCurrentPageData(updatedPage);
       toast.success('Image generated successfully!');
     } catch (error) {
       console.error('Image generation error:', error);

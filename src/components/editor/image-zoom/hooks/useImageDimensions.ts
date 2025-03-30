@@ -30,12 +30,21 @@ export function useImageDimensions(src: string) {
     img.src = src;
   }, [src]);
 
-  // Get container dimensions handler
+  // Get container dimensions handler, preventing unnecessary updates
   const updateContainerSize = (containerRef: React.RefObject<HTMLDivElement>) => {
     if (!containerRef.current) return;
-    
+
     const { width, height } = containerRef.current.getBoundingClientRect();
-    setContainerDimensions({ width, height });
+
+    // Only update state if dimensions have actually changed
+    setContainerDimensions(prevDimensions => {
+      if (prevDimensions.width !== width || prevDimensions.height !== height) {
+        // console.log('Container dimensions changed:', { width, height }); // Optional: for debugging
+        return { width, height };
+      }
+      // Return previous state if no change to prevent re-render loop
+      return prevDimensions; 
+    });
   };
 
   return {
