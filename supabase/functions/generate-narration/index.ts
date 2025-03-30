@@ -3,8 +3,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-const DEFAULT_VOICE_ID = "pNInz6obpgDQGcFmaJgB"; 
-const API_URL = `https://api.elevenlabs.io/v1/text-to-speech/${DEFAULT_VOICE_ID}`;
+const VOICE_ID = "lxYfHSkYm1EzQzGhdbfc"; // Updated to use the specified voice ID
+const API_URL = `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -28,6 +28,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    console.log(`Generating narration with voice ID: ${VOICE_ID} for text: "${text.substring(0, 50)}..."`);
 
     const response = await fetch(API_URL, {
       method: "POST",
@@ -60,6 +62,8 @@ serve(async (req) => {
       new Uint8Array(audioArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
     );
 
+    console.log("Narration generated successfully.");
+    
     return new Response(JSON.stringify({ audioBase64: base64Audio }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
