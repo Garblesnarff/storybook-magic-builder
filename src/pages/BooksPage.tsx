@@ -1,96 +1,99 @@
 
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { BookList } from '@/components/BookList';
 import { useBook } from '@/contexts/BookContext';
+import { useNavigate } from 'react-router-dom';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { BookTemplate } from '@/data/bookTemplates';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
-const BooksPage = () => {
-  // Wrap in try/catch to help debug if the context is not available
-  try {
-    const { books, createBook, createBookFromTemplate, deleteBook } = useBook();
-    const [bookToDelete, setBookToDelete] = useState<string | null>(null);
-
-    const handleCreateBook = () => {
-      createBook();
-      toast.success('New book created!');
-    };
-
-    const handleCreateBookFromTemplate = (template: BookTemplate) => {
-      createBookFromTemplate(template);
-      toast.success(`New book created from the "${template.name}" template!`);
-    };
-
-    const handleDeleteBook = (id: string) => {
-      // Show confirmation dialog instead of deleting immediately
-      setBookToDelete(id);
-    };
-
-    const confirmDeleteBook = () => {
-      if (bookToDelete) {
-        deleteBook(bookToDelete);
-        setBookToDelete(null);
-        toast.success('Book deleted');
+const BooksPage: React.FC = () => {
+  const { 
+    books, 
+    createBook, 
+    createBookFromTemplate, 
+    updateBook,
+    deleteBook, 
+    loading 
+  } = useBook();
+  
+  const navigate = useNavigate();
+  
+  const handleCreateBook = async () => {
+    try {
+      const newBookId = await createBook();
+      if (newBookId) {
+        navigate(`/editor/${newBookId}`);
+        toast.success('Book created successfully');
       }
-    };
-
-    const cancelDeleteBook = () => {
-      setBookToDelete(null);
-    };
-
+    } catch (error) {
+      console.error('Error creating book', error);
+      toast.error('Failed to create book');
+    }
+  };
+  
+  const handleCreateBookFromTemplate = async (template: any) => {
+    try {
+      const newBookId = await createBookFromTemplate(template);
+      if (newBookId) {
+        navigate(`/editor/${newBookId}`);
+        toast.success('Book created from template');
+      }
+    } catch (error) {
+      console.error('Error creating book from template', error);
+      toast.error('Failed to create book from template');
+    }
+  };
+  
+  const handleDeleteBook = async (id: string) => {
+    try {
+      await deleteBook(id);
+      toast.success('Book deleted');
+    } catch (error) {
+      console.error('Error deleting book', error);
+      toast.error('Failed to delete book');
+    }
+  };
+  
+  if (loading) {
     return (
       <Layout>
-        <div className="py-8">
-          <BookList 
-            books={books} 
-            onCreateBook={handleCreateBook}
-            onCreateBookFromTemplate={handleCreateBookFromTemplate}
-            onDeleteBook={handleDeleteBook} 
-          />
-
-          <AlertDialog open={!!bookToDelete} onOpenChange={() => setBookToDelete(null)}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to delete this book?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the book and all its pages.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={cancelDeleteBook}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDeleteBook} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </Layout>
-    );
-  } catch (error) {
-    console.error("Error in BooksPage:", error);
-    return (
-      <Layout>
-        <div className="py-8">
-          <div className="text-center p-8">
-            <h2 className="text-2xl font-bold text-red-500">Error loading books</h2>
-            <p>There was a problem loading the book data. Please try again later.</p>
+        <div className="container mx-auto py-8 px-4">
+          <div className="flex justify-between items-center mb-8">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex flex-col">
+                <Skeleton className="aspect-[3/4] w-full rounded-xl" />
+                <Skeleton className="h-6 w-3/4 mt-4" />
+                <Skeleton className="h-4 w-1/2 mt-2" />
+                <div className="flex justify-between mt-4">
+                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-8 w-20" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </Layout>
     );
   }
+  
+  return (
+    <Layout>
+      <div className="container mx-auto py-8 px-4">
+        <BookList
+          books={books}
+          onCreateBook={handleCreateBook}
+          onCreateBookFromTemplate={handleCreateBookFromTemplate}
+          onDeleteBook={handleDeleteBook}
+          onUpdateBook={updateBook}
+        />
+      </div>
+    </Layout>
+  );
 };
 
 export default BooksPage;

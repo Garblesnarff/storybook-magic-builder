@@ -32,7 +32,8 @@ const EditorPage = () => {
     updatePage,
     setCurrentPageData,
     handleReorderPage,
-    handleDeletePage
+    handleDeletePage,
+    updateBookTitle
   } = usePageState(id);
   
   // Modify handleAddPageAsync to correctly await and return the new page ID
@@ -73,6 +74,18 @@ const EditorPage = () => {
 
   const handleLayoutChange = (layout: PageLayout) => {
     handlePageLayoutChange(layout);
+  };
+
+  const handleTitleUpdate = async (newTitle: string) => {
+    if (currentBook && newTitle !== currentBook.title) {
+      try {
+        await updateBookTitle(newTitle);
+        toast.success('Book title updated');
+      } catch (error) {
+        console.error('Error updating book title', error);
+        toast.error('Failed to update book title');
+      }
+    }
   };
 
   const handleExportPDF = async () => {
@@ -137,6 +150,7 @@ const EditorPage = () => {
             isSaving={isSaving || processingStory}
             currentBook={currentBook}
             updatePage={updatePage}
+            onUpdateTitle={handleTitleUpdate}
           />
           
           <div className="border-b bg-white/50 backdrop-blur-sm">
