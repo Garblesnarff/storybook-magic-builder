@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -90,13 +89,19 @@ export const deletePageImages = async (bookId: string, pageId: string): Promise<
 // Upload audio to Supabase Storage
 export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: string): Promise<string | null> => {
   try {
+    // Validate inputs
+    if (!audioBlob || !bookId || !pageId) {
+      toast.error('Missing required information for audio upload');
+      return null;
+    }
+
     // Generate a unique file path
     const filePath = `${bookId}/${pageId}_narration.mp3`;
     
     // Upload to Supabase Storage
     const { data, error } = await supabase
       .storage
-      .from('narrations') // Use the narrations bucket
+      .from('narrations')
       .upload(filePath, audioBlob, {
         contentType: 'audio/mpeg',
         upsert: true
@@ -104,11 +109,11 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     
     if (error) {
       console.error('Error uploading audio:', error);
-      toast.error('Failed to upload narration audio.');
+      toast.error('Failed to upload narration audio');
       return null;
     }
     
-    // Return the public URL for the audio
+    // Get the public URL for the uploaded audio
     const { data: urlData } = supabase
       .storage
       .from('narrations')
@@ -118,7 +123,7 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     return urlData.publicUrl;
   } catch (e) {
     console.error('Failed to upload audio to storage', e);
-    toast.error('Failed to save narration audio.');
+    toast.error('Failed to save narration audio');
     return null;
   }
 };
