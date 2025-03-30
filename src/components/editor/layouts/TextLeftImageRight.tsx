@@ -23,7 +23,6 @@ export const TextLeftImageRight: React.FC<LayoutProps> = memo(({
   // Memoized handler for image settings changes
   const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
     if (onImageSettingsChange) {
-      console.log("TextLeftImageRight: Forwarding image settings change");
       onImageSettingsChange(settings);
     }
   }, [onImageSettingsChange]);

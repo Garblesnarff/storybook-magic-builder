@@ -15,7 +15,6 @@ export function useSettingsSync(
   // Ref to track the last saved settings to avoid unnecessary updates
   const lastSavedSettingsRef = useRef<string>('');
   const saveTimeoutRef = useRef<number | null>(null);
-  const isChangingRef = useRef(false);
   
   // Save settings function that can be called externally
   const saveSettings = useCallback(() => {
@@ -24,9 +23,6 @@ export function useSettingsSync(
     
     // Don't initiate saves during active panning to prevent UI jumps
     if (isPanning) return;
-
-    // Don't save if we're in the middle of changing settings programmatically
-    if (isChangingRef.current) return;
     
     // Clear any existing timeout
     if (saveTimeoutRef.current !== null) {
@@ -50,16 +46,7 @@ export function useSettingsSync(
         if (onSettingsChange) {
           console.log("Saving image settings:", currentSettings);
           lastSavedSettingsRef.current = currentSettingsString;
-          
-          isChangingRef.current = true;
-          try {
-            onSettingsChange(currentSettings);
-          } finally {
-            // Wait a bit before allowing more saves
-            setTimeout(() => {
-              isChangingRef.current = false;
-            }, 100);
-          }
+          onSettingsChange(currentSettings);
         }
         saveTimeoutRef.current = null;
       }, 300); // Use a longer debounce time

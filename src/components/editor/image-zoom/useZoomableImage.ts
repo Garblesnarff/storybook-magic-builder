@@ -54,13 +54,13 @@ export function useZoomableImage(
     setFitMethod
   } = useImageFit(initialSettings);
   
+  // Track if we're in a save-triggered operation to avoid circular updates
+  const inSaveTriggeredOperationRef = useRef(false);
+  
   // Get the saveSettings function from useSettingsSync
   const { saveSettings } = useSettingsSync(
     scale, position, fitMethod, imageLoaded, isPanning, isInteractionReady, initialSettings, onSettingsChange
   );
-
-  // Track if we're in a save-triggered operation to avoid circular updates
-  const inSaveTriggeredOperationRef = useRef(false);
 
   // Get container dimensions
   useEffect(() => {
@@ -135,42 +135,61 @@ export function useZoomableImage(
     scaleRef
   ]);
 
-  // Enhance base handlers with save functionality
-  const handleZoomIn = useCallback(() => {
-    baseHandleZoomIn();
-    // Delay save until after state update is processed
-    setTimeout(saveSettings, 50);
-  }, [baseHandleZoomIn, saveSettings]);
-
-  const handleZoomOut = useCallback(() => {
-    baseHandleZoomOut();
-    // Delay save until after state update is processed
-    setTimeout(saveSettings, 50);
-  }, [baseHandleZoomOut, saveSettings]);
-
+  // Handle mouse down for panning - directly implemented here for better control
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!isInteractionReady || inSaveTriggeredOperationRef.current) return;
     baseHandleMouseDown(e, isInteractionReady, containerRef);
   }, [baseHandleMouseDown, isInteractionReady, containerRef]);
 
+  // Handle mouse move for panning - directly implemented here for better control
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isInteractionReady || inSaveTriggeredOperationRef.current) return;
     baseHandleMouseMove(e, isInteractionReady);
-    // Don't save during mouse move to prevent jitter
+    // Don't save during mouse move
   }, [baseHandleMouseMove, isInteractionReady]);
 
+  // Handle mouse up - only save after completed
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (!isInteractionReady) return;
     baseHandleMouseUp(e, isInteractionReady, containerRef);
-    // Only save after the interaction is complete and a short delay
-    setTimeout(saveSettings, 100);
-  }, [baseHandleMouseUp, isInteractionReady, containerRef, saveSettings]);
+    
+    // Only save when panning is complete and a mouse up occurs
+    setTimeout(() => {
+      if (!isPanningRef.current) {
+        saveSettings();
+      }
+    }, 50);
+  }, [baseHandleMouseUp, isInteractionReady, containerRef, saveSettings, isPanningRef]);
 
+  // Handle zoom in - carefully control when settings are saved
+  const handleZoomIn = useCallback(() => {
+    if (inSaveTriggeredOperationRef.current) return;
+    baseHandleZoomIn();
+    // Only save after zoom completes
+    setTimeout(saveSettings, 50);
+  }, [baseHandleZoomIn, saveSettings]);
+
+  // Handle zoom out - carefully control when settings are saved
+  const handleZoomOut = useCallback(() => {
+    if (inSaveTriggeredOperationRef.current) return;
+    baseHandleZoomOut();
+    // Only save after zoom completes
+    setTimeout(saveSettings, 50);
+  }, [baseHandleZoomOut, saveSettings]);
+
+  // Toggle fit method with controlled saving
   const toggleFitMethod = useCallback(() => {
+    if (inSaveTriggeredOperationRef.current) return;
     baseToggleFitMethod();
-    // Save after fit method changes with a delay
+    // Save after fit method changes
     setTimeout(saveSettings, 50);
   }, [baseToggleFitMethod, saveSettings]);
 
+  // Reset function with controlled saving
   const handleReset = useCallback(() => {
-    // Avoid triggering saves during reset operation
+    if (!isInteractionReady) return;
+    
+    // Avoid triggering saves during reset
     inSaveTriggeredOperationRef.current = true;
     
     fitImageToContainer(
@@ -183,7 +202,7 @@ export function useZoomableImage(
       scaleRef
     );
     
-    // Save after reset with a delay to allow state updates to complete
+    // Save after reset with a delay to prevent circular updates
     setTimeout(() => {
       inSaveTriggeredOperationRef.current = false;
       saveSettings();

@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, memo } from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
 import { PageEditor } from './PageEditor';
 import { PageSettings } from './PageSettings';
@@ -14,7 +14,7 @@ interface EditorContentProps {
   isGenerating?: boolean;
 }
 
-export const EditorContent: React.FC<EditorContentProps> = ({
+export const EditorContent: React.FC<EditorContentProps> = memo(({
   currentPageData,
   handleTextChange,
   handleLayoutChange,
@@ -23,11 +23,8 @@ export const EditorContent: React.FC<EditorContentProps> = ({
   handleImageSettingsChange,
   isGenerating = false
 }) => {
-  // Use a memoized handler with a significant debounce
+  // Use a memoized handler to avoid re-renders
   const imageSettingsChangeHandler = useCallback((settings: ImageSettings) => {
-    console.log("EditorContent: Image settings change requested");
-    // We pass the settings directly to the handler, since the save debouncing
-    // is now handled in the ZoomableImage component
     handleImageSettingsChange(settings);
   }, [handleImageSettingsChange]);
 
@@ -53,4 +50,6 @@ export const EditorContent: React.FC<EditorContentProps> = ({
       />
     </div>
   );
-};
+});
+
+EditorContent.displayName = 'EditorContent';

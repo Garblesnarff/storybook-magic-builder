@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
@@ -75,25 +76,25 @@ export function useImagePan(
     isInteractionReady: boolean, 
     containerRef: React.RefObject<HTMLDivElement>
   ) => {
-    if (!isPanningRef.current) return;
-    
-    setIsPanning(false);
-    isPanningRef.current = false;
-    
-    if (containerRef.current) {
-      containerRef.current.style.cursor = 'grab';
-    }
+    if (!isPanningRef.current || !isInteractionReady) return;
     
     // Calculate final position on mouse up
     const finalX = e.clientX - startPanRef.current.x;
     const finalY = e.clientY - startPanRef.current.y;
     
-    // Update position one last time
+    // Update position one last time and end panning state
     requestAnimationFrame(() => {
       setPosition({
         x: finalX,
         y: finalY
       });
+      
+      setIsPanning(false);
+      isPanningRef.current = false;
+      
+      if (containerRef.current) {
+        containerRef.current.style.cursor = 'grab';
+      }
     });
     
     e.preventDefault();
