@@ -129,6 +129,7 @@ export type Database = {
           is_bold: boolean | null
           is_italic: boolean | null
           layout: string
+          narration_url: string | null
           page_number: number
           text: string | null
           updated_at: string
@@ -147,6 +148,7 @@ export type Database = {
           is_bold?: boolean | null
           is_italic?: boolean | null
           layout?: string
+          narration_url?: string | null
           page_number: number
           text?: string | null
           updated_at?: string
@@ -165,6 +167,7 @@ export type Database = {
           is_bold?: boolean | null
           is_italic?: boolean | null
           layout?: string
+          narration_url?: string | null
           page_number?: number
           text?: string | null
           updated_at?: string
