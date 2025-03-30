@@ -23,11 +23,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/home" element={<HomePage />} />
             <Route path="/books" element={<BooksPage />} />
-            <Route path="/editor/:id" element={<NotFound 
-              variant="coming-soon" 
-              title="Editor Coming Soon" 
-              message="We're working hard to bring you an amazing book creation experience. Stay tuned!" 
-            />} />
+            <Route path="/editor/:id" element={<EditorPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
