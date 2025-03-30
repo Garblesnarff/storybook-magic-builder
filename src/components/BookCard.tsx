@@ -6,13 +6,15 @@ import { BookCopy, Clock, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
+import { EditableTitle } from '@/components/EditableTitle';
 
 interface BookCardProps {
   book: Book;
   onDelete: (id: string) => void;
+  onUpdateTitle: (id: string, newTitle: string) => void;
 }
 
-export const BookCard: React.FC<BookCardProps> = ({ book, onDelete }) => {
+export const BookCard: React.FC<BookCardProps> = ({ book, onDelete, onUpdateTitle }) => {
   const { id, title, author, updatedAt, pages } = book;
   
   const formattedDate = formatDistanceToNow(new Date(updatedAt), { addSuffix: true });
@@ -31,7 +33,11 @@ export const BookCard: React.FC<BookCardProps> = ({ book, onDelete }) => {
       </div>
       
       <CardContent className="flex-grow p-4">
-        <h3 className="font-display text-lg font-semibold text-gray-900 line-clamp-1">{title}</h3>
+        <EditableTitle 
+          value={title} 
+          onSave={(newTitle) => onUpdateTitle(id, newTitle)}
+          className="font-display text-lg font-semibold text-gray-900 line-clamp-1" 
+        />
         <p className="text-sm text-gray-600">by {author}</p>
         <div className="flex items-center mt-2 text-xs text-gray-500">
           <BookCopy className="w-3 h-3 mr-1" />
