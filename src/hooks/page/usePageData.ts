@@ -20,9 +20,15 @@ export function usePageData(currentBook: Book | null, selectedPageId: string | u
     
   }, [currentBook, selectedPageId]);
 
-  // Note: We no longer return setCurrentPageData as this hook doesn't manage state directly.
-  // State updates should happen via the context's updatePage function.
+  // We need to return a setCurrentPageData function to match the expected interface
+  // This is a dummy function that will be overridden by the real implementation later
+  const setCurrentPageData = (_page: BookPage | null) => {
+    console.log("setCurrentPageData called, but this is a no-op in usePageData");
+    // This is intentionally empty as the actual state updates happen via the context
+  };
+
   return {
-    currentPageData
+    currentPageData,
+    setCurrentPageData
   };
 }

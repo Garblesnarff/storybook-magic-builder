@@ -10,13 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// Removed useRealTimeText import
 
 interface TextSettingsProps {
   currentPageData: BookPage;
-  handleTextChange: (value: string) => void; // This will now be called on blur if changed
+  handleTextChange: (value: string) => void;
   handleTextFormattingChange: (key: keyof TextFormatting, value: any) => void;
-  // Removed onPreviewTextChange prop
 }
 
 export const TextSettings: React.FC<TextSettingsProps> = ({

@@ -1,5 +1,5 @@
 
-import React from 'react'; // Removed useState, useEffect, useRef, useCallback
+import React from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
 import { PageEditor } from './PageEditor';
 import { PageSettings } from './PageSettings';
@@ -23,8 +23,6 @@ export const EditorContent: React.FC<EditorContentProps> = ({
   handleImageSettingsChange,
   isGenerating = false
 }) => {
-  // Removed previewText state and related logic
-
   // Handle image settings changes (passed down)
   const handleImageSettings = (settings: ImageSettings) => {
     if (handleImageSettingsChange) {
@@ -41,18 +39,16 @@ export const EditorContent: React.FC<EditorContentProps> = ({
         handleTextFormattingChange={handleTextFormattingChange}
         handleGenerateImage={handleGenerateImage}
         isGenerating={isGenerating}
-        // Removed previewText prop
         onImageSettingsChange={handleImageSettings}
       />
 
       <PageSettings
         currentPageData={currentPageData}
-        handleTextChange={handleTextChange} // Pass handleTextChange directly now
+        handleTextChange={handleTextChange}
         handleLayoutChange={handleLayoutChange}
         handleTextFormattingChange={handleTextFormattingChange}
         handleGenerateImage={handleGenerateImage}
         isGenerating={isGenerating}
-        // Removed onPreviewTextChange prop
       />
     </div>
   );

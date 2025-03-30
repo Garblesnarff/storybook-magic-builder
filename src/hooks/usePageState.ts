@@ -1,5 +1,4 @@
-
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useBook } from '@/contexts/BookContext';
 import { usePageSelection } from './page/usePageSelection';
 import { usePageData } from './page/usePageData';
@@ -7,6 +6,7 @@ import { usePageActions } from './page/usePageActions';
 import { useSavingState } from './page/useSavingState';
 import { useBookLoading } from './page/useBookLoading';
 import { usePageOperationsHandlers } from './page/usePageOperationsHandlers';
+import { BookPage } from '@/types/book';
 
 export function usePageState(bookId: string | undefined) {
   // Get context data
@@ -31,14 +31,25 @@ export function usePageState(bookId: string | undefined) {
   // Use the separate hooks
   const { isSaving, cleanupSavingTimeout } = useSavingState();
   const { selectedPageId, setSelectedPageId, handlePageSelect } = usePageSelection(currentBook, books);
-  const { currentPageData, setCurrentPageData } = usePageData(currentBook, selectedPageId);
+  const { currentPageData } = usePageData(currentBook, selectedPageId);
+  
+  // Maintain local state for the current page data
+  const [localCurrentPageData, setLocalCurrentPageData] = useState<BookPage | null>(null);
+  
+  // Keep local state in sync with the derived data
+  useEffect(() => {
+    if (currentPageData !== null) {
+      setLocalCurrentPageData(currentPageData);
+    }
+  }, [currentPageData]);
+  
   const { 
     handleTextChange, 
     handleLayoutChange, 
     handleTextFormattingChange, 
     handleImageSettingsChange,
     cleanupTimeouts
-  } = usePageActions(currentBook, currentPageData, updatePage, setCurrentPageData);
+  } = usePageActions(currentBook, localCurrentPageData, updatePage);
   
   // Handle book loading
   useBookLoading(bookId, books, loadBook);
@@ -78,7 +89,7 @@ export function usePageState(bookId: string | undefined) {
     books,
     currentBook,
     selectedPageId,
-    currentPageData,
+    currentPageData: localCurrentPageData, // Use local state variable
     isSaving,
     handlePageSelect,
     handleAddPage,
@@ -89,7 +100,7 @@ export function usePageState(bookId: string | undefined) {
     handleTextFormattingChange,
     handleImageSettingsChange,
     updatePage,
-    setCurrentPageData,
+    setCurrentPageData: setLocalCurrentPageData, // Expose local setter
     handleReorderPage
   };
 }
