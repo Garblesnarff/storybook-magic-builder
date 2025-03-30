@@ -12,15 +12,13 @@ interface BookListProps {
   onCreateBook: () => void;
   onCreateBookFromTemplate: (template: BookTemplate) => void;
   onDeleteBook: (id: string) => void;
-  onUpdateBook: (book: Book) => Promise<void>;
 }
 
 export const BookList: React.FC<BookListProps> = ({ 
   books, 
   onCreateBook,
   onCreateBookFromTemplate,
-  onDeleteBook,
-  onUpdateBook
+  onDeleteBook 
 }) => {
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
@@ -31,16 +29,6 @@ export const BookList: React.FC<BookListProps> = ({
   const handleQuickCreate = () => {
     // Bypass template selection for quick create
     onCreateBook();
-  };
-
-  const handleUpdateTitle = (id: string, newTitle: string) => {
-    const bookToUpdate = books.find(book => book.id === id);
-    if (bookToUpdate) {
-      onUpdateBook({
-        ...bookToUpdate,
-        title: newTitle
-      });
-    }
   };
 
   return (
@@ -68,7 +56,6 @@ export const BookList: React.FC<BookListProps> = ({
               key={book.id} 
               book={book} 
               onDelete={onDeleteBook}
-              onUpdateTitle={handleUpdateTitle}
             />
           ))}
           <div className="aspect-[3/4] flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300 hover:border-primary transition-colors">

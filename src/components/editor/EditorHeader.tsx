@@ -5,7 +5,6 @@ import { ChevronLeft, Download, Save, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Book, BookPage } from '@/types/book';
 import { AIAssistant } from '@/components/AIAssistant';
-import { EditableTitle } from '@/components/EditableTitle';
 
 interface EditorHeaderProps {
   book: Book;
@@ -17,7 +16,6 @@ interface EditorHeaderProps {
   isSaving?: boolean;
   currentBook?: Book | null;
   updatePage?: (page: BookPage) => Promise<void>;
-  onUpdateTitle?: (newTitle: string) => Promise<void>;
 }
 
 export const EditorHeader: React.FC<EditorHeaderProps> = ({
@@ -29,15 +27,8 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   isExporting,
   isSaving = false,
   currentBook,
-  updatePage,
-  onUpdateTitle
+  updatePage
 }) => {
-  const handleTitleUpdate = async (newTitle: string) => {
-    if (onUpdateTitle && newTitle !== book.title) {
-      await onUpdateTitle(newTitle);
-    }
-  };
-
   return (
     <header className="sticky top-0 bg-white border-b z-10">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
@@ -46,16 +37,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
             <ChevronLeft className="h-4 w-4 mr-1" />
             <span>Back to Books</span>
           </Link>
-          
-          {onUpdateTitle ? (
-            <EditableTitle 
-              value={book?.title || 'Untitled Book'} 
-              onSave={handleTitleUpdate}
-              className="text-xl font-medium"
-            />
-          ) : (
-            <h1 className="text-xl font-medium">{book?.title || 'Untitled Book'}</h1>
-          )}
+          <h1 className="text-xl font-medium">{book?.title || 'Untitled Book'}</h1>
           
           {/* Saving indicator */}
           {isSaving && (

@@ -1,109 +1,106 @@
-
-import { useState, useCallback, useEffect } from 'react';
-import { Book, BookPage, PageLayout, TextFormatting, ImageSettings } from '@/types/book';
+import { useEffect, useState } from 'react';
 import { useBook } from '@/contexts/BookContext';
-import { toast } from 'sonner';
-import { useBookLoading } from './page/useBookLoading';
 import { usePageSelection } from './page/usePageSelection';
 import { usePageData } from './page/usePageData';
-import { useSavingState } from './page/useSavingState';
-import { usePageOperationsHandlers } from './page/usePageOperationsHandlers';
 import { usePageActions } from './page/usePageActions';
+import { useSavingState } from './page/useSavingState';
+import { useBookLoading } from './page/useBookLoading';
+import { usePageOperationsHandlers } from './page/usePageOperationsHandlers';
+import { BookPage } from '@/types/book';
 
-export const usePageState = (bookId?: string) => {
-  // Use the book context
-  const {
-    books,
-    currentBook,
-    loadBook,
-    updateBook,
-    addPage,
-    updatePage,
-    deletePage,
-    duplicatePage,
-    reorderPage,
-    loading,
-    error
-  } = useBook();
+export function usePageState(bookId: string | undefined) {
+  // Get context data
+  const bookContext = useBook();
+  const { 
+    books, 
+    loadBook, 
+    currentBook, 
+    addPage, 
+    updatePage, 
+    deletePage, 
+    duplicatePage, 
+    reorderPage 
+  } = bookContext;
+
+  console.log('usePageState: initializing with bookId:', bookId);
+  console.log('usePageState: books available:', books.length);
+  if (currentBook) {
+    console.log('usePageState: current book:', currentBook.title);
+  }
   
-  // Use the book loading hook
+  // Use the separate hooks
+  const { isSaving, cleanupSavingTimeout } = useSavingState();
+  const { selectedPageId, setSelectedPageId, handlePageSelect } = usePageSelection(currentBook, books);
+  const { currentPageData } = usePageData(currentBook, selectedPageId);
+  
+  // Maintain local state for the current page data
+  const [localCurrentPageData, setLocalCurrentPageData] = useState<BookPage | null>(null);
+  
+  // Keep local state in sync with the derived data
+  useEffect(() => {
+    if (currentPageData !== null) {
+      setLocalCurrentPageData(currentPageData);
+    }
+  }, [currentPageData]);
+  
+  const { 
+    handleTextChange, 
+    handleLayoutChange, 
+    handleTextFormattingChange, 
+    handleImageSettingsChange,
+    cleanupTimeouts
+  } = usePageActions(currentBook, localCurrentPageData, updatePage);
+  
+  // Handle book loading
   useBookLoading(bookId, books, loadBook);
   
-  // Use the page selection hook
-  const {
-    selectedPageId,
-    setSelectedPageId,
-    handlePageSelect
-  } = usePageSelection(currentBook, books);
-  
-  // Use the page data hook
-  const { currentPageData, setCurrentPageData } = usePageData(currentBook, selectedPageId);
-  
-  // Use the saving state hook
-  const { isSaving, trackSavingOperation, completeSavingOperation } = useSavingState();
-  
-  // Use the page operations handlers hook
-  const {
-    handleAddPage,
-    handleDuplicatePage,
-    handleDeletePage,
-    handleReorderPage
+  // Page operation handlers
+  const { 
+    handleAddPage, 
+    handleDuplicatePage, 
+    handleDeletePage, 
+    handleReorderPage 
   } = usePageOperationsHandlers(
     currentBook,
     selectedPageId,
-    addPage,
-    duplicatePage,
-    deletePage,
-    reorderPage,
+    addPage, 
+    duplicatePage, 
+    deletePage, 
+    reorderPage, 
     setSelectedPageId
   );
   
-  // Use the page actions hook for content changes
-  const {
-    handleTextChange,
-    handleLayoutChange,
-    handleTextFormattingChange,
-    handleImageSettingsChange
-  } = usePageActions(currentBook, currentPageData, updatePage);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupSavingTimeout();
+      cleanupTimeouts();
+    };
+  }, [cleanupSavingTimeout, cleanupTimeouts]);
   
-  // Handle updating the book title
-  const updateBookTitle = useCallback(async (newTitle: string) => {
-    if (currentBook) {
-      try {
-        trackSavingOperation();
-        const updatedBook = { ...currentBook, title: newTitle };
-        await updateBook(updatedBook);
-        return true;
-      } catch (error) {
-        console.error('Error updating book title:', error);
-        toast.error('Failed to update book title');
-        return false;
-      } finally {
-        completeSavingOperation();
-      }
+  // Additional effect to clean up timeouts when the page changes
+  useEffect(() => {
+    if (selectedPageId) {
+      cleanupTimeouts();
     }
-    return false;
-  }, [currentBook, updateBook, trackSavingOperation, completeSavingOperation]);
-  
+  }, [selectedPageId, cleanupTimeouts]);
+
   return {
     books,
     currentBook,
     selectedPageId,
-    currentPageData,
+    currentPageData: localCurrentPageData, // Use local state variable
     isSaving,
     handlePageSelect,
     handleAddPage,
     handleDuplicatePage,
+    handleDeletePage,
     handleTextChange,
     handleLayoutChange,
     handleTextFormattingChange,
     handleImageSettingsChange,
     updatePage,
-    setCurrentPageData,
-    handleReorderPage,
-    handleDeletePage,
-    loading,
-    error,
-    updateBookTitle
+    setCurrentPageData: setLocalCurrentPageData, // Expose local setter
+    handleReorderPage
   };
-};
+}

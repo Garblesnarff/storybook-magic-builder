@@ -32,8 +32,7 @@ const EditorPage = () => {
     updatePage,
     setCurrentPageData,
     handleReorderPage,
-    handleDeletePage,
-    updateBookTitle
+    handleDeletePage
   } = usePageState(id);
   
   // Modify handleAddPageAsync to correctly await and return the new page ID
@@ -76,18 +75,6 @@ const EditorPage = () => {
     handlePageLayoutChange(layout);
   };
 
-  const handleTitleUpdate = async (newTitle: string) => {
-    if (currentBook && newTitle !== currentBook.title) {
-      try {
-        await updateBookTitle(newTitle);
-        toast.success('Book title updated');
-      } catch (error) {
-        console.error('Error updating book title', error);
-        toast.error('Failed to update book title');
-      }
-    }
-  };
-
   const handleExportPDF = async () => {
     if (!currentBook) {
       toast.error('No book to export');
@@ -120,15 +107,6 @@ const EditorPage = () => {
     }
   };
 
-  // Fix the adapter function to correctly convert between the interface expected by PageList
-  // and the actual handleReorderPage function signature
-  const handleReorderAdapter = (sourceIndex: number, destinationIndex: number) => {
-    if (!currentBook || !currentBook.pages[sourceIndex]) return;
-    
-    const pageId = currentBook.pages[sourceIndex].id;
-    handleReorderPage(pageId, destinationIndex);
-  };
-
   return (
     <Layout fullWidth>
       {!id || (books.length > 0 && !books.some(book => book.id === id)) ? (
@@ -159,7 +137,6 @@ const EditorPage = () => {
             isSaving={isSaving || processingStory}
             currentBook={currentBook}
             updatePage={updatePage}
-            onUpdateTitle={handleTitleUpdate}
           />
           
           <div className="border-b bg-white/50 backdrop-blur-sm">
@@ -171,7 +148,7 @@ const EditorPage = () => {
                 onAddPage={handleAddPage}
                 onDuplicatePage={handleDuplicatePage}
                 onDeletePage={handleDeletePage}
-                onReorderPage={handleReorderAdapter}
+                onReorderPage={handleReorderPage}
               />
             </div>
           </div>
