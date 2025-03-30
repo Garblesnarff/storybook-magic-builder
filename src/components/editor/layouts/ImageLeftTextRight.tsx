@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
 import { ZoomableImage } from '../image-zoom';
 import { ImagePlaceholder } from '../image-placeholder';
@@ -20,12 +20,12 @@ export const ImageLeftTextRight: React.FC<LayoutProps> = ({
   previewText,
   onImageSettingsChange
 }) => {
-  // Handler for image settings changes with debounce
-  const handleImageSettingsChange = (settings: ImageSettings) => {
+  // Handler for image settings changes with memoization to prevent re-renders
+  const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
     if (onImageSettingsChange) {
       onImageSettingsChange(settings);
     }
-  };
+  }, [onImageSettingsChange]);
 
   return (
     <div className="flex h-full">

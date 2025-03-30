@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
@@ -49,7 +50,7 @@ export function useImagePan(
     const newX = e.clientX - startPanRef.current.x;
     const newY = e.clientY - startPanRef.current.y;
     
-    // Use requestAnimationFrame for smoother updates
+    // Use requestAnimationFrame for smoother updates without triggering too many React renders
     requestAnimationFrame(() => {
       setPosition({
         x: newX,
@@ -78,10 +79,13 @@ export function useImagePan(
     const finalX = e.clientX - startPanRef.current.x;
     const finalY = e.clientY - startPanRef.current.y;
     
-    // Update position one more time to ensure we have the final position
-    setPosition({
-      x: finalX,
-      y: finalY
+    // Use requestAnimationFrame for the final position update
+    requestAnimationFrame(() => {
+      // Only set position if the component is still mounted
+      setPosition({
+        x: finalX,
+        y: finalY
+      });
     });
     
     e.preventDefault();

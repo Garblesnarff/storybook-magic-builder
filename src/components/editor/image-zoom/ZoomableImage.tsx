@@ -32,15 +32,16 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     saveSettings
   } = useZoomableImage(src, initialSettings, onSettingsChange);
 
-  // Only save settings when user stops panning (mouse up)
+  // Handler for saving settings after user actions (when component unmounts or leaves)
   const handleMouseUpWithSave = useCallback((e: React.MouseEvent) => {
     handleMouseUp(e);
     
-    // Only save settings after interaction has completed (not during)
-    if (isInteractionReady && imageLoaded && !isPanning) {
-      saveSettings();
+    // Only save settings after interaction has fully completed
+    if (isInteractionReady && imageLoaded) {
+      // Use setTimeout to ensure mouse up is fully processed first
+      setTimeout(() => saveSettings(), 100);
     }
-  }, [handleMouseUp, isInteractionReady, imageLoaded, isPanning, saveSettings]);
+  }, [handleMouseUp, isInteractionReady, imageLoaded, saveSettings]);
   
   // Save settings when mouse leaves the component
   const handleMouseLeave = useCallback((e: React.MouseEvent) => {
@@ -48,11 +49,12 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     
     // Save settings when mouse leaves the component
     if (isInteractionReady && imageLoaded) {
-      saveSettings();
+      // Use setTimeout to ensure mouse up is fully processed first
+      setTimeout(() => saveSettings(), 100);
     }
   }, [handleMouseUp, isInteractionReady, imageLoaded, saveSettings]);
 
-  // Add an effect to save settings on unmount or when src changes
+  // Add an effect to save settings on unmount
   useEffect(() => {
     return () => {
       if (isInteractionReady && imageLoaded) {
@@ -101,29 +103,19 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
         isInteractionReady={isInteractionReady}
         onZoomIn={() => {
           handleZoomIn();
-          // Don't save immediately after zoom to avoid conflicts
+          // Don't save immediately after zoom to avoid update conflicts
         }}
         onZoomOut={() => {
           handleZoomOut();
-          // Don't save immediately after zoom to avoid conflicts
+          // Don't save immediately after zoom to avoid update conflicts
         }}
         onToggleFitMethod={() => {
           toggleFitMethod();
-          // Save after changing fit method (with delay)
-          setTimeout(() => {
-            if (isInteractionReady && imageLoaded) {
-              saveSettings();
-            }
-          }, 300);
+          // Don't save immediately after fit method change to avoid update conflicts
         }}
         onReset={() => {
           handleReset();
-          // Save after reset (with delay)
-          setTimeout(() => {
-            if (isInteractionReady && imageLoaded) {
-              saveSettings();
-            }
-          }, 300);
+          // Don't save immediately after reset to avoid update conflicts
         }}
       />
     </div>

@@ -16,14 +16,22 @@ export function useImageZoom(
   // Zoom in with requestAnimationFrame for smoother transitions
   const handleZoomIn = useCallback(() => {
     requestAnimationFrame(() => {
-      setScale(prev => Math.min(prev + 0.25, 4));
+      setScale(prev => {
+        // Round to nearest 0.25 after zoom to prevent floating point issues
+        const newScale = Math.min(prev + 0.25, 4);
+        return Math.round(newScale * 4) / 4; // Round to nearest 0.25
+      });
     });
   }, []);
 
   // Zoom out with requestAnimationFrame for smoother transitions
   const handleZoomOut = useCallback(() => {
     requestAnimationFrame(() => {
-      setScale(prev => Math.max(prev - 0.25, 0.5));
+      setScale(prev => {
+        // Round to nearest 0.25 after zoom to prevent floating point issues
+        const newScale = Math.max(prev - 0.25, 0.5);
+        return Math.round(newScale * 4) / 4; // Round to nearest 0.25
+      });
     });
   }, []);
 

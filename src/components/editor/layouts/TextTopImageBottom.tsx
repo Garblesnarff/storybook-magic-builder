@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
 import { ZoomableImage } from '../image-zoom';
 import { ImagePlaceholder } from '../image-placeholder';
@@ -20,6 +20,13 @@ export const TextTopImageBottom: React.FC<LayoutProps> = ({
   previewText,
   onImageSettingsChange
 }) => {
+  // Memoized handler for image settings changes
+  const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
+    if (onImageSettingsChange) {
+      onImageSettingsChange(settings);
+    }
+  }, [onImageSettingsChange]);
+
   return (
     <div className="flex flex-col h-full">
       <div className="h-1/2 p-8 overflow-auto">
@@ -36,11 +43,7 @@ export const TextTopImageBottom: React.FC<LayoutProps> = ({
               src={page.image} 
               alt="Page illustration"
               initialSettings={page.imageSettings}
-              onSettingsChange={(settings) => {
-                if (onImageSettingsChange) {
-                  onImageSettingsChange(settings);
-                }
-              }}
+              onSettingsChange={handleImageSettingsChange}
             />
           </div>
         ) : (

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
 import { ZoomableImage } from '../image-zoom';
 import { ImagePlaceholder } from '../image-placeholder';
@@ -20,6 +20,13 @@ export const FullPageImage: React.FC<LayoutProps> = ({
   previewText,
   onImageSettingsChange
 }) => {
+  // Memoized handler for image settings changes
+  const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
+    if (onImageSettingsChange) {
+      onImageSettingsChange(settings);
+    }
+  }, [onImageSettingsChange]);
+
   return (
     <div className="relative h-full">
       {page.image ? (
@@ -28,11 +35,7 @@ export const FullPageImage: React.FC<LayoutProps> = ({
             src={page.image} 
             alt="Page illustration"
             initialSettings={page.imageSettings}
-            onSettingsChange={(settings) => {
-              if (onImageSettingsChange) {
-                onImageSettingsChange(settings);
-              }
-            }}
+            onSettingsChange={handleImageSettingsChange}
           />
         </div>
       ) : (

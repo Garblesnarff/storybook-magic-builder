@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
 import { PageEditor } from './PageEditor';
 import { PageSettings } from './PageSettings';
@@ -23,11 +23,12 @@ export const EditorContent: React.FC<EditorContentProps> = ({
   handleImageSettingsChange,
   isGenerating = false
 }) => {
-  // Debounced image settings change handler to prevent rapid updates
-  const debouncedImageSettingsChange = (settings: ImageSettings) => {
+  // Memoized image settings change handler to prevent excessive updates
+  const debouncedImageSettingsChange = useCallback((settings: ImageSettings) => {
+    // We can now trust the settings data as it's properly managed
     console.log("Image settings change requested", settings);
     handleImageSettingsChange(settings);
-  };
+  }, [handleImageSettingsChange]);
 
   return (
     <div className="flex flex-col md:flex-row flex-grow">
