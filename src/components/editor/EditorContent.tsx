@@ -23,13 +23,6 @@ export const EditorContent: React.FC<EditorContentProps> = ({
   handleImageSettingsChange,
   isGenerating = false
 }) => {
-  // Handle image settings changes (passed down)
-  const handleImageSettings = (settings: ImageSettings) => {
-    if (handleImageSettingsChange) {
-      handleImageSettingsChange(settings);
-    }
-  };
-
   return (
     <div className="flex flex-col md:flex-row flex-grow">
       <PageEditor
@@ -39,7 +32,7 @@ export const EditorContent: React.FC<EditorContentProps> = ({
         handleTextFormattingChange={handleTextFormattingChange}
         handleGenerateImage={handleGenerateImage}
         isGenerating={isGenerating}
-        onImageSettingsChange={handleImageSettings}
+        onImageSettingsChange={handleImageSettingsChange}
       />
 
       <PageSettings

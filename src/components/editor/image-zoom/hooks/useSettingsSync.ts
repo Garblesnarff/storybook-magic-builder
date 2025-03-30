@@ -19,9 +19,6 @@ export function useSettingsSync(
   const saveSettings = useCallback(() => {
     if (!onSettingsChange || !imageLoaded || !isInteractionReady) return;
     
-    // Don't save if panning is active
-    if (isPanning) return;
-    
     // Create settings object from current state
     const currentSettings: ImageSettings = {
       scale,
@@ -40,8 +37,13 @@ export function useSettingsSync(
     }
   }, [imageLoaded, isInteractionReady, onSettingsChange, scale, position, fitMethod, isPanning]);
 
-  // Removed the useEffect hook that automatically debounced and called saveSettings.
-  // saveSettings will now need to be called explicitly when an interaction finishes.
+  // Set up an auto-save effect when component unmounts
+  useEffect(() => {
+    return () => {
+      // Save settings on unmount if they've changed
+      saveSettings();
+    };
+  }, [saveSettings]);
 
   // Apply initial settings when they change (e.g., when changing pages)
   const lastInitialSettingsRef = useRef<ImageSettings | undefined>(initialSettings);

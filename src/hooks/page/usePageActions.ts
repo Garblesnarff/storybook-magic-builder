@@ -2,20 +2,17 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { BookPage, PageLayout, TextFormatting, ImageSettings } from '@/types/book';
 import { useSavingState } from './useSavingState';
-import { supabase } from '@/integrations/supabase/client';
 
 export function usePageActions(
-  currentBook: any, // Type might need refinement if currentBook structure is complex
+  currentBook: any, 
   currentPageData: BookPage | null,
   updatePage: (page: BookPage) => Promise<void>
-  // Removed setCurrentPageData as it's no longer provided by usePageData
 ) {
   // Use saving state to track operations
   const { trackSavingOperation, completeSavingOperation } = useSavingState();
   
   // Use refs for debounce timeouts
-  const textChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref seems unused now, consider removing later
-  // Removed imageSettingsDebounceTimerRef and delay constant
+  const textChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handle text changes with more robust saving
   const handleTextChange = useCallback(async (value: string) => {
@@ -23,7 +20,7 @@ export function usePageActions(
     
     console.log(`handleTextChange called with value: "${value.substring(0, 30)}..." for page ${currentPageData.id}`);
 
-    // Clear any existing timeout (This ref seems unused here, but keeping for safety unless further refactoring)
+    // Clear any existing timeout
     if (textChangeTimeoutRef.current) clearTimeout(textChangeTimeoutRef.current);
 
     // Track the saving operation
@@ -42,14 +39,11 @@ export function usePageActions(
     } finally {
       completeSavingOperation();
     }
-    // Removed setCurrentPageData from dependency array
   }, [currentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
 
   // Handle layout changes - immediately save
   const handleLayoutChange = useCallback((layout: PageLayout) => {
     if (!currentPageData) return;
-
-    // Removed immediate local state update: setCurrentPageData({...});
 
     // Save to the backend immediately
     trackSavingOperation();
@@ -59,8 +53,6 @@ export function usePageActions(
     })
     .then(() => completeSavingOperation())
     .catch(() => completeSavingOperation());
-
-    // Removed setCurrentPageData from dependency array
   }, [currentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
 
   // Handle text formatting changes - immediately save
@@ -72,8 +64,6 @@ export function usePageActions(
       [key]: value
     };
 
-    // Removed immediate local state update: setCurrentPageData({...});
-
     // Save to the backend
     trackSavingOperation();
     updatePage({
@@ -82,42 +72,35 @@ export function usePageActions(
     })
     .then(() => completeSavingOperation())
     .catch(() => completeSavingOperation());
-
-    // Removed setCurrentPageData from dependency array
   }, [currentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
 
   // Handle image settings changes - Save immediately when called
   const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
     if (!currentPageData) return;
 
-    console.log('handleImageSettingsChange called with:', settings);
-    // This function is now expected to be called explicitly when saving is desired (e.g., on interaction end)
+    console.log('handleImageSettingsChange called with settings:', settings);
 
     // Track the saving operation
     trackSavingOperation(); 
 
-    // Call updatePage directly (optimistic update happens inside usePageOperations)
+    // Update the page with new image settings
     updatePage({
       ...currentPageData, 
       imageSettings: settings 
     })
-      .then(() => {
-        console.log('Image settings save initiated successfully.');
-      })
-      .catch((error) => {
-        // Error handling (rollback) is managed within usePageOperations' updatePage
-        console.error('Error initiating image settings save:', error);
-      })
-      .finally(() => {
-        completeSavingOperation(); // Mark saving attempt as complete
-      });
-
+    .then(() => {
+      console.log('Image settings saved successfully');
+      completeSavingOperation();
+    })
+    .catch((error) => {
+      console.error('Failed to save image settings:', error);
+      completeSavingOperation();
+    });
   }, [currentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
 
   // Clean up timeouts to prevent memory leaks
   const cleanupTimeouts = useCallback(() => {
-    // if (textChangeTimeoutRef.current) clearTimeout(textChangeTimeoutRef.current); // Ref seems unused
-    // No image settings timer to clear anymore
+    if (textChangeTimeoutRef.current) clearTimeout(textChangeTimeoutRef.current);
   }, []);
 
   // Clean up timeouts on unmount or when currentPageData changes

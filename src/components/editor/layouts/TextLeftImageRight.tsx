@@ -36,11 +36,7 @@ export const TextLeftImageRight: React.FC<LayoutProps> = ({
               src={page.image} 
               alt="Page illustration"
               initialSettings={page.imageSettings}
-              onSettingsChange={(settings) => {
-                if (onImageSettingsChange) {
-                  onImageSettingsChange(settings);
-                }
-              }}
+              onSettingsChange={onImageSettingsChange}
             />
           </div>
         ) : (

@@ -1,5 +1,5 @@
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { ImageSettings } from '@/types/book';
 import { 
   useImageDimensions,
@@ -51,12 +51,15 @@ export function useZoomableImage(
   const {
     fitMethod,
     fitMethodRef,
-    toggleFitMethod: baseToggleFitMethod, // Renamed base function
+    toggleFitMethod: baseToggleFitMethod,
     fitImageToContainer,
     setFitMethod
-  } = useImageFit(initialSettings); // Removed onSettingsChange from here
+  } = useImageFit(initialSettings);
   
-  // Get the saveSettings function, but it won't be called automatically anymore
+  // Track if user has interacted with the image
+  const [hasInteracted, setHasInteracted] = useState(false);
+  
+  // Get the saveSettings function from useSettingsSync
   const { saveSettings } = useSettingsSync(
     scale, position, fitMethod, imageLoaded, isPanning, isInteractionReady, initialSettings, onSettingsChange
   );
@@ -89,9 +92,9 @@ export function useZoomableImage(
     console.log('Applying initial settings from main useZoomableImage:', initialSettings);
     
     // Apply settings when they change from outside
-    setScale(initialSettings.scale);
-    setPosition(initialSettings.position);
-    setFitMethod(initialSettings.fitMethod);
+    setScale(initialSettings.scale || 1);
+    setPosition(initialSettings.position || { x: 0, y: 0 });
+    setFitMethod(initialSettings.fitMethod || 'contain');
   }, [initialSettings, setPosition, setScale, setFitMethod]);
 
   // Apply auto-fit when relevant properties change
@@ -122,17 +125,22 @@ export function useZoomableImage(
 
   // Enhance base handlers to call saveSettings explicitly after interaction
   const handleZoomIn = useCallback(() => {
+    setHasInteracted(true);
     baseHandleZoomIn();
-    saveSettings(); // Save immediately after zoom
+    // Save settings after zoom operation
+    setTimeout(() => saveSettings(), 50);
   }, [baseHandleZoomIn, saveSettings]);
 
   const handleZoomOut = useCallback(() => {
+    setHasInteracted(true);
     baseHandleZoomOut();
-    saveSettings(); // Save immediately after zoom
+    // Save settings after zoom operation
+    setTimeout(() => saveSettings(), 50);
   }, [baseHandleZoomOut, saveSettings]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     // No save needed on mouse down
+    setHasInteracted(true);
     baseHandleMouseDown(e, isInteractionReady, containerRef);
   }, [baseHandleMouseDown, isInteractionReady]);
 
@@ -144,21 +152,24 @@ export function useZoomableImage(
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     // Call base mouse up logic first
     baseHandleMouseUp(e, isInteractionReady, containerRef);
+    
     // Then explicitly save settings if panning occurred
-    if (isPanningRef.current) { // Check if panning actually happened
-       saveSettings(); 
+    if (isPanningRef.current) {
+      setTimeout(() => saveSettings(), 50);
     }
   }, [baseHandleMouseUp, isInteractionReady, containerRef, saveSettings, isPanningRef]);
 
   // Enhance toggleFitMethod to save settings
   const toggleFitMethod = useCallback(() => {
+    setHasInteracted(true);
     baseToggleFitMethod();
-    // Need a slight delay to allow state to update before saving
-    setTimeout(saveSettings, 0); 
+    // Save settings after toggling fit method
+    setTimeout(() => saveSettings(), 50);
   }, [baseToggleFitMethod, saveSettings]);
 
   // Reset function - should also save the reset state
   const handleReset = useCallback(() => {
+    setHasInteracted(true);
     fitImageToContainer(
       imageLoaded,
       containerDimensions,
@@ -168,8 +179,8 @@ export function useZoomableImage(
       setPosition,
       scaleRef
     );
-    // Need a slight delay to allow state to update before saving
-    setTimeout(saveSettings, 0); 
+    // Save settings after reset
+    setTimeout(() => saveSettings(), 50);
   }, [
     fitImageToContainer, 
     imageLoaded, 
@@ -179,35 +190,17 @@ export function useZoomableImage(
     setScale,
     setPosition,
     scaleRef,
-    saveSettings // Added saveSettings dependency
+    saveSettings
   ]);
 
-  // Save settings on unmount if they have changed from initial
+  // Save settings on unmount if user has interacted
   useEffect(() => {
-    // Store refs to ensure cleanup uses the latest values
-    const scaleRefCleanup = { current: scale };
-    const positionRefCleanup = { current: position };
-    const fitMethodRefCleanup = { current: fitMethod };
-    const initialSettingsRefCleanup = { current: initialSettings };
-    const saveSettingsRefCleanup = { current: saveSettings };
-
     return () => {
-      if (!initialSettingsRefCleanup.current) return; // No initial settings to compare against
-
-      const currentState: ImageSettings = {
-        scale: scaleRefCleanup.current,
-        position: positionRefCleanup.current,
-        fitMethod: fitMethodRefCleanup.current
-      };
-
-      // Compare current state to initial state for this instance
-      if (JSON.stringify(currentState) !== JSON.stringify(initialSettingsRefCleanup.current)) {
-        console.log('Saving image settings on unmount:', currentState);
-        saveSettingsRefCleanup.current();
+      if (hasInteracted) {
+        saveSettings();
       }
     };
-    // Run only on mount/unmount
-  }, []); // Empty dependency array
+  }, [saveSettings, hasInteracted]);
 
   return {
     scale,
