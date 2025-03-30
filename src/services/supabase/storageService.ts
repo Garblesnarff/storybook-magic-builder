@@ -86,3 +86,63 @@ export const deletePageImages = async (bookId: string, pageId: string): Promise<
     // Continue even if image deletion fails
   }
 };
+
+// Upload audio to Supabase Storage
+export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: string): Promise<string | null> => {
+  try {
+    // Generate a unique file path
+    const filePath = `${bookId}/${pageId}_narration.mp3`;
+    
+    // Upload to Supabase Storage
+    const { data, error } = await supabase
+      .storage
+      .from('narrations') // Use the narrations bucket
+      .upload(filePath, audioBlob, {
+        contentType: 'audio/mpeg',
+        upsert: true
+      });
+    
+    if (error) {
+      console.error('Error uploading audio:', error);
+      toast.error('Failed to upload narration audio.');
+      return null;
+    }
+    
+    // Return the public URL for the audio
+    const { data: urlData } = supabase
+      .storage
+      .from('narrations')
+      .getPublicUrl(data.path);
+    
+    console.log("Audio uploaded, public URL:", urlData.publicUrl);
+    return urlData.publicUrl;
+  } catch (e) {
+    console.error('Failed to upload audio to storage', e);
+    toast.error('Failed to save narration audio.');
+    return null;
+  }
+};
+
+// Delete narration audio for a page
+export const deletePageNarration = async (bookId: string, pageId: string): Promise<void> => {
+  try {
+    const { data, error: listError } = await supabase
+      .storage
+      .from('narrations')
+      .list(bookId, {
+        search: pageId
+      });
+    
+    if (!listError && data && data.length > 0) {
+      const filesToDelete = data.map(file => `${bookId}/${file.name}`);
+      
+      await supabase
+        .storage
+        .from('narrations')
+        .remove(filesToDelete);
+    }
+  } catch (storageError) {
+    console.error('Error deleting page narration:', storageError);
+    // Continue even if deletion fails
+  }
+};

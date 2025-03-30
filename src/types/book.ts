@@ -1,3 +1,4 @@
+
 export interface Book {
   id: string;
   title: string;
@@ -23,6 +24,7 @@ export interface BookPage {
   backgroundColor?: string;
   textFormatting?: TextFormatting;
   imageSettings?: ImageSettings;
+  narrationUrl?: string; // Added field for audio narration URL
 }
 
 export interface ImageSettings {
@@ -84,7 +86,8 @@ export const DEFAULT_PAGE: Omit<BookPage, 'id' | 'pageNumber'> = {
     scale: 1,
     position: { x: 0, y: 0 },
     fitMethod: 'contain'
-  }
+  },
+  narrationUrl: undefined // Added default value
 };
 
 export const IMAGE_STYLES: ImageStyle[] = [

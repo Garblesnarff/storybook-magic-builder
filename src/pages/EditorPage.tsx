@@ -8,6 +8,7 @@ import { EditorHeader } from '@/components/editor/EditorHeader';
 import { EditorContent } from '@/components/editor/EditorContent';
 import { usePageState } from '@/hooks/usePageState';
 import { useAIOperations } from '@/hooks/useAIOperations';
+import { useNarration } from '@/hooks/ai/useNarration';
 import { exportBookToPdf, generatePdfFilename } from '@/services/pdfExport';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageLayout, ImageSettings } from '@/types/book';
@@ -35,6 +36,37 @@ const EditorPage = () => {
     handleDeletePage,
     updateBookTitle
   } = usePageState(id);
+  
+  // Added narration functionality
+  const { isNarrating, generateNarration } = useNarration();
+  
+  // Handler for generating narration
+  const handleGenerateNarration = async () => {
+    if (!currentPageData || !currentBook) {
+      toast.error("Cannot generate narration without a selected page and text.");
+      return;
+    }
+    if (!currentPageData.text?.trim()) {
+      toast.error("Page text is empty, cannot generate narration.");
+      return;
+    }
+
+    const audioUrl = await generateNarration(currentPageData.text, currentBook.id, currentPageData.id);
+
+    if (audioUrl) {
+      // Save the URL to the page data using the existing updatePage function
+      const updatedPage = { ...currentPageData, narrationUrl: audioUrl };
+      setCurrentPageData(updatedPage); // Optimistic UI update
+      try {
+        await updatePage(updatedPage); // Persist change
+      } catch (e) {
+        console.error("Failed to save narration URL:", e);
+        toast.error("Failed to save narration link.");
+        // Revert optimistic update if needed
+        setCurrentPageData({ ...currentPageData, narrationUrl: undefined });
+      }
+    }
+  };
   
   // Modify handleAddPageAsync to correctly await and return the new page ID
   const handleAddPageAsync = async (): Promise<string | undefined> => {
@@ -184,6 +216,8 @@ const EditorPage = () => {
             handleGenerateImage={handleGenerateImage}
             handleImageSettingsChange={handleImageSettingsChange}
             isGenerating={isGenerating || processingStory}
+            isNarrating={isNarrating}
+            handleGenerateNarration={handleGenerateNarration}
           />
         </div>
       )}

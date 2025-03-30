@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BookPage, TextFormatting } from '@/types/book';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Mic, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -15,12 +17,16 @@ interface TextSettingsProps {
   currentPageData: BookPage;
   handleTextChange: (value: string) => void;
   handleTextFormattingChange: (key: keyof TextFormatting, value: any) => void;
+  isNarrating?: boolean;
+  handleGenerateNarration?: () => Promise<void>;
 }
 
 export const TextSettings: React.FC<TextSettingsProps> = ({
   currentPageData,
   handleTextChange,
   handleTextFormattingChange,
+  isNarrating = false,
+  handleGenerateNarration
 }) => {
   // Local state for the text being edited
   const [localText, setLocalText] = useState<string>(currentPageData.text || "");
@@ -119,6 +125,38 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
           </Select>
         </div>
       </div>
+
+      {/* Narration Section */}
+      {handleGenerateNarration && (
+        <div className="pt-4 border-t mt-4">
+          <Label>Narration</Label>
+          <Button
+            onClick={handleGenerateNarration}
+            disabled={isNarrating || !currentPageData.text?.trim()}
+            className="w-full mt-2"
+          >
+            {isNarrating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Mic className="mr-2 h-4 w-4" />
+                Generate Narration
+              </>
+            )}
+          </Button>
+          {currentPageData.narrationUrl && (
+            <div className="mt-3">
+              <Label>Listen:</Label>
+              <audio controls src={currentPageData.narrationUrl} className="w-full mt-1">
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

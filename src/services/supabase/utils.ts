@@ -22,7 +22,8 @@ export const bookPageToDatabasePage = (bookPage: BookPage, bookId: string) => {
     is_bold: bookPage.textFormatting?.isBold,
     is_italic: bookPage.textFormatting?.isItalic,
     image_style: bookPage.textFormatting?.imageStyle,
-    image_settings: imageSettingsJson
+    image_settings: imageSettingsJson,
+    narration_url: bookPage.narrationUrl || null // Added field for narration URL
   };
 };
 
@@ -57,6 +58,7 @@ export const databasePageToBookPage = (dbPage: any): BookPage => {
       scale: 1,
       position: { x: 0, y: 0 },
       fitMethod: 'contain'
-    }
+    },
+    narrationUrl: dbPage.narration_url || undefined // Added field for narration URL
   };
 };

@@ -12,6 +12,8 @@ interface EditorContentProps {
   handleGenerateImage: () => Promise<void>;
   handleImageSettingsChange: (settings: ImageSettings) => void;
   isGenerating?: boolean;
+  isNarrating?: boolean;
+  handleGenerateNarration?: () => Promise<void>;
 }
 
 export const EditorContent: React.FC<EditorContentProps> = memo(({
@@ -21,7 +23,9 @@ export const EditorContent: React.FC<EditorContentProps> = memo(({
   handleTextFormattingChange,
   handleGenerateImage,
   handleImageSettingsChange,
-  isGenerating = false
+  isGenerating = false,
+  isNarrating = false,
+  handleGenerateNarration
 }) => {
   // Use a memoized handler to avoid re-renders
   const imageSettingsChangeHandler = useCallback((settings: ImageSettings) => {
@@ -47,6 +51,8 @@ export const EditorContent: React.FC<EditorContentProps> = memo(({
         handleTextFormattingChange={handleTextFormattingChange}
         handleGenerateImage={handleGenerateImage}
         isGenerating={isGenerating}
+        isNarrating={isNarrating}
+        handleGenerateNarration={handleGenerateNarration}
       />
     </div>
   );
