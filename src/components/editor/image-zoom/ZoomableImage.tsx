@@ -32,24 +32,34 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     saveSettings
   } = useZoomableImage(src, initialSettings, onSettingsChange);
 
-  // Enhanced mouse event handlers to ensure proper event propagation
+  // Only save settings when user stops panning (mouse up)
+  const handleMouseUpWithSave = useCallback((e: React.MouseEvent) => {
+    handleMouseUp(e);
+    
+    // Only save settings after interaction has completed (not during)
+    if (isInteractionReady && imageLoaded && !isPanning) {
+      saveSettings();
+    }
+  }, [handleMouseUp, isInteractionReady, imageLoaded, isPanning, saveSettings]);
+  
+  // Save settings when mouse leaves the component
   const handleMouseLeave = useCallback((e: React.MouseEvent) => {
     handleMouseUp(e);
     
-    // Explicitly save settings when mouse leaves
+    // Save settings when mouse leaves the component
     if (isInteractionReady && imageLoaded) {
       saveSettings();
     }
   }, [handleMouseUp, isInteractionReady, imageLoaded, saveSettings]);
-  
-  // Add an effect to save settings on unmount
+
+  // Add an effect to save settings on unmount or when src changes
   useEffect(() => {
     return () => {
       if (isInteractionReady && imageLoaded) {
         saveSettings();
       }
     };
-  }, [isInteractionReady, imageLoaded, saveSettings]);
+  }, [src, isInteractionReady, imageLoaded, saveSettings]);
 
   return (
     <div 
@@ -57,7 +67,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
       className="relative w-full h-full overflow-hidden"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
+      onMouseUp={handleMouseUpWithSave}
       onMouseLeave={handleMouseLeave}
     >
       {imageLoaded && (
@@ -89,10 +99,32 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
         scale={scale}
         fitMethod={fitMethod}
         isInteractionReady={isInteractionReady}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onToggleFitMethod={toggleFitMethod}
-        onReset={handleReset}
+        onZoomIn={() => {
+          handleZoomIn();
+          // Don't save immediately after zoom to avoid conflicts
+        }}
+        onZoomOut={() => {
+          handleZoomOut();
+          // Don't save immediately after zoom to avoid conflicts
+        }}
+        onToggleFitMethod={() => {
+          toggleFitMethod();
+          // Save after changing fit method (with delay)
+          setTimeout(() => {
+            if (isInteractionReady && imageLoaded) {
+              saveSettings();
+            }
+          }, 300);
+        }}
+        onReset={() => {
+          handleReset();
+          // Save after reset (with delay)
+          setTimeout(() => {
+            if (isInteractionReady && imageLoaded) {
+              saveSettings();
+            }
+          }, 300);
+        }}
       />
     </div>
   );

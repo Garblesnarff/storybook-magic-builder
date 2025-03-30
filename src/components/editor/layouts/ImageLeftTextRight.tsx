@@ -20,6 +20,13 @@ export const ImageLeftTextRight: React.FC<LayoutProps> = ({
   previewText,
   onImageSettingsChange
 }) => {
+  // Handler for image settings changes with debounce
+  const handleImageSettingsChange = (settings: ImageSettings) => {
+    if (onImageSettingsChange) {
+      onImageSettingsChange(settings);
+    }
+  };
+
   return (
     <div className="flex h-full">
       <div className="w-1/2 h-full bg-gray-100 flex items-center justify-center">
@@ -29,7 +36,7 @@ export const ImageLeftTextRight: React.FC<LayoutProps> = ({
               src={page.image} 
               alt="Page illustration"
               initialSettings={page.imageSettings}
-              onSettingsChange={onImageSettingsChange}
+              onSettingsChange={handleImageSettingsChange}
             />
           </div>
         ) : (

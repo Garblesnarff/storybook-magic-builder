@@ -23,6 +23,12 @@ export const EditorContent: React.FC<EditorContentProps> = ({
   handleImageSettingsChange,
   isGenerating = false
 }) => {
+  // Debounced image settings change handler to prevent rapid updates
+  const debouncedImageSettingsChange = (settings: ImageSettings) => {
+    console.log("Image settings change requested", settings);
+    handleImageSettingsChange(settings);
+  };
+
   return (
     <div className="flex flex-col md:flex-row flex-grow">
       <PageEditor
@@ -32,7 +38,7 @@ export const EditorContent: React.FC<EditorContentProps> = ({
         handleTextFormattingChange={handleTextFormattingChange}
         handleGenerateImage={handleGenerateImage}
         isGenerating={isGenerating}
-        onImageSettingsChange={handleImageSettingsChange}
+        onImageSettingsChange={debouncedImageSettingsChange}
       />
 
       <PageSettings

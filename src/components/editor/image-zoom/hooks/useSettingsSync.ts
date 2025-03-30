@@ -16,13 +16,14 @@ export function useSettingsSync(
   const lastSavedSettingsRef = useRef<string>('');
   const saveTimeoutRef = useRef<number | null>(null);
   
-  // Enhanced save settings function with debounce mechanism
+  // Enhanced save settings function with debounce mechanism and proper cleanup
   const saveSettings = useCallback(() => {
     if (!onSettingsChange || !imageLoaded || !isInteractionReady) return;
     
     // Clear any existing timeout to prevent multiple saves
     if (saveTimeoutRef.current) {
       window.clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
     }
     
     // Create settings object from current state
@@ -35,18 +36,17 @@ export function useSettingsSync(
     // Stringify for comparison
     const currentSettingsString = JSON.stringify(currentSettings);
     
-    // Only save if settings changed
-    if (currentSettingsString !== lastSavedSettingsRef.current) {
-      // Use a short timeout to avoid too frequent updates
-      saveTimeoutRef.current = window.setTimeout(() => {
-        console.log('Saving image settings:', currentSettings);
-        lastSavedSettingsRef.current = currentSettingsString;
-        if (onSettingsChange) {
-          onSettingsChange(currentSettings);
-        }
-      }, 50);
+    // Only save if settings changed and we're not in the middle of panning
+    if (currentSettingsString !== lastSavedSettingsRef.current && !isPanning) {
+      console.log('Saving image settings:', currentSettings);
+      lastSavedSettingsRef.current = currentSettingsString;
+      
+      // Save directly without timeout to ensure it happens
+      if (onSettingsChange) {
+        onSettingsChange(currentSettings);
+      }
     }
-  }, [imageLoaded, isInteractionReady, onSettingsChange, scale, position, fitMethod]);
+  }, [imageLoaded, isInteractionReady, onSettingsChange, scale, position, fitMethod, isPanning]);
 
   // Set up an auto-save effect when component unmounts
   useEffect(() => {
@@ -56,16 +56,31 @@ export function useSettingsSync(
         window.clearTimeout(saveTimeoutRef.current);
       }
       
-      // Final save on unmount
-      saveSettings();
+      // Final save on unmount (but avoid saving if already saved)
+      const currentSettingsString = JSON.stringify({
+        scale,
+        position,
+        fitMethod
+      });
+      
+      if (currentSettingsString !== lastSavedSettingsRef.current && 
+          isInteractionReady && 
+          imageLoaded && 
+          onSettingsChange) {
+        onSettingsChange({
+          scale,
+          position, 
+          fitMethod
+        });
+      }
     };
-  }, [saveSettings]);
+  }, [scale, position, fitMethod, isInteractionReady, imageLoaded, onSettingsChange]);
 
   // Apply initial settings when they change (e.g., when changing pages)
   const lastInitialSettingsRef = useRef<ImageSettings | undefined>(initialSettings);
   
   useEffect(() => {
-    // Skip if settings haven't changed
+    // Skip if settings haven't changed or are undefined
     if (!initialSettings || 
         (lastInitialSettingsRef.current && 
          JSON.stringify(lastInitialSettingsRef.current) === JSON.stringify(initialSettings))) {
