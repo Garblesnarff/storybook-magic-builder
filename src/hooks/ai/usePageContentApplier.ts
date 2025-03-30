@@ -21,26 +21,26 @@ export function usePageContentApplier(
 
     try {
       const style = currentPageData.textFormatting?.imageStyle || 'REALISTIC';
-      const response = await fetch('/api/generate-image', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
+      // Use the direct Supabase function invocation to avoid CSP issues
+      const { data, error } = await supabase.functions.invoke('generate-image', {
+        body: { 
           prompt: currentPageData.text, 
           style 
-        }),
+        },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (error) {
         toast.error('Failed to generate image', {
-          description: errorData.error || 'Unknown error'
+          description: error.message || 'Unknown error'
         });
         return;
       }
 
-      const data = await response.json();
+      if (!data || !data.image) {
+        toast.error('No image data returned');
+        return;
+      }
+
       const updatedPage = { 
         ...currentPageData, 
         image: `data:image/png;base64,${data.image}` 

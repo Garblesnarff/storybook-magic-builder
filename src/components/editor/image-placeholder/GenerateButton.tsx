@@ -12,11 +12,20 @@ export const GenerateButton: React.FC<GenerateButtonProps> = ({
   isGenerating,
   onClick
 }) => {
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      await onClick();
+    } catch (error) {
+      console.error('Error generating image:', error);
+    }
+  };
+
   return (
     <Button 
       variant="outline" 
       className="mt-4"
-      onClick={onClick}
+      onClick={handleClick}
       disabled={isGenerating}
     >
       {isGenerating ? (
