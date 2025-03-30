@@ -272,34 +272,119 @@ const addImage = async (
   height: number
 ): Promise<void> => {
   try {
-    // Handle base64 data URLs
+    let imageSrc: string | null = null;
+    let format: string = 'PNG'; // Default format
+
+    // Determine image source and format
     if (imageData.startsWith('data:image')) {
-      const format = imageData.split(';')[0].split('/')[1];
-      pdf.addImage(imageData, format.toUpperCase(), x, y, width, height, undefined, 'FAST');
+      // Handle base64 data URLs directly
+      imageSrc = imageData;
+      const formatPart = imageData.split(';')[0].split('/')[1];
+      if (formatPart) {
+        format = formatPart.toUpperCase();
+        if (format === 'JPEG') format = 'JPG'; // jsPDF uses JPG
+      }
+      console.log(`Using provided base64 image. Format: ${format}`);
+
     } else {
-      // For URL images, fetch and convert to base64 first
+      // Handle URL images by fetching and converting to base64
+      console.log(`Fetching image from URL: ${imageData}`);
+      try {
+        const response = await fetch(imageData);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.statusText}`);
+        }
+        const blob = await response.blob();
+
+        // Determine image format from blob type
+        if (blob.type === 'image/jpeg' || blob.type === 'image/jpg') {
+          format = 'JPG'; // jsPDF uses JPG
+        } else if (blob.type === 'image/png') {
+          format = 'PNG';
+        } else {
+           console.warn(`Unknown image blob type: ${blob.type}. Defaulting to PNG.`);
+           format = 'PNG';
+        }
+        console.log(`Image format determined as: ${format}`);
+
+        // Convert Blob to base64 Data URL
+        imageSrc = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        console.log(`Adding fetched image (base64) to PDF. Format: ${format}`);
+
+      } catch (fetchError) {
+        console.error(`Error fetching or processing image URL ${imageData}:`, fetchError);
+        // Skip adding the image on fetch error
+        return;
+      }
+    }
+
+    // If we have an image source (either original base64 or fetched), calculate aspect ratio and add
+    if (imageSrc) {
       const img = new Image();
-      img.src = imageData;
-      await new Promise<void>((resolve) => {
+      img.src = imageSrc;
+
+      await new Promise<void>((resolve, reject) => {
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0);
-          
-          const dataURL = canvas.toDataURL('image/jpeg');
-          pdf.addImage(dataURL, 'JPEG', x, y, width, height, undefined, 'FAST');
-          resolve();
+          try {
+            const imgWidth = img.naturalWidth;
+            const imgHeight = img.naturalHeight;
+
+            if (imgWidth === 0 || imgHeight === 0) {
+              console.error('Image has zero dimensions:', imageSrc);
+              resolve(); // Skip adding zero-dimension image
+              return;
+            }
+
+            const imgRatio = imgWidth / imgHeight;
+            const boxRatio = width / height;
+
+            let drawWidth = width;
+            let drawHeight = height;
+
+            // Calculate dimensions to fit within the box while preserving aspect ratio ('contain' logic)
+            if (imgRatio > boxRatio) { // Image is wider than the box
+              drawHeight = width / imgRatio;
+            } else { // Image is taller than or equal to the box
+              drawWidth = height * imgRatio;
+            }
+
+            // Calculate centering offsets
+            const offsetX = (width - drawWidth) / 2;
+            const offsetY = (height - drawHeight) / 2;
+
+            // Add the image with corrected dimensions and centering
+            pdf.addImage(
+              imageSrc!, // Use the determined image source (base64)
+              format,
+              x + offsetX, // Centered X
+              y + offsetY, // Centered Y
+              drawWidth,   // Aspect-corrected width
+              drawHeight,  // Aspect-corrected height
+              undefined,
+              'FAST'
+            );
+            resolve();
+          } catch (addImgError) {
+             console.error('Error calculating image dimensions or adding image to PDF:', addImgError);
+             reject(addImgError); // Reject the promise on error during calculation/adding
+          }
         };
-        img.onerror = () => {
-          console.error('Failed to load image:', imageData);
-          resolve(); // Still resolve so PDF generation continues
+        img.onerror = (err) => {
+          console.error('Failed to load image data for dimension calculation:', imageSrc, err);
+          reject(new Error('Image loading failed')); // Reject the promise on image load error
         };
       });
+    } else {
+       console.warn('No valid image source to add to PDF.');
     }
+
   } catch (error) {
     console.error('Error adding image to PDF:', error);
-    // Continue without the image
+    // Continue without the image if an error occurred in the outer try
   }
 };

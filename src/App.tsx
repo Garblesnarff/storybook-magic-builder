@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import HomePage from "./pages/HomePage";
 import BooksPage from "./pages/BooksPage";
 import EditorPage from "./pages/EditorPage";
+import EditorPlaceholderPage from "./pages/EditorPlaceholderPage"; // Added import
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
@@ -24,6 +25,8 @@ const App = () => (
             <Route path="/home" element={<HomePage />} />
             <Route path="/books" element={<BooksPage />} />
             <Route path="/editor/:id" element={<EditorPage />} />
+            {/* ADD THIS NEW ROUTE BELOW */}
+            <Route path="/editor" element={<EditorPlaceholderPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
