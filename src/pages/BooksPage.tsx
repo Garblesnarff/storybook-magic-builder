@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
 const BooksPage: React.FC = () => {
+  // useEffect hook removed
+
   const { 
     books, 
     createBook, 
@@ -82,7 +84,8 @@ const BooksPage: React.FC = () => {
   }
   
   return (
-    <Layout>
+    // Use rootClassName for full-screen background
+    <Layout rootClassName="bg-books-background bg-cover bg-center bg-no-repeat"> 
       <div className="container mx-auto py-8 px-4">
         <BookList
           books={books}

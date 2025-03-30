@@ -68,6 +68,9 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
+      backgroundImage: {
+        'books-background': "url('/books-background.png')",
+      },
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',

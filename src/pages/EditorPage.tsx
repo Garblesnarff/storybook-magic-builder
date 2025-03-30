@@ -162,7 +162,7 @@ const EditorPage = () => {
   };
 
   return (
-    <Layout fullWidth>
+    <Layout fullWidth className="bg-books-background bg-cover bg-center bg-no-repeat">
       {!id || (books.length > 0 && !books.some(book => book.id === id)) ? (
         <Navigate to="/books" />
       ) : !currentBook ? (
@@ -180,7 +180,7 @@ const EditorPage = () => {
           <Skeleton className="h-64 w-full" />
         </div>
       ) : (
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col"> {/* Background classes removed from here */}
           <EditorHeader 
             book={currentBook}
             onExportPDF={handleExportPDF}
