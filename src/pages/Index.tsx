@@ -9,7 +9,7 @@ const Index = () => {
     <div 
       className="min-h-screen flex flex-col items-center justify-center bg-cover bg-center bg-no-repeat" 
       style={{
-        backgroundImage: "url('/lovable-uploads/2b1920b1-e04b-45df-b249-70805bce4a6f.png')",
+        backgroundImage: "url('/index-background.png')",
         backgroundSize: 'cover',
         backgroundPosition: 'center'
       }}
