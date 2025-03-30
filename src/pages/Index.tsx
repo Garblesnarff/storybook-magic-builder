@@ -11,7 +11,7 @@ const Index = () => {
       <div className="text-center max-w-3xl px-6 py-12 text-white">
         <h1 className="text-5xl md:text-6xl font-bold mb-6 font-display drop-shadow-lg">
       </h1>
-        <p className="text-xl mb-8 drop-shadow-md text-yellow-100 md:text-4xl">Create magical, personalized books for children with AI-generated images and stories.</p>
+        <p className="text-xl mb-8 drop-shadow-md text-yellow-100 md:text-4xl">Bring Your Child's Next Favorite Story to Life.</p>
         
         <div className="space-y-4">
           <Button size="lg" className="w-full md:w-auto px-8 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-lg" onClick={() => navigate('/books')}>
