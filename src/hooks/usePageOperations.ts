@@ -1,5 +1,5 @@
-
-import { useState } from 'react';
+// src/hooks/usePageOperations.ts
+import { useState, useCallback } from 'react'; // Added useCallback
 import { Book, BookPage } from '../types/book';
 import { toast } from 'sonner';
 import {
@@ -8,7 +8,10 @@ import {
   deletePage as deletePageService,
   reorderPage as reorderPageService,
   duplicatePage as duplicatePageService
-} from '../services/pageOperations';
+} from '../services/pageOperations'; // Assuming these names
+// Import the function to fetch the book again
+import { loadBookById } from '../services/bookOperations';
+
 
 export function usePageOperations(
   books: Book[],
@@ -16,100 +19,88 @@ export function usePageOperations(
   setBooks: React.Dispatch<React.SetStateAction<Book[]>>,
   setCurrentBook: React.Dispatch<React.SetStateAction<Book | null>>
 ) {
-  const [pageLoading, setPageLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(false); // Maybe rename to isProcessing
   const [pageError, setPageError] = useState<string | null>(null);
 
   // Modify addPage to return the new page ID
-  const addPage = async (): Promise<string | undefined> => {
+  // (Assuming addPageService returns [updatedBooks, newPageId])
+  const addPage = useCallback(async (): Promise<string | undefined> => {
     if (!currentBook) return undefined;
-    
+    setPageLoading(true);
+    setPageError(null);
     try {
-      setPageLoading(true);
-      // Assume addPageService returns [updatedBooks, newPageId]
       const [updatedBooksResult, newPageId] = await addPageService(currentBook, books);
-      
       setBooks(updatedBooksResult);
-      
-      // Update current book
       const updatedBook = updatedBooksResult.find(book => book.id === currentBook.id);
       if (updatedBook) {
         setCurrentBook(updatedBook);
       }
-      
-      // Don't show toast here, let the handler do it
-      // toast.success('New page added'); 
-      return newPageId; // Return the ID
+      return newPageId;
     } catch (error) {
       console.error('Error adding page:', error);
       setPageError('Failed to add page');
       toast.error('Failed to add page');
-      return undefined; // Return undefined on error
+      return undefined;
+    } finally {
+      setPageLoading(false);
+    }
+  }, [currentBook, books, setBooks, setCurrentBook]); // Added dependencies
+
+  // --- Replace the ENTIRE updatePage function ---
+  const updatePage = async (pageToUpdate: BookPage): Promise<void> => {
+    if (!currentBook) return;
+    console.log(`updatePage: Received request to update page ${pageToUpdate.id}`);
+
+    // Don't do optimistic updates here for simplicity and to avoid src changes
+    setPageLoading(true); // Indicate processing
+    setPageError(null);
+
+    try {
+      // Call the service function which handles DB update and image upload (if needed)
+      // This service MUST ensure the database row has the final public URL if an image was uploaded.
+      await updatePageService(pageToUpdate, currentBook, books); // Pass the potentially base64 image
+
+      console.log(`updatePage: updatePageService completed for page ${pageToUpdate.id}. Fetching updated book state...`);
+
+      // *** Force a refresh of the book data from the source of truth (database) ***
+      // This ensures we get the final state, including the public image URL
+      const refreshedBook = await loadBookById(currentBook.id);
+
+      if (refreshedBook) {
+         console.log(`updatePage: Refreshed book data loaded. Updating context state.`);
+         // Update the context with the completely refreshed book data
+         setCurrentBook(refreshedBook);
+         setBooks(prevBooks => prevBooks.map(b => b.id === refreshedBook.id ? refreshedBook : b));
+      } else {
+         console.error(`updatePage: Failed to reload book ${currentBook.id} after update.`);
+         // Handle error - maybe revert? For now, just log.
+         toast.error("Failed to refresh book data after saving.");
+      }
+
+    } catch (error) {
+      console.error('Error during updatePage process:', error);
+      setPageError('Failed to update page');
+      toast.error('Failed to save page changes.');
+      // No explicit rollback needed as we didn't do optimistic UI updates here
     } finally {
       setPageLoading(false);
     }
   };
+  // --- End of replaced updatePage function ---
 
-  const updatePage = async (updatedPage: BookPage): Promise<void> => {
+  const deletePage = useCallback(async (id: string): Promise<void> => {
     if (!currentBook) return;
-
-    // Store previous state for potential rollback
-    const previousBooks = [...books];
-    const previousCurrentBook = currentBook ? { ...currentBook } : null;
-
-    // --- Optimistic Update ---
-    // 1. Update the page within the current book optimistically
-    const updatedPages = currentBook.pages.map(p => 
-      p.id === updatedPage.id ? updatedPage : p
-    );
-    const optimisticallyUpdatedBook = { ...currentBook, pages: updatedPages };
-
-    // 2. Update the list of books optimistically
-    const optimisticallyUpdatedBooks = books.map(b => 
-      b.id === currentBook.id ? optimisticallyUpdatedBook : b
-    );
-
-    // 3. Apply optimistic updates to the state
-    setBooks(optimisticallyUpdatedBooks);
-    setCurrentBook(optimisticallyUpdatedBook);
-    // --- End Optimistic Update ---
-
+    setPageLoading(true);
+    setPageError(null);
     try {
-      setPageLoading(true); // Indicate background activity
-      // Call the service to persist the change (we don't need the result for state update now)
-      await updatePageService(updatedPage, currentBook, books); 
-      // If successful, the optimistic state is correct.
-      console.log(`Page ${updatedPage.id} update persisted successfully.`);
-
-    } catch (error) {
-      console.error('Error updating page, rolling back optimistic update:', error);
-      setPageError('Failed to update page');
-      toast.error('Failed to save page changes. Reverting.');
-
-      // --- Rollback on Error ---
-      setBooks(previousBooks);
-      setCurrentBook(previousCurrentBook);
-      // --- End Rollback ---
-
-    } finally {
-      setPageLoading(false); // Stop indicating background activity
-    }
-  };
-
-  const deletePage = async (id: string): Promise<void> => {
-    if (!currentBook) return;
-    
-    try {
-      setPageLoading(true);
       const updatedBooksResult = await deletePageService(id, currentBook, books);
-      
       setBooks(updatedBooksResult);
-      
-      // Update current book
       const updatedBook = updatedBooksResult.find(book => book.id === currentBook.id);
       if (updatedBook) {
         setCurrentBook(updatedBook);
+      } else if (currentBook.pages.length === 1) { // If last page was deleted
+        setCurrentBook(null); // Or handle as appropriate
       }
-      
       toast.success('Page deleted');
     } catch (error) {
       console.error('Error deleting page:', error);
@@ -118,18 +109,15 @@ export function usePageOperations(
     } finally {
       setPageLoading(false);
     }
-  };
+  }, [currentBook, books, setBooks, setCurrentBook]); // Added dependencies
 
-  const reorderPage = async (id: string, newPosition: number): Promise<void> => {
+  const reorderPage = useCallback(async (id: string, newPosition: number): Promise<void> => {
     if (!currentBook) return;
-    
+    setPageLoading(true);
+    setPageError(null);
     try {
-      setPageLoading(true);
       const updatedBooksResult = await reorderPageService(id, newPosition, currentBook, books);
-      
       setBooks(updatedBooksResult);
-      
-      // Update current book
       const updatedBook = updatedBooksResult.find(book => book.id === currentBook.id);
       if (updatedBook) {
         setCurrentBook(updatedBook);
@@ -141,23 +129,20 @@ export function usePageOperations(
     } finally {
       setPageLoading(false);
     }
-  };
+  }, [currentBook, books, setBooks, setCurrentBook]); // Added dependencies
 
-  const duplicatePage = async (id: string): Promise<string | undefined> => {
+  // (Assuming duplicatePageService returns [updatedBooks, newPageId])
+  const duplicatePage = useCallback(async (id: string): Promise<string | undefined> => {
     if (!currentBook) return undefined;
-    
+    setPageLoading(true);
+    setPageError(null);
     try {
-      setPageLoading(true);
       const [updatedBooksResult, newPageId] = await duplicatePageService(id, currentBook, books);
-      
       setBooks(updatedBooksResult);
-      
-      // Update current book
       const updatedBook = updatedBooksResult.find(book => book.id === currentBook.id);
       if (updatedBook) {
         setCurrentBook(updatedBook);
       }
-      
       return newPageId;
     } catch (error) {
       console.error('Error duplicating page:', error);
@@ -167,7 +152,8 @@ export function usePageOperations(
     } finally {
       setPageLoading(false);
     }
-  };
+  }, [currentBook, books, setBooks, setCurrentBook]); // Added dependencies
+
 
   return {
     addPage,

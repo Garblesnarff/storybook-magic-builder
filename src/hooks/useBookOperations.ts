@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // <-- Add useCallback
 import { Book } from '../types/book';
 import { 
   createNewBook, 
@@ -41,28 +41,29 @@ export function useBookOperations() {
     }
 
     fetchBooks();
-  }, []);
+  }, []); // Empty dependency array is correct here
 
-  const createBook = async (): Promise<string | null> => {
+  const createBook = useCallback(async (): Promise<string | null> => {
     try {
       const newBook = await createNewBook();
-      setBooks(prevBooks => [...prevBooks, newBook]);
-      setCurrentBook(newBook);
+      setBooks(prevBooks => [...prevBooks, newBook]); // setBooks is stable
+      setCurrentBook(newBook); // setCurrentBook is stable
       return newBook.id;
     } catch (error) {
       console.error('Error creating book:', error);
       toast.error('Failed to create new book');
       return null;
     }
-  };
+  }, []); // No external dependencies needed
 
-  const createBookFromTemplate = async (template: BookTemplate): Promise<string | null> => {
+  const createBookFromTemplate = useCallback(async (template: BookTemplate): Promise<string | null> => {
     try {
       const newBook = template.createBook();
       const savedBook = await createNewBook();
-      // Merge template book data with saved book
       const mergedBook = { ...savedBook, ...newBook, id: savedBook.id };
-      await updateBookService(mergedBook, books);
+      // Pass books state directly, useCallback will close over the current value
+      // If updateBookService *mutates* books, this could be an issue, but assuming it returns new array
+      await updateBookService(mergedBook, books); 
       
       setBooks(prevBooks => [...prevBooks, mergedBook]);
       setCurrentBook(mergedBook);
@@ -72,13 +73,13 @@ export function useBookOperations() {
       toast.error('Failed to create book from template');
       return null;
     }
-  };
+  }, [books]); // Depends on the current list of books for updateBookService
 
-  const loadBook = async (id: string): Promise<Book | null> => {
+  const loadBook = useCallback(async (id: string): Promise<Book | null> => {
     try {
       const book = await loadBookById(id);
       if (book) {
-        setCurrentBook(book);
+        setCurrentBook(book); // setCurrentBook is stable
         return book;
       }
       return null;
@@ -87,29 +88,33 @@ export function useBookOperations() {
       toast.error('Failed to load book');
       return null;
     }
-  };
+  }, []); // No external dependencies needed
 
-  const updateBookState = async (updatedBook: Book): Promise<void> => {
+  const updateBookState = useCallback(async (updatedBook: Book): Promise<void> => {
     try {
-      const updatedBooks = await updateBookService(updatedBook, books);
-      setBooks(updatedBooks);
+      // Pass books state directly
+      const updatedBooksResult = await updateBookService(updatedBook, books); 
+      setBooks(updatedBooksResult); // setBooks is stable
       
-      if (currentBook?.id === updatedBook.id) {
-        setCurrentBook({ ...updatedBook });
+      // Use currentBook state directly
+      if (currentBook?.id === updatedBook.id) { 
+        setCurrentBook({ ...updatedBook }); // setCurrentBook is stable
       }
     } catch (error) {
       console.error('Error updating book:', error);
       toast.error('Failed to update book');
     }
-  };
+  }, [books, currentBook]); // Depends on books and currentBook
 
-  const deleteBook = async (id: string): Promise<void> => {
+  const deleteBook = useCallback(async (id: string): Promise<void> => {
     try {
-      const updatedBooks = await deleteBookService(id, books);
-      setBooks(updatedBooks);
+      // Pass books state directly
+      const updatedBooksResult = await deleteBookService(id, books); 
+      setBooks(updatedBooksResult); // setBooks is stable
       
-      if (currentBook?.id === id) {
-        setCurrentBook(updatedBooks.length ? updatedBooks[0] : null);
+      // Use currentBook state directly
+      if (currentBook?.id === id) { 
+        setCurrentBook(updatedBooksResult.length ? updatedBooksResult[0] : null); // setCurrentBook is stable
       }
       
       toast.success('Book deleted successfully');
@@ -117,7 +122,7 @@ export function useBookOperations() {
       console.error('Error deleting book:', error);
       toast.error('Failed to delete book');
     }
-  };
+  }, [books, currentBook]); // Depends on books and currentBook
 
   return {
     books,

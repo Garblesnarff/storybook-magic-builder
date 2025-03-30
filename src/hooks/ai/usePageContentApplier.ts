@@ -45,13 +45,18 @@ export function usePageContentApplier(
         ...currentPageData, 
         image: `data:image/png;base64,${data.image}` 
       };
-      
-      // Call updatePage (which handles optimistic update)
-      await updatePage(updatedPage); 
-      // Removed the direct call to setCurrentPageData(updatedPage);
+
+      // *** REMOVE THIS LINE ***
+      // setCurrentPageData(updatedPage); // <- Remove this direct local state update
+
+      // Rely solely on the context update function (which includes optimistic update)
+      console.log("usePageContentApplier: Calling context updatePage...");
+      await updatePage(updatedPage); // This handles optimistic UI and background save
+
       toast.success('Image generated successfully!');
+
     } catch (error) {
-      console.error('Image generation error:', error);
+      console.error('usePageContentApplier: Image generation error:', error);
       toast.error('Failed to generate image', {
         description: error instanceof Error ? error.message : 'Unknown error'
       });
