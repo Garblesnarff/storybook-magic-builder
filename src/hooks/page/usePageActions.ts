@@ -14,6 +14,7 @@ export function usePageActions(
   // Use refs for debounce timeouts
   const textChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const imageSettingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const imageSettingsInProgressRef = useRef(false);
 
   // Handle text changes with more robust saving
   const handleTextChange = useCallback(async (value: string) => {
@@ -75,29 +76,56 @@ export function usePageActions(
     .catch(() => completeSavingOperation());
   }, [currentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
 
-  // Handle image settings changes - with improved debouncing
+  // Handle image settings changes with improved save handling
   const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
     if (!currentPageData) return;
-
+    
+    // Avoid multiple parallel image setting operations
+    if (imageSettingsInProgressRef.current) {
+      console.log('Image settings update already in progress, skipping this update');
+      return;
+    }
+    
     console.log('handleImageSettingsChange called with settings:', settings);
-
-    // No need to debounce again as the ZoomableImage component already handles this
+    
+    // Clear any existing timeout
+    if (imageSettingsTimeoutRef.current) {
+      clearTimeout(imageSettingsTimeoutRef.current);
+    }
+    
+    // Set flag to prevent parallel updates
+    imageSettingsInProgressRef.current = true;
+    
     // Track the saving operation
-    trackSavingOperation(); 
+    trackSavingOperation();
 
-    // Update the page with new image settings
-    updatePage({
-      ...currentPageData, 
-      imageSettings: settings 
-    })
-    .then(() => {
-      console.log('Image settings saved successfully');
-      completeSavingOperation();
-    })
-    .catch((error) => {
-      console.error('Failed to save image settings:', error);
-      completeSavingOperation();
-    });
+    // Debounce the update to prevent rapid sequential saves
+    imageSettingsTimeoutRef.current = setTimeout(() => {
+      // Prepare current page data with new settings
+      const updatedPage = {
+        ...currentPageData,
+        imageSettings: settings
+      };
+      
+      // Update the page
+      updatePage(updatedPage)
+        .then(() => {
+          console.log('Image settings saved successfully');
+          completeSavingOperation();
+        })
+        .catch((error) => {
+          console.error('Failed to save image settings:', error);
+          completeSavingOperation();
+        })
+        .finally(() => {
+          // Reset the in-progress flag
+          setTimeout(() => {
+            imageSettingsInProgressRef.current = false;
+          }, 100);
+        });
+        
+      imageSettingsTimeoutRef.current = null;
+    }, 200);
   }, [currentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
 
   // Clean up timeouts to prevent memory leaks

@@ -7,6 +7,7 @@ export function useImageZoom(
 ) {
   const [scale, setScale] = useState(initialSettings?.scale || 1);
   const scaleRef = useRef(scale);
+  const lastZoomTimeRef = useRef(0);
   
   // Update refs to keep them in sync with state
   useEffect(() => {
@@ -15,6 +16,13 @@ export function useImageZoom(
 
   // Zoom in with requestAnimationFrame for smoother transitions
   const handleZoomIn = useCallback(() => {
+    // Throttle zoom operations
+    const now = Date.now();
+    if (now - lastZoomTimeRef.current < 150) {
+      return;
+    }
+    lastZoomTimeRef.current = now;
+    
     requestAnimationFrame(() => {
       setScale(prev => {
         // Round to nearest 0.25 after zoom to prevent floating point issues
@@ -26,6 +34,13 @@ export function useImageZoom(
 
   // Zoom out with requestAnimationFrame for smoother transitions
   const handleZoomOut = useCallback(() => {
+    // Throttle zoom operations
+    const now = Date.now();
+    if (now - lastZoomTimeRef.current < 150) {
+      return;
+    }
+    lastZoomTimeRef.current = now;
+    
     requestAnimationFrame(() => {
       setScale(prev => {
         // Round to nearest 0.25 after zoom to prevent floating point issues

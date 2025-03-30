@@ -15,13 +15,18 @@ export function useSettingsSync(
   // Ref to track the last saved settings to avoid unnecessary updates
   const lastSavedSettingsRef = useRef<string>('');
   const saveTimeoutRef = useRef<number | null>(null);
+  const isChangingRef = useRef(false);
   
   // Save settings function that can be called externally
   const saveSettings = useCallback(() => {
+    // Don't save if there's no callback, image isn't loaded, or interaction system isn't ready
     if (!onSettingsChange || !imageLoaded || !isInteractionReady) return;
     
     // Don't initiate saves during active panning to prevent UI jumps
     if (isPanning) return;
+
+    // Don't save if we're in the middle of changing settings programmatically
+    if (isChangingRef.current) return;
     
     // Clear any existing timeout
     if (saveTimeoutRef.current !== null) {
@@ -43,8 +48,18 @@ export function useSettingsSync(
     if (currentSettingsString !== lastSavedSettingsRef.current) {
       saveTimeoutRef.current = window.setTimeout(() => {
         if (onSettingsChange) {
+          console.log("Saving image settings:", currentSettings);
           lastSavedSettingsRef.current = currentSettingsString;
-          onSettingsChange(currentSettings);
+          
+          isChangingRef.current = true;
+          try {
+            onSettingsChange(currentSettings);
+          } finally {
+            // Wait a bit before allowing more saves
+            setTimeout(() => {
+              isChangingRef.current = false;
+            }, 100);
+          }
         }
         saveTimeoutRef.current = null;
       }, 300); // Use a longer debounce time
@@ -56,19 +71,9 @@ export function useSettingsSync(
     return () => {
       if (saveTimeoutRef.current !== null) {
         window.clearTimeout(saveTimeoutRef.current);
-        
-        // Final save on unmount if there were changes
-        if (isInteractionReady && imageLoaded && onSettingsChange && 
-            JSON.stringify({scale, position, fitMethod}) !== lastSavedSettingsRef.current) {
-          onSettingsChange({
-            scale,
-            position, 
-            fitMethod
-          });
-        }
       }
     };
-  }, [scale, position, fitMethod, isInteractionReady, imageLoaded, onSettingsChange, lastSavedSettingsRef]);
+  }, []);
 
   return {
     saveSettings

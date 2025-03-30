@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
@@ -12,6 +11,7 @@ export function useImagePan(
   const positionRef = useRef(position);
   const isPanningRef = useRef(isPanning);
   const startPanRef = useRef({ x: 0, y: 0 });
+  const lastMoveTimeRef = useRef(0);
   
   // Update refs to keep them in sync with state
   useEffect(() => {
@@ -43,9 +43,16 @@ export function useImagePan(
     e.preventDefault();
   }, []);
 
-  // Handle mouse move for panning
+  // Handle mouse move for panning with throttling
   const handleMouseMove = useCallback((e: React.MouseEvent, isInteractionReady: boolean) => {
     if (!isPanningRef.current || !isInteractionReady) return;
+    
+    // Throttle updates for smoother panning
+    const now = Date.now();
+    if (now - lastMoveTimeRef.current < 16) { // ~60fps (1000ms/60)
+      return;
+    }
+    lastMoveTimeRef.current = now;
     
     // Calculate new position
     const newX = e.clientX - startPanRef.current.x;

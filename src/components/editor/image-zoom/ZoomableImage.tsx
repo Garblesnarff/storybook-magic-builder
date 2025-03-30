@@ -28,33 +28,13 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     handleZoomIn,
     handleZoomOut,
     toggleFitMethod,
-    handleReset,
-    saveSettings
+    handleReset
   } = useZoomableImage(src, initialSettings, onSettingsChange);
 
-  // Handler for mouse up which also saves settings
-  const handleMouseUpWithSave = useCallback((e: React.MouseEvent) => {
-    handleMouseUp(e);
-    
-    // Only save settings after the interaction is fully complete
-    setTimeout(() => {
-      if (isInteractionReady && imageLoaded) {
-        saveSettings();
-      }
-    }, 100);
-  }, [handleMouseUp, isInteractionReady, imageLoaded, saveSettings]);
-  
-  // Save settings when mouse leaves the component
+  // Handle mouse events in component to ensure we have access to current state
   const handleMouseLeave = useCallback((e: React.MouseEvent) => {
     handleMouseUp(e);
-    
-    // Save settings when mouse leaves the component
-    setTimeout(() => {
-      if (isInteractionReady && imageLoaded) {
-        saveSettings();
-      }
-    }, 100);
-  }, [handleMouseUp, isInteractionReady, imageLoaded, saveSettings]);
+  }, [handleMouseUp]);
 
   return (
     <div 
@@ -62,7 +42,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
       className="relative w-full h-full overflow-hidden"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUpWithSave}
+      onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
     >
       {imageLoaded && (

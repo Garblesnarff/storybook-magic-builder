@@ -59,6 +59,9 @@ export function useZoomableImage(
     scale, position, fitMethod, imageLoaded, isPanning, isInteractionReady, initialSettings, onSettingsChange
   );
 
+  // Track if we're in a save-triggered operation to avoid circular updates
+  const inSaveTriggeredOperationRef = useRef(false);
+
   // Get container dimensions
   useEffect(() => {
     if (!containerRef.current) return;
@@ -84,15 +87,26 @@ export function useZoomableImage(
   useEffect(() => {
     if (!initialSettings) return;
     
+    // Avoid triggering saves when applying initial settings
+    inSaveTriggeredOperationRef.current = true;
+    
     // Apply settings when they change from outside
     setScale(initialSettings.scale || 1);
     setPosition(initialSettings.position || { x: 0, y: 0 });
     setFitMethod(initialSettings.fitMethod || 'contain');
+    
+    // Reset the flag after a delay to allow state updates to complete
+    setTimeout(() => {
+      inSaveTriggeredOperationRef.current = false;
+    }, 100);
   }, [initialSettings, setPosition, setScale, setFitMethod]);
 
   // Apply auto-fit when relevant properties change
   useEffect(() => {
     if (!initialSettings && imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0 && imageDimensions.width > 0) {
+      // Avoid triggering saves when auto-fitting
+      inSaveTriggeredOperationRef.current = true;
+      
       fitImageToContainer(
         imageLoaded,
         containerDimensions,
@@ -102,6 +116,11 @@ export function useZoomableImage(
         setPosition,
         scaleRef
       );
+      
+      // Reset the flag after a delay
+      setTimeout(() => {
+        inSaveTriggeredOperationRef.current = false;
+      }, 100);
     }
   }, [
     imageLoaded, 
@@ -116,16 +135,18 @@ export function useZoomableImage(
     scaleRef
   ]);
 
-  // Enhance base handlers - but DO NOT save immediately
+  // Enhance base handlers with save functionality
   const handleZoomIn = useCallback(() => {
     baseHandleZoomIn();
-    // Don't save immediately to prevent update loops
-  }, [baseHandleZoomIn]);
+    // Delay save until after state update is processed
+    setTimeout(saveSettings, 50);
+  }, [baseHandleZoomIn, saveSettings]);
 
   const handleZoomOut = useCallback(() => {
     baseHandleZoomOut();
-    // Don't save immediately to prevent update loops
-  }, [baseHandleZoomOut]);
+    // Delay save until after state update is processed
+    setTimeout(saveSettings, 50);
+  }, [baseHandleZoomOut, saveSettings]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     baseHandleMouseDown(e, isInteractionReady, containerRef);
@@ -133,19 +154,25 @@ export function useZoomableImage(
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     baseHandleMouseMove(e, isInteractionReady);
+    // Don't save during mouse move to prevent jitter
   }, [baseHandleMouseMove, isInteractionReady]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     baseHandleMouseUp(e, isInteractionReady, containerRef);
-    // Don't save here - saveSettings will be called by ZoomableImage after mouse up
-  }, [baseHandleMouseUp, isInteractionReady, containerRef]);
+    // Only save after the interaction is complete and a short delay
+    setTimeout(saveSettings, 100);
+  }, [baseHandleMouseUp, isInteractionReady, containerRef, saveSettings]);
 
   const toggleFitMethod = useCallback(() => {
     baseToggleFitMethod();
-    // Don't save immediately to prevent update loops
-  }, [baseToggleFitMethod]);
+    // Save after fit method changes with a delay
+    setTimeout(saveSettings, 50);
+  }, [baseToggleFitMethod, saveSettings]);
 
   const handleReset = useCallback(() => {
+    // Avoid triggering saves during reset operation
+    inSaveTriggeredOperationRef.current = true;
+    
     fitImageToContainer(
       imageLoaded,
       containerDimensions,
@@ -155,7 +182,12 @@ export function useZoomableImage(
       setPosition,
       scaleRef
     );
-    // Don't save immediately to prevent update loops
+    
+    // Save after reset with a delay to allow state updates to complete
+    setTimeout(() => {
+      inSaveTriggeredOperationRef.current = false;
+      saveSettings();
+    }, 100);
   }, [
     fitImageToContainer, 
     imageLoaded, 
@@ -164,7 +196,8 @@ export function useZoomableImage(
     isInteractionReady,
     setScale,
     setPosition,
-    scaleRef
+    scaleRef,
+    saveSettings
   ]);
 
   return {
@@ -183,6 +216,6 @@ export function useZoomableImage(
     handleZoomOut,
     toggleFitMethod,
     handleReset,
-    saveSettings // Expose saveSettings function
+    saveSettings
   };
 }
