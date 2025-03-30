@@ -120,7 +120,7 @@ const EditorPage = () => {
     }
   };
 
-  // Create an adapter function to convert between the interface expected by PageList
+  // Fix the adapter function to correctly convert between the interface expected by PageList
   // and the actual handleReorderPage function signature
   const handleReorderAdapter = (sourceIndex: number, destinationIndex: number) => {
     if (!currentBook || !currentBook.pages[sourceIndex]) return;
