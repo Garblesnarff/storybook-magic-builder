@@ -10,7 +10,10 @@ This directory contains hooks related to page management and editing functionali
 - `usePageData.ts`: Provides the current page data based on selection.
 - `useSavingState.ts`: Manages the saving state for operations.
 - `usePageOperationsHandlers.ts`: Handles page operations like add, delete, duplicate, and reorder.
-- `usePageActions.ts`: Manages page content actions like text and layout changes.
+- `useTextEditor.ts`: Manages text content editing functionality.
+- `useLayoutManager.ts`: Handles page layout changes.
+- `useImageSettings.ts`: Manages image settings and positioning.
+- `useBookTitle.ts`: Handles book title updates.
 
 ## Usage
 
@@ -26,3 +29,4 @@ These hooks are composed together in the main `usePageState.ts` hook which provi
 - Each hook is responsible for a specific aspect of page state management.
 - The hooks are designed to be composable and reusable.
 - Error handling is implemented in each hook.
+- Most hooks use the useSavingState hook to track async operations.

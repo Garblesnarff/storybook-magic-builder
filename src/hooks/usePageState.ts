@@ -4,10 +4,13 @@ import { useBook } from '@/contexts/BookContext';
 import { useBookLoading } from './page/useBookLoading';
 import { usePageSelection } from './page/usePageSelection';
 import { usePageData } from './page/usePageData';
-import { usePageActions } from './page/usePageActions';
 import { usePageOperationsHandlers } from './page/usePageOperationsHandlers';
 import { useSavingState } from './page/useSavingState';
-import { BookPage, PageLayout, TextFormatting, ImageSettings } from '@/types/book';
+import { useLayoutManager } from './page/useLayoutManager';
+import { useTextEditor } from './page/useTextEditor';
+import { useImageSettings } from './page/useImageSettings';
+import { useBookTitle } from './page/useBookTitle';
+import { BookPage, ImageSettings } from '@/types/book';
 
 export const usePageState = (bookId?: string) => {
   // Use the book context
@@ -49,14 +52,6 @@ export const usePageState = (bookId?: string) => {
       completeSavingOperation();
     }
   }, [contextUpdatePage, trackSavingOperation, completeSavingOperation]);
-
-  // Page text and layout actions
-  const {
-    handleTextChange,
-    handleLayoutChange,
-    handleTextFormattingChange,
-    handleImageSettingsChange,
-  } = usePageActions(currentBook, currentPageData, updatePage);
   
   // Page operations (add, delete, duplicate, reorder)
   const {
@@ -74,23 +69,17 @@ export const usePageState = (bookId?: string) => {
     setSelectedPageId
   );
   
-  // Handle updating the book title
-  const updateBookTitle = useCallback(async (newTitle: string): Promise<boolean> => {
-    if (currentBook) {
-      try {
-        trackSavingOperation();
-        const updatedBook = { ...currentBook, title: newTitle };
-        await updateBook(updatedBook);
-        return true;
-      } catch (error) {
-        console.error('Error updating book title:', error);
-        return false;
-      } finally {
-        completeSavingOperation();
-      }
-    }
-    return false;
-  }, [currentBook, updateBook, trackSavingOperation, completeSavingOperation]);
+  // Hook for text editing
+  const { handleTextChange, handleTextFormattingChange } = useTextEditor(currentPageData, updatePage);
+  
+  // Hook for layout management
+  const { handleLayoutChange } = useLayoutManager(currentPageData, updatePage);
+  
+  // Hook for image settings
+  const { handleImageSettingsChange } = useImageSettings(currentPageData, updatePage);
+  
+  // Book title management
+  const { updateBookTitle } = useBookTitle(currentBook, updateBook);
   
   return {
     books,
