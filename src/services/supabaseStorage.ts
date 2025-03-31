@@ -1,45 +1,34 @@
+
 /**
  * @deprecated This file is kept for backwards compatibility.
  * Please use the new modular services in the supabase directory instead.
  */
 
 import { Book, BookPage } from '../types/book';
-import {
-  saveBookToSupabase,
-  loadBookFromSupabase,
-  loadBooksFromSupabase,
-  createBookInSupabase,
-  deleteBookFromSupabase,
-  fetchBookFromDatabase
-} from './supabase/bookService';
-
-import {
-  addPageToSupabase as addPage,
-  updatePageInSupabase as updatePage,
-  deletePageFromSupabase as deletePage,
-  reorderPagesInSupabase as reorderPages
-} from './supabase/pageService';
-
-import {
-  uploadImage
-} from './supabase/storageService';
-
+import * as bookService from './supabase/bookService';
+import * as pageService from './supabase/pageService';
+import * as storageService from './supabase/storageService';
 import {
   bookPageToDatabasePage,
   databasePageToBookPage
 } from './supabase/utils';
 
-// Re-export all functions for backwards compatibility
-export const saveBookToSupabase = saveBookToSupabase;
-export const loadBookFromSupabase = loadBookFromSupabase;
-export const loadBooksFromSupabase = loadBooksFromSupabase;
-export const createBookInSupabase = createBookInSupabase;
-export const deleteBookFromSupabase = deleteBookFromSupabase;
+// Re-export book-related functions
+export const saveBookToSupabase = bookService.saveBookToSupabase;
+export const loadBookFromSupabase = bookService.loadBookFromSupabase;
+export const loadBooksFromSupabase = bookService.loadBooksFromSupabase;
+export const createBookInSupabase = bookService.createBookInSupabase;
+export const deleteBookFromSupabase = bookService.deleteBookFromSupabase;
+export const fetchBookFromDatabase = bookService.fetchBookFromDatabase;
 
-export const addPageToSupabase = addPage;
-export const updatePageInSupabase = updatePage;
-export const deletePageFromSupabase = deletePage;
-export const reorderPagesInSupabase = reorderPages;
+// Re-export page-related functions
+export const addPageToSupabase = pageService.addPageToSupabase;
+export const updatePageInSupabase = pageService.updatePageInSupabase;
+export const deletePageFromSupabase = pageService.deletePageFromSupabase;
+export const reorderPagesInSupabase = pageService.reorderPagesInSupabase;
 
-// Keep original functions for backwards compatibility
-export { uploadImage, bookPageToDatabasePage, databasePageToBookPage };
+// Re-export storage-related functions
+export const uploadImage = storageService.uploadImage;
+
+// Re-export utility functions
+export { bookPageToDatabasePage, databasePageToBookPage };
