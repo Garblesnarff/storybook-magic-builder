@@ -8,7 +8,7 @@ export interface BookTemplate {
   description: string;
   coverImage?: string;
   pageCount: number; // Approximate number of pages
-  createBook: () => Book;
+  createBook: () => Omit<Book, 'userId'>; // Change return type to Omit<Book, 'userId'>
 }
 
 // Helper function to create pages based on a template
@@ -124,18 +124,18 @@ export const bookTemplates: BookTemplate[] = [
       
       // Create a mix of layouts for a storybook
       const layouts: PageLayout[] = [
-        "text-left-image-right", // Title/intro
-        "full-page-image", // Setting
-        "text-left-image-right", // Character intro
-        "image-left-text-right", // Problem appears
-        "text-top-image-bottom", // Challenge 1
-        "image-top-text-bottom", // Challenge 2
-        "text-left-image-right", // Challenge 3
-        "image-left-text-right", // Crisis
-        "text-top-image-bottom", // Resolution begins
-        "image-top-text-bottom", // Resolution continues
-        "text-left-image-right", // Conclusion
-        "full-page-image" // Final scene
+        "text-left-image-right",
+        "full-page-image", 
+        "text-left-image-right",
+        "image-left-text-right",
+        "text-top-image-bottom",
+        "image-top-text-bottom",
+        "text-left-image-right",
+        "image-left-text-right",
+        "text-top-image-bottom",
+        "image-top-text-bottom",
+        "text-left-image-right",
+        "full-page-image"
       ];
       
       // Create starter text prompts for a story

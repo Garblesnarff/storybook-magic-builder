@@ -11,7 +11,12 @@ export function useImageFit(
   initialSettings?: ImageSettings,
   onSettingsChange?: (settings: ImageSettings) => void
 ) {
-  const [fitMethod, setFitMethod] = useState<'contain' | 'cover'>(initialSettings?.fitMethod || 'contain');
+  // Update to only allow 'contain' or 'cover' for fitMethod
+  const [fitMethod, setFitMethod] = useState<'contain' | 'cover'>(
+    (initialSettings?.fitMethod === 'contain' || initialSettings?.fitMethod === 'cover') 
+      ? initialSettings.fitMethod 
+      : 'contain'
+  );
   const fitMethodRef = useRef(fitMethod);
   
   // Update refs to keep them in sync with state
