@@ -1,8 +1,13 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { Book, BookPage, PageLayout, TextFormatting, ImageSettings } from '@/types/book';
+import { useState, useCallback } from 'react';
 import { useBook } from '@/contexts/BookContext';
-import { toast } from 'sonner';
+import { useBookLoading } from './page/useBookLoading';
+import { usePageSelection } from './page/usePageSelection';
+import { usePageData } from './page/usePageData';
+import { usePageActions } from './page/usePageActions';
+import { usePageOperationsHandlers } from './page/usePageOperationsHandlers';
+import { useSavingState } from './page/useSavingState';
+import { BookPage, PageLayout, TextFormatting, ImageSettings } from '@/types/book';
 
 export const usePageState = (bookId?: string) => {
   // Use the book context
@@ -12,7 +17,7 @@ export const usePageState = (bookId?: string) => {
     loadBook,
     updateBook,
     addPage,
-    updatePage,
+    updatePage: contextUpdatePage,
     deletePage,
     duplicatePage,
     reorderPage,
@@ -20,215 +25,72 @@ export const usePageState = (bookId?: string) => {
     error
   } = useBook();
   
-  // Local state
-  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
-  const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  
-  // Load the book and select the first page when component mounts
-  useEffect(() => {
-    const fetchBook = async () => {
-      try {
-        // Only fetch if we have a book id and it's not the current book
-        if (bookId && (!currentBook || currentBook.id !== bookId)) {
-          await loadBook(bookId);
-        }
-      } catch (error) {
-        console.error('Failed to load book:', error);
-        toast.error('Failed to load book');
-      }
-    };
-    
-    fetchBook();
-  }, [bookId, currentBook, loadBook]);
-  
-  // Select the first page when book changes or there's no selected page
-  useEffect(() => {
-    if (currentBook?.pages.length && (!selectedPageId || !currentBook.pages.find(page => page.id === selectedPageId))) {
-      // Select the first page when the book loads or when the selected page doesn't exist
-      setSelectedPageId(currentBook.pages[0].id);
-    }
-  }, [currentBook, selectedPageId]);
-  
-  // Update currentPageData when selectedPageId changes or book updates
-  useEffect(() => {
-    if (currentBook && selectedPageId) {
-      const page = currentBook.pages.find(page => page.id === selectedPageId);
-      setCurrentPageData(page || null);
-    } else {
-      setCurrentPageData(null);
-    }
-  }, [currentBook, selectedPageId]);
+  // Initialize saving state
+  const { isSaving, trackSavingOperation, completeSavingOperation } = useSavingState();
+
+  // Load the book based on ID
+  useBookLoading(bookId, books, loadBook);
   
   // Handle page selection
-  const handlePageSelect = useCallback((pageId: string) => {
-    setSelectedPageId(pageId);
-  }, []);
+  const { selectedPageId, setSelectedPageId, handlePageSelect } = usePageSelection(currentBook, books);
   
-  // Handle adding a new page
-  const handleAddPage = useCallback(async (): Promise<string | undefined> => {
+  // Get current page data
+  const { currentPageData, setCurrentPageData } = usePageData(currentBook, selectedPageId);
+  
+  // Create wrapper for updatePage to handle saving state
+  const updatePage = useCallback(async (page: BookPage): Promise<void> => {
     try {
-      setIsSaving(true);
-      return await addPage();
+      trackSavingOperation();
+      await contextUpdatePage(page);
     } catch (error) {
-      console.error('Error adding page:', error);
-      toast.error('Failed to add page');
-      return undefined;
+      console.error('Error in updatePage:', error);
+      throw error;
     } finally {
-      setIsSaving(false);
+      completeSavingOperation();
     }
-  }, [addPage]);
+  }, [contextUpdatePage, trackSavingOperation, completeSavingOperation]);
+
+  // Page text and layout actions
+  const {
+    handleTextChange,
+    handleLayoutChange,
+    handleTextFormattingChange,
+    handleImageSettingsChange,
+  } = usePageActions(currentBook, currentPageData, updatePage);
   
-  // Handle duplicating a page
-  const handleDuplicatePage = useCallback(async (pageId: string) => {
-    try {
-      setIsSaving(true);
-      const newPageId = await duplicatePage(pageId);
-      if (newPageId) {
-        setSelectedPageId(newPageId);
-      }
-    } catch (error) {
-      console.error('Error duplicating page:', error);
-      toast.error('Failed to duplicate page');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [duplicatePage]);
-  
-  // Handle updating text content
-  const handleTextChange = useCallback(async (text: string) => {
-    if (currentPageData) {
-      const updatedPage = { ...currentPageData, text };
-      setCurrentPageData(updatedPage);
-      
-      try {
-        setIsSaving(true);
-        await updatePage(updatedPage);
-      } catch (error) {
-        console.error('Error updating page text:', error);
-        // Don't show a toast for every text change error
-      } finally {
-        setIsSaving(false);
-      }
-    }
-  }, [currentPageData, updatePage]);
-  
-  // Handle updating layout
-  const handleLayoutChange = useCallback(async (layout: PageLayout) => {
-    if (currentPageData) {
-      const updatedPage = { ...currentPageData, layout };
-      setCurrentPageData(updatedPage);
-      
-      try {
-        setIsSaving(true);
-        await updatePage(updatedPage);
-        toast.success(`Layout changed to ${layout}`);
-      } catch (error) {
-        console.error('Error updating page layout:', error);
-        toast.error('Failed to update layout');
-      } finally {
-        setIsSaving(false);
-      }
-    }
-  }, [currentPageData, updatePage]);
-  
-  // Handle updating text formatting
-  const handleTextFormattingChange = useCallback(async (textFormatting: Partial<TextFormatting>) => {
-    if (currentPageData) {
-      const updatedPage = {
-        ...currentPageData,
-        textFormatting: {
-          ...(currentPageData.textFormatting || {}),
-          ...textFormatting
-        }
-      };
-      setCurrentPageData(updatedPage);
-      
-      try {
-        setIsSaving(true);
-        await updatePage(updatedPage);
-      } catch (error) {
-        console.error('Error updating text formatting:', error);
-        toast.error('Failed to update text formatting');
-      } finally {
-        setIsSaving(false);
-      }
-    }
-  }, [currentPageData, updatePage]);
-  
-  // Handle updating image settings - FIXED to ensure all required properties are present
-  const handleImageSettingsChange = useCallback(async (imageSettings: Partial<ImageSettings>) => {
-    if (currentPageData) {
-      // Ensure all required fields from ImageSettings are present
-      const updatedImageSettings: ImageSettings = {
-        scale: imageSettings.scale ?? currentPageData.imageSettings?.scale ?? 1,
-        position: imageSettings.position ?? currentPageData.imageSettings?.position ?? { x: 0, y: 0 },
-        fitMethod: imageSettings.fitMethod ?? currentPageData.imageSettings?.fitMethod ?? 'contain'
-      };
-      
-      const updatedPage = {
-        ...currentPageData,
-        imageSettings: updatedImageSettings
-      };
-      
-      setCurrentPageData(updatedPage);
-      
-      try {
-        setIsSaving(true);
-        await updatePage(updatedPage);
-      } catch (error) {
-        console.error('Error updating image settings:', error);
-        toast.error('Failed to update image settings');
-      } finally {
-        setIsSaving(false);
-      }
-    }
-  }, [currentPageData, updatePage]);
-  
-  // Handle deleting a page
-  const handleDeletePage = useCallback(async (pageId: string) => {
-    try {
-      setIsSaving(true);
-      await deletePage(pageId);
-    } catch (error) {
-      console.error('Error deleting page:', error);
-      toast.error('Failed to delete page');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [deletePage]);
-  
-  // Handle reordering pages
-  const handleReorderPage = useCallback(async (pageId: string, newPosition: number) => {
-    try {
-      setIsSaving(true);
-      await reorderPage(pageId, newPosition);
-    } catch (error) {
-      console.error('Error reordering page:', error);
-      toast.error('Failed to reorder page');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [reorderPage]);
+  // Page operations (add, delete, duplicate, reorder)
+  const {
+    handleAddPage,
+    handleDuplicatePage,
+    handleDeletePage,
+    handleReorderPage
+  } = usePageOperationsHandlers(
+    currentBook, 
+    selectedPageId, 
+    addPage, 
+    duplicatePage, 
+    deletePage, 
+    reorderPage, 
+    setSelectedPageId
+  );
   
   // Handle updating the book title
-  const updateBookTitle = useCallback(async (newTitle: string) => {
+  const updateBookTitle = useCallback(async (newTitle: string): Promise<boolean> => {
     if (currentBook) {
       try {
-        setIsSaving(true);
+        trackSavingOperation();
         const updatedBook = { ...currentBook, title: newTitle };
         await updateBook(updatedBook);
         return true;
       } catch (error) {
         console.error('Error updating book title:', error);
-        toast.error('Failed to update book title');
         return false;
       } finally {
-        setIsSaving(false);
+        completeSavingOperation();
       }
     }
     return false;
-  }, [currentBook, updateBook]);
+  }, [currentBook, updateBook, trackSavingOperation, completeSavingOperation]);
   
   return {
     books,

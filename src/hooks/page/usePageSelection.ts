@@ -5,9 +5,9 @@ import { Book } from '@/types/book';
 export function usePageSelection(currentBook: Book | null, books: Book[]) {
   const [selectedPageId, setSelectedPageId] = useState<string | undefined>(undefined);
   
-  // Load the book when the component mounts or the book ID changes
+  // Select the first page when book changes or there's no selected page
   useEffect(() => {
-    if (currentBook && currentBook.pages.length > 0 && !selectedPageId) {
+    if (currentBook?.pages.length && (!selectedPageId || !currentBook.pages.find(page => page.id === selectedPageId))) {
       console.log('Selecting first page in current book');
       const firstPageId = currentBook.pages[0].id;
       setSelectedPageId(firstPageId);

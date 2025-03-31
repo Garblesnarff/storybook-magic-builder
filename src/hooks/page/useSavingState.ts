@@ -1,5 +1,5 @@
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 export function useSavingState() {
   const [isSaving, setIsSaving] = useState(false);
@@ -33,17 +33,18 @@ export function useSavingState() {
     }
   };
 
-  // Cleanup function for useEffect
-  const cleanupSavingTimeout = () => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-  };
+  // Cleanup function
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return {
     isSaving,
     trackSavingOperation,
-    completeSavingOperation,
-    cleanupSavingTimeout
+    completeSavingOperation
   };
 }

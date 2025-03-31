@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react'; // Add missing React import
+import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { Book } from '@/types/book';
 import { useSavingState } from './useSavingState';
@@ -7,7 +7,7 @@ import { useSavingState } from './useSavingState';
 export function usePageOperationsHandlers(
   currentBook: Book | null,
   selectedPageId: string | undefined,
-  addPage: () => Promise<string | undefined>, // Expect addPage to return the new ID
+  addPage: () => Promise<string | undefined>,
   duplicatePage: (id: string) => Promise<string | undefined>,
   deletePage: (id: string) => Promise<void>,
   reorderPage: (id: string, newPosition: number) => Promise<void>,
@@ -15,13 +15,14 @@ export function usePageOperationsHandlers(
 ) {
   const { trackSavingOperation, completeSavingOperation } = useSavingState();
   
-  // Modify handleAddPage to be async and return the new page ID
-  const handleAddPage = async (): Promise<string | undefined> => {
+  // Handle adding a new page
+  const handleAddPage = useCallback(async (): Promise<string | undefined> => {
     try {
-      const newPageId = await addPage(); // Await the context function
+      trackSavingOperation();
+      const newPageId = await addPage();
       if (newPageId) {
         toast.success('New page added');
-        return newPageId; // Return the ID
+        return newPageId;
       } else {
         toast.error('Failed to add new page');
         return undefined;
@@ -30,11 +31,15 @@ export function usePageOperationsHandlers(
       console.error('Error adding page:', error);
       toast.error('Failed to add new page');
       return undefined;
+    } finally {
+      completeSavingOperation();
     }
-  };
+  }, [addPage, trackSavingOperation, completeSavingOperation]);
 
-  const handleDuplicatePage = async (pageId: string) => {
+  // Handle duplicating a page
+  const handleDuplicatePage = useCallback(async (pageId: string): Promise<void> => {
     try {
+      trackSavingOperation();
       const newPageId = await duplicatePage(pageId);
       if (newPageId) {
         setSelectedPageId(newPageId);
@@ -43,11 +48,13 @@ export function usePageOperationsHandlers(
     } catch (error) {
       console.error('Error duplicating page:', error);
       toast.error('Failed to duplicate page');
+    } finally {
+      completeSavingOperation();
     }
-  };
+  }, [duplicatePage, setSelectedPageId, trackSavingOperation, completeSavingOperation]);
 
-  // Handle page deletion
-  const handleDeletePage = async (pageId: string) => {
+  // Handle deleting a page
+  const handleDeletePage = useCallback(async (pageId: string): Promise<void> => {
     if (!currentBook) return;
     
     try {
@@ -62,27 +69,28 @@ export function usePageOperationsHandlers(
       }
       
       toast.success('Page deleted');
-      completeSavingOperation();
     } catch (error) {
       console.error('Error deleting page:', error);
       toast.error('Failed to delete page');
+    } finally {
       completeSavingOperation();
     }
-  };
+  }, [currentBook, selectedPageId, deletePage, setSelectedPageId, trackSavingOperation, completeSavingOperation]);
 
-  const handleReorderPage = (sourceIndex: number, destinationIndex: number) => {
+  // Handle reordering pages
+  const handleReorderPage = useCallback(async (pageId: string, newPosition: number): Promise<void> => {
     if (!currentBook) return;
     
-    // Get the actual page from the visiblePages array
-    const pageToMove = currentBook.pages[sourceIndex];
-    
-    if (pageToMove) {
+    try {
       trackSavingOperation();
-      reorderPage(pageToMove.id, destinationIndex)
-        .then(() => completeSavingOperation())
-        .catch(() => completeSavingOperation());
+      await reorderPage(pageId, newPosition);
+    } catch (error) {
+      console.error('Error reordering page:', error);
+      toast.error('Failed to reorder page');
+    } finally {
+      completeSavingOperation();
     }
-  };
+  }, [currentBook, reorderPage, trackSavingOperation, completeSavingOperation]);
 
   return {
     handleAddPage,
