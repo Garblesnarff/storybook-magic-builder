@@ -131,7 +131,7 @@ export function useEditorPage(bookId?: string) {
     }
   };
 
-  const handleTitleUpdate = async (newTitle: string) => {
+  const handleTitleUpdate = async (newTitle: string): Promise<boolean> => {
     if (currentBook && newTitle !== currentBook.title) {
       try {
         await updateBookTitle(newTitle);

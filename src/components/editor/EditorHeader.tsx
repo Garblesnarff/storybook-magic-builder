@@ -17,7 +17,7 @@ interface EditorHeaderProps {
   isSaving?: boolean;
   currentBook?: Book | null;
   updatePage?: (page: BookPage) => Promise<void>;
-  onUpdateTitle?: (newTitle: string) => Promise<void>;
+  onUpdateTitle?: (newTitle: string) => Promise<boolean>;
 }
 
 export const EditorHeader: React.FC<EditorHeaderProps> = ({

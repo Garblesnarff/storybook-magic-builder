@@ -38,6 +38,14 @@ const EditorPage = () => {
     handleTitleUpdate
   } = useEditorPage(id);
 
+  // Create an adapter function to convert between the function signatures
+  const handleReorderAdapter = (sourceIndex: number, destinationIndex: number) => {
+    if (currentBook && currentBook.pages[sourceIndex]) {
+      const pageId = currentBook.pages[sourceIndex].id;
+      handleReorderPage(pageId, destinationIndex);
+    }
+  };
+
   return (
     <Layout fullWidth className="bg-books-background bg-cover bg-center bg-no-repeat">
       {!id || (books.length > 0 && !books.some(book => book.id === id)) ? (
@@ -58,7 +66,7 @@ const EditorPage = () => {
           handleAddPage={handleAddPage}
           handleDuplicatePage={handleDuplicatePage}
           handleDeletePage={handleDeletePage}
-          handleReorderPage={handleReorderPage}
+          handleReorderPage={handleReorderAdapter}
           handleExportPDF={handleExportPDF}
           handleApplyAIText={handleApplyAIText}
           handleApplyAIImage={handleApplyAIImage}
