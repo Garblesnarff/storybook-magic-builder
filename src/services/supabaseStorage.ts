@@ -5,11 +5,12 @@
 
 import { Book, BookPage } from '../types/book';
 import {
-  saveBookToSupabase as saveBook,
-  loadBookFromSupabase as loadBook,
-  loadBooksFromSupabase as loadBooks,
-  createBookInSupabase as createBook,
-  deleteBookFromSupabase as deleteBook
+  saveBookToSupabase,
+  loadBookFromSupabase,
+  loadBooksFromSupabase,
+  createBookInSupabase,
+  deleteBookFromSupabase,
+  fetchBookFromDatabase
 } from './supabase/bookService';
 
 import {
@@ -29,11 +30,11 @@ import {
 } from './supabase/utils';
 
 // Re-export all functions for backwards compatibility
-export const saveBookToSupabase = saveBook;
-export const loadBookFromSupabase = loadBook;
-export const loadBooksFromSupabase = loadBooks;
-export const createBookInSupabase = createBook;
-export const deleteBookFromSupabase = deleteBook;
+export const saveBookToSupabase = saveBookToSupabase;
+export const loadBookFromSupabase = loadBookFromSupabase;
+export const loadBooksFromSupabase = loadBooksFromSupabase;
+export const createBookInSupabase = createBookInSupabase;
+export const deleteBookFromSupabase = deleteBookFromSupabase;
 
 export const addPageToSupabase = addPage;
 export const updatePageInSupabase = updatePage;

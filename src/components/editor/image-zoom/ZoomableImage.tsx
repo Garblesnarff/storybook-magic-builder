@@ -65,6 +65,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
               maxHeight: "none", // Remove max-height constraint to allow proper scaling
             }}
             draggable="false"
+            onLoad={() => imageRef.current && imageRef.current.complete && imageRef.current.naturalWidth > 0 && imageRef.current.naturalHeight > 0 ? handleMouseDown : null}
             onDragStart={(e) => e.preventDefault()}
           />
         </div>
