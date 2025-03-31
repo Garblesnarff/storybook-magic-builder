@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useCallback } from 'react'; // <-- Add useCallback
+import { useState, useEffect, useCallback } from 'react';
 import { Book } from '../types/book';
 import { 
   createNewBook, 
@@ -10,26 +9,29 @@ import {
 } from '../services/bookOperations';
 import { BookTemplate } from '@/data/bookTemplates';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useBookOperations() {
   const [books, setBooks] = useState<Book[]>([]);
   const [currentBook, setCurrentBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
-  // Load books from Supabase on initial mount
   useEffect(() => {
     async function fetchBooks() {
       try {
         setLoading(true);
         console.log('Loading books from Supabase...');
         const fetchedBooks = await loadAllBooks();
-        setBooks(fetchedBooks);
         
-        if (fetchedBooks.length) {
-          console.log(`Found ${fetchedBooks.length} existing books`);
+        const userBooks = user ? fetchedBooks.filter(book => book.userId === user.id) : fetchedBooks;
+        setBooks(userBooks);
+        
+        if (userBooks.length) {
+          console.log(`Found ${userBooks.length} existing books for the user`);
         } else {
-          console.log('No books found');
+          console.log('No books found for the user');
         }
         
         setLoading(false);
@@ -40,30 +42,44 @@ export function useBookOperations() {
       }
     }
 
-    fetchBooks();
-  }, []); // Empty dependency array is correct here
+    if (user) {
+      fetchBooks();
+    } else {
+      setBooks([]);
+      setLoading(false);
+    }
+    
+  }, [user]);
 
   const createBook = useCallback(async (): Promise<string | null> => {
+    if (!user) {
+      toast.error('You must be logged in to create a book');
+      return null;
+    }
+    
     try {
-      const newBook = await createNewBook();
-      setBooks(prevBooks => [...prevBooks, newBook]); // setBooks is stable
-      setCurrentBook(newBook); // setCurrentBook is stable
+      const newBook = await createNewBook(user.id);
+      setBooks(prevBooks => [...prevBooks, newBook]);
+      setCurrentBook(newBook);
       return newBook.id;
     } catch (error) {
       console.error('Error creating book:', error);
       toast.error('Failed to create new book');
       return null;
     }
-  }, []); // No external dependencies needed
+  }, [user]);
 
   const createBookFromTemplate = useCallback(async (template: BookTemplate): Promise<string | null> => {
+    if (!user) {
+      toast.error('You must be logged in to create a book');
+      return null;
+    }
+    
     try {
       const newBook = template.createBook();
-      const savedBook = await createNewBook();
-      const mergedBook = { ...savedBook, ...newBook, id: savedBook.id };
-      // Pass books state directly, useCallback will close over the current value
-      // If updateBookService *mutates* books, this could be an issue, but assuming it returns new array
-      await updateBookService(mergedBook, books); 
+      const savedBook = await createNewBook(user.id);
+      const mergedBook = { ...savedBook, ...newBook, id: savedBook.id, userId: user.id };
+      await updateBookService(mergedBook, books);
       
       setBooks(prevBooks => [...prevBooks, mergedBook]);
       setCurrentBook(mergedBook);
@@ -73,13 +89,13 @@ export function useBookOperations() {
       toast.error('Failed to create book from template');
       return null;
     }
-  }, [books]); // Depends on the current list of books for updateBookService
+  }, [books, user]);
 
   const loadBook = useCallback(async (id: string): Promise<Book | null> => {
     try {
       const book = await loadBookById(id);
       if (book) {
-        setCurrentBook(book); // setCurrentBook is stable
+        setCurrentBook(book);
         return book;
       }
       return null;
@@ -88,33 +104,29 @@ export function useBookOperations() {
       toast.error('Failed to load book');
       return null;
     }
-  }, []); // No external dependencies needed
+  }, []);
 
   const updateBookState = useCallback(async (updatedBook: Book): Promise<void> => {
     try {
-      // Pass books state directly
       const updatedBooksResult = await updateBookService(updatedBook, books); 
-      setBooks(updatedBooksResult); // setBooks is stable
+      setBooks(updatedBooksResult);
       
-      // Use currentBook state directly
       if (currentBook?.id === updatedBook.id) { 
-        setCurrentBook({ ...updatedBook }); // setCurrentBook is stable
+        setCurrentBook({ ...updatedBook });
       }
     } catch (error) {
       console.error('Error updating book:', error);
       toast.error('Failed to update book');
     }
-  }, [books, currentBook]); // Depends on books and currentBook
+  }, [books, currentBook]);
 
   const deleteBook = useCallback(async (id: string): Promise<void> => {
     try {
-      // Pass books state directly
       const updatedBooksResult = await deleteBookService(id, books); 
-      setBooks(updatedBooksResult); // setBooks is stable
+      setBooks(updatedBooksResult);
       
-      // Use currentBook state directly
       if (currentBook?.id === id) { 
-        setCurrentBook(updatedBooksResult.length ? updatedBooksResult[0] : null); // setCurrentBook is stable
+        setCurrentBook(updatedBooksResult.length ? updatedBooksResult[0] : null);
       }
       
       toast.success('Book deleted successfully');
@@ -122,7 +134,7 @@ export function useBookOperations() {
       console.error('Error deleting book:', error);
       toast.error('Failed to delete book');
     }
-  }, [books, currentBook]); // Depends on books and currentBook
+  }, [books, currentBook]);
 
   return {
     books,
@@ -134,7 +146,6 @@ export function useBookOperations() {
     loadBook,
     loading,
     error,
-    // Export state setters to be used by usePageOperations
     setBooks,
     setCurrentBook
   };

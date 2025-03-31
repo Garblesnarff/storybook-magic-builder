@@ -1,4 +1,3 @@
-
 import { Book, BookPage, DEFAULT_BOOK, DEFAULT_PAGE, DEFAULT_PAGE_TEXT } from '../types/book';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -12,10 +11,11 @@ import {
 /**
  * Core book creation and management functions
  */
-export const createNewBook = async (): Promise<Book> => {
+export const createNewBook = async (userId: string): Promise<Book> => {
   const newBook: Book = {
     ...DEFAULT_BOOK,
     id: uuidv4(),
+    userId: userId,
     pages: [createNewPage(0)],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()

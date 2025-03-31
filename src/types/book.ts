@@ -1,18 +1,18 @@
-
 export interface Book {
   id: string;
   title: string;
   author: string;
-  description?: string;
+  description: string;
   coverImage?: string;
-  createdAt: string;
-  updatedAt: string;
-  pages: BookPage[];
   orientation: 'portrait' | 'landscape';
   dimensions: {
     width: number;
     height: number;
   };
+  userId: string; // Added userId field
+  pages: BookPage[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface BookPage {
@@ -24,22 +24,8 @@ export interface BookPage {
   backgroundColor?: string;
   textFormatting?: TextFormatting;
   imageSettings?: ImageSettings;
-  narrationUrl?: string; // Added field for audio narration URL
+  narrationUrl?: string;
 }
-
-export interface ImageSettings {
-  scale: number;
-  position: { x: number, y: number };
-  fitMethod: 'contain' | 'cover';
-}
-
-export type PageLayout = 
-  | 'text-left-image-right'
-  | 'image-left-text-right'
-  | 'text-top-image-bottom'
-  | 'image-top-text-bottom'
-  | 'full-page-image'
-  | 'full-page-text';
 
 export interface TextFormatting {
   fontFamily?: string;
@@ -47,61 +33,34 @@ export interface TextFormatting {
   fontColor?: string;
   isBold?: boolean;
   isItalic?: boolean;
-  imageStyle?: 'REALISTIC' | 'CARTOON' | 'SKETCH' | 'ANIME';
+  imageStyle?: string;
 }
 
-export interface ImageStyle {
-  id: string;
-  name: string;
-  description: string;
+export interface ImageSettings {
+  scale: number;
+  position: { x: number; y: number };
+  fitMethod: 'contain' | 'cover' | 'fill';
 }
 
-export const DEFAULT_PAGE_TEXT = '';
+export type PageLayout =
+  | 'text-left-image-right'
+  | 'text-right-image-left'
+  | 'text-top-image-bottom'
+  | 'text-bottom-image-top'
+  | 'full-text'
+  | 'full-image';
 
-export const DEFAULT_BOOK: Omit<Book, 'id'> = {
+export const DEFAULT_BOOK: Omit<Book, 'id' | 'pages' | 'createdAt' | 'updatedAt' | 'userId'> = {
   title: 'Untitled Book',
   author: 'Anonymous',
   description: '',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  pages: [],
   orientation: 'portrait',
-  dimensions: {
-    width: 8.5,
-    height: 11
-  }
+  dimensions: { width: 8.5, height: 11 }
 };
+
+export const DEFAULT_PAGE_TEXT = 'Once upon a time...';
 
 export const DEFAULT_PAGE: Omit<BookPage, 'id' | 'pageNumber'> = {
   text: DEFAULT_PAGE_TEXT,
-  layout: 'text-left-image-right',
-  textFormatting: {
-    fontFamily: 'Inter',
-    fontSize: 16,
-    fontColor: '#000000',
-    isBold: false,
-    isItalic: false
-  },
-  imageSettings: {
-    scale: 1,
-    position: { x: 0, y: 0 },
-    fitMethod: 'contain'
-  },
-  narrationUrl: undefined // Added default value
-};
-
-export const IMAGE_STYLES: ImageStyle[] = [
-  { id: 'REALISTIC', name: 'Realistic', description: 'Photorealistic image generation' },
-  { id: 'CARTOON', name: 'Cartoon', description: 'Colorful and playful cartoon style' },
-  { id: 'SKETCH', name: 'Sketch', description: 'Hand-drawn pencil illustration style' },
-  { id: 'ANIME', name: 'Anime', description: 'Japanese animation-inspired style' }
-];
-
-export const layoutNames: Record<PageLayout, string> = {
-  'text-left-image-right': 'Text Left, Image Right',
-  'image-left-text-right': 'Image Left, Text Right',
-  'text-top-image-bottom': 'Text Top, Image Bottom',
-  'image-top-text-bottom': 'Image Top, Text Bottom',
-  'full-page-image': 'Full Page Image',
-  'full-page-text': 'Full Page Text'
+  layout: 'text-left-image-right'
 };

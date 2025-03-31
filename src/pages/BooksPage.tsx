@@ -1,15 +1,15 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Layout } from '@/components/Layout';
 import { BookList } from '@/components/BookList';
 import { useBook } from '@/contexts/BookContext';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
 
 const BooksPage: React.FC = () => {
-  // useEffect hook removed
-
   const { 
     books, 
     createBook, 
@@ -19,6 +19,7 @@ const BooksPage: React.FC = () => {
     loading 
   } = useBook();
   
+  const { user } = useAuth();
   const navigate = useNavigate();
   
   const handleCreateBook = async () => {
@@ -84,16 +85,31 @@ const BooksPage: React.FC = () => {
   }
   
   return (
-    // Use rootClassName for full-screen background
     <Layout rootClassName="bg-books-background bg-cover bg-center bg-no-repeat"> 
       <div className="container mx-auto py-8 px-4">
-        <BookList
-          books={books}
-          onCreateBook={handleCreateBook}
-          onCreateBookFromTemplate={handleCreateBookFromTemplate}
-          onDeleteBook={handleDeleteBook}
-          onUpdateBook={updateBook}
-        />
+        {books.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[60vh] p-8 bg-white/80 backdrop-blur-sm rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold mb-4">Welcome to Children's Book Generator!</h2>
+            <p className="text-gray-600 mb-8 text-center">
+              You don't have any books yet. Create your first book to get started!
+            </p>
+            <Button 
+              onClick={handleCreateBook}
+              className="bg-amber-500 hover:bg-amber-600 text-white font-semibold"
+              size="lg"
+            >
+              Create Your First Book
+            </Button>
+          </div>
+        ) : (
+          <BookList
+            books={books}
+            onCreateBook={handleCreateBook}
+            onCreateBookFromTemplate={handleCreateBookFromTemplate}
+            onDeleteBook={handleDeleteBook}
+            onUpdateBook={updateBook}
+          />
+        )}
       </div>
     </Layout>
   );
