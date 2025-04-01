@@ -1,18 +1,30 @@
+
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 // Upload an image to Supabase Storage
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
+    // Check if image is already a URL (was previously uploaded)
+    if (image.startsWith('https://') || image.startsWith('http://')) {
+      console.log('Image is already a URL, skipping upload');
+      return image;
+    }
+    
     // Extract the base64 data from the string
     const base64Data = image.split(',')[1];
-    if (!base64Data) return null;
+    if (!base64Data) {
+      console.log('Invalid base64 data in image');
+      return image; // Return the original image to avoid breaking the UI
+    }
     
     // Convert base64 to a Blob
     const blob = await fetch(`data:image/png;base64,${base64Data}`).then(res => res.blob());
     
     // Generate a unique file path
     const filePath = `${bookId}/${pageId}_${Date.now()}.png`;
+    
+    console.log(`Uploading image to storage bucket: book_images/${filePath}`);
     
     // Upload to Supabase Storage
     const { data, error } = await supabase
@@ -25,7 +37,11 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     
     if (error) {
       console.error('Error uploading image:', error);
-      return null;
+      
+      // IMPORTANT: Return the original image data so it's not lost
+      // This allows image to still be displayed even if storage upload fails
+      toast.warning('Failed to save image to cloud storage, but the image will still be visible in your book');
+      return image;
     }
     
     // Return the public URL for the image
@@ -34,10 +50,13 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
       .from('book_images')
       .getPublicUrl(data.path);
     
+    console.log('Successfully uploaded image, URL:', urlData.publicUrl);
     return urlData.publicUrl;
   } catch (e) {
     console.error('Failed to upload image to storage', e);
-    return null;
+    // Return the original image data as fallback
+    toast.warning('Failed to save image to cloud storage, but the image will still be visible in your book');
+    return image;
   }
 };
 

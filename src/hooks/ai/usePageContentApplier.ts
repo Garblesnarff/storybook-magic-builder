@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { BookPage } from '@/types/book';
 import { toast } from 'sonner';
@@ -46,11 +45,16 @@ export function usePageContentApplier(
       // Optimistic update
       setCurrentPageData(updatedPage);
       
-      // Persist change
-      await updatePage(updatedPage);
-      
-      // Ensure success message appears
-      toast.success(`${imageStyle} image generated and applied to the page`);
+      // Persist change - note that this might convert the base64 image to a URL
+      // or might keep the base64 image if storage upload fails
+      try {
+        await updatePage(updatedPage);
+        toast.success(`${imageStyle} image generated and applied to the page`);
+      } catch (error) {
+        console.error('Failed to save page with new image:', error);
+        toast.warning('Image generated but there was an issue saving it to the database');
+        // The optimistic update ensures the image is still visible to the user
+      }
       
     } catch (error) {
       console.error('Error generating image:', error);
