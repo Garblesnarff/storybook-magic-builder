@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { IMAGE_STYLES, getStyleDescriptionById } from '@/types/book';
+import { IMAGE_STYLES } from '@/types/book';
 import {
   Select,
   SelectContent,
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from 'sonner';
 
 interface ImageGenerationTabProps {
   prompt: string;
@@ -42,6 +43,21 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
   // Get the current style name for display
   const currentStyleName = IMAGE_STYLES.find(style => style.id === imageStyle)?.name || 'Realistic';
   
+  // Handle the generate button click with proper error handling
+  const handleGenerateClick = async () => {
+    if (!prompt.trim()) {
+      toast.error('Please enter a prompt first');
+      return;
+    }
+    
+    try {
+      await onGenerate();
+    } catch (error) {
+      console.error('Error generating image:', error);
+      toast.error('Failed to generate image');
+    }
+  };
+  
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -67,7 +83,7 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
       </div>
       
       <Button 
-        onClick={onGenerate} 
+        onClick={handleGenerateClick} 
         className="w-full"
         disabled={isGenerating || !prompt.trim()}
       >
@@ -94,7 +110,10 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
             />
           </div>
           <Button 
-            onClick={onApply} 
+            onClick={() => {
+              onApply();
+              toast.success('Image applied to page');
+            }} 
             disabled={!generatedImage}
             className="w-full"
           >
