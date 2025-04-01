@@ -34,6 +34,15 @@ export function useAIOperations(
     handleApplyAIImage
   } = usePageContentApplier(currentPageData, updatePage, setCurrentPageData, onAddPage);
 
+  // Debug state changes
+  useState(() => {
+    console.log('useAIOperations state:', { 
+      generatedImage, 
+      isGeneratingImage,
+      currentPageData
+    });
+  });
+
   return {
     // Original functions for direct page updates
     isGenerating,

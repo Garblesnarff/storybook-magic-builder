@@ -57,6 +57,11 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
       toast.error('Failed to generate image');
     }
   };
+
+  // Debugging to help track state changes
+  useEffect(() => {
+    console.log('ImageGenerationTab state updated:', { generatedImage, isGenerating });
+  }, [generatedImage, isGenerating]);
   
   return (
     <div className="space-y-4">
@@ -107,6 +112,7 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
               src={generatedImage} 
               alt="AI generated" 
               className="w-full h-auto"
+              key={generatedImage} // Add key to force re-render when image changes
             />
           </div>
           <Button 

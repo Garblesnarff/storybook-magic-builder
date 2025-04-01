@@ -15,7 +15,9 @@ export function useAIImageGeneration() {
     }
 
     setIsGeneratingImage(true);
-    setGeneratedImage(null);
+    
+    // Don't clear the generated image until we have a new one
+    // Removed: setGeneratedImage(null);
     
     // Get the style description for the selected style
     const styleDescription = getStyleDescriptionById(imageStyle);
