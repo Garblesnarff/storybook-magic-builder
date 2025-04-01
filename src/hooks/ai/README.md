@@ -1,28 +1,26 @@
 
-## AI Hooks Directory
+# AI Assistant Hooks
 
-This directory contains hooks for interacting with AI services and managing AI-generated content.
+This directory contains hooks related to AI functionality in the Children's Book Generator application.
 
-### Files
+## Files
 
-- `useAITextGeneration.ts`: Manages text generation using AI, including state management for generation status and results.
-- `useAIImageGeneration.ts`: Manages image generation using AI, including state management for generation status and results.
-- `usePageContentApplier.ts`: Applies AI-generated content to book pages, handling text distribution and image application.
+- `useAITextGeneration.ts`: Hook for generating text content using AI.
+- `useAIImageGeneration.ts`: Hook for generating images based on text prompts.
+- `usePageContentApplier.ts`: Hook for applying generated AI content to book pages.
+- `useNarration.ts`: Hook for generating audio narrations of book content.
 
-### Instructions
+## Style Integration
 
-- Use these hooks to separate concerns when working with AI features:
-  - Text generation
-  - Image generation
-  - Applying AI content to book pages
+The image generation system now uses the selected style to create more accurate illustrations:
 
-### Dependencies
+1. Each style (CARTOON, WATERCOLOR, etc.) has a detailed description for the AI prompt
+2. Styles are stored in user preferences and applied consistently
+3. The default style can be configured in the Settings page
 
-- Supabase Edge Functions: These hooks rely on Supabase Edge Functions for AI processing
-- Toast notifications: User feedback is provided via toast notifications
+## Dependencies
 
-### Notes
+- These hooks use the Supabase edge functions for AI operations
+- They rely on toast notifications for user feedback
+- They integrate with the book/page data management system
 
-- Error handling is provided for all AI operations
-- For multi-page text generation, the page break marker is "---PAGE BREAK---"
-- The hooks maintain separation of concerns while preserving the original API

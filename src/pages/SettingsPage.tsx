@@ -1,13 +1,56 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
+import { IMAGE_STYLES } from '@/types/book';
 
 const SettingsPage = () => {
+  // Load settings from localStorage
+  const [defaultAuthor, setDefaultAuthor] = useState('Anonymous');
+  const [defaultOrientation, setDefaultOrientation] = useState('portrait');
+  const [defaultImageStyle, setDefaultImageStyle] = useState('CARTOON');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    const storedAuthor = localStorage.getItem('defaultAuthor');
+    const storedOrientation = localStorage.getItem('defaultOrientation');
+    const storedImageStyle = localStorage.getItem('defaultImageStyle');
+    const storedName = localStorage.getItem('userName');
+    const storedEmail = localStorage.getItem('userEmail');
+    
+    if (storedAuthor) setDefaultAuthor(storedAuthor);
+    if (storedOrientation) setDefaultOrientation(storedOrientation);
+    if (storedImageStyle) setDefaultImageStyle(storedImageStyle);
+    if (storedName) setName(storedName);
+    if (storedEmail) setEmail(storedEmail);
+  }, []);
+
+  // Save account settings
+  const saveAccountSettings = () => {
+    localStorage.setItem('userName', name);
+    localStorage.setItem('userEmail', email);
+    toast.success('Account settings saved!');
+  };
+
+  // Save default book settings
+  const saveDefaultBookSettings = () => {
+    localStorage.setItem('defaultAuthor', defaultAuthor);
+    localStorage.setItem('defaultOrientation', defaultOrientation);
+    toast.success('Default book settings saved!');
+  };
+
+  // Save image generation settings
+  const saveImageSettings = () => {
+    localStorage.setItem('defaultImageStyle', defaultImageStyle);
+    toast.success('Image settings saved!');
+  };
+
   return (
     <Layout>
       <div className="py-8 max-w-xl">
@@ -19,16 +62,27 @@ const SettingsPage = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Your Name</Label>
-              <Input id="name" placeholder="Enter your name" defaultValue="Anonymous" />
+              <Input 
+                id="name" 
+                placeholder="Enter your name" 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" placeholder="Enter your email" />
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="Enter your email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
             
             <Button 
-              onClick={() => toast.success('Settings saved!')} 
+              onClick={saveAccountSettings} 
               className="mt-2"
             >
               Save Account Settings
@@ -42,7 +96,10 @@ const SettingsPage = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Default Page Orientation</Label>
-              <RadioGroup defaultValue="portrait">
+              <RadioGroup 
+                value={defaultOrientation}
+                onValueChange={(value) => setDefaultOrientation(value)}
+              >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="portrait" id="portrait" />
                   <Label htmlFor="portrait">Portrait (8.5" × 11")</Label>
@@ -56,11 +113,16 @@ const SettingsPage = () => {
             
             <div className="space-y-2">
               <Label htmlFor="default-author">Default Author Name</Label>
-              <Input id="default-author" placeholder="Enter default author name" defaultValue="Anonymous" />
+              <Input 
+                id="default-author" 
+                placeholder="Enter default author name" 
+                value={defaultAuthor}
+                onChange={(e) => setDefaultAuthor(e.target.value)}
+              />
             </div>
             
             <Button 
-              onClick={() => toast.success('Default settings saved!')} 
+              onClick={saveDefaultBookSettings} 
               className="mt-2"
             >
               Save Default Settings
@@ -78,24 +140,21 @@ const SettingsPage = () => {
             
             <div className="space-y-2">
               <Label>Default Image Style</Label>
-              <RadioGroup defaultValue="cartoon">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="cartoon" id="cartoon" />
-                  <Label htmlFor="cartoon">Cartoon Style</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="watercolor" id="watercolor" />
-                  <Label htmlFor="watercolor">Watercolor Painting</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="pencil" id="pencil" />
-                  <Label htmlFor="pencil">Pencil Sketch</Label>
-                </div>
+              <RadioGroup 
+                value={defaultImageStyle}
+                onValueChange={(value) => setDefaultImageStyle(value)}
+              >
+                {IMAGE_STYLES.map(style => (
+                  <div className="flex items-center space-x-2" key={style.id}>
+                    <RadioGroupItem value={style.id} id={style.id.toLowerCase()} />
+                    <Label htmlFor={style.id.toLowerCase()}>{style.name}</Label>
+                  </div>
+                ))}
               </RadioGroup>
             </div>
             
             <Button 
-              onClick={() => toast.success('Image settings saved!')} 
+              onClick={saveImageSettings} 
               className="mt-2"
             >
               Save Image Settings
