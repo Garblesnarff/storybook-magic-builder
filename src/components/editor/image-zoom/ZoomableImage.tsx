@@ -2,7 +2,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 import { ZoomControls } from './ZoomControls';
-import { useZoomableImage } from './useZoomableImage';
+import { useImageDimensions } from './hooks/useImageDimensions';
+import { useImageZoom } from './hooks/useImageZoom';
+import { useImagePan } from './hooks/useImagePan';
+import { useImageFit } from './hooks/useImageFit';
+import { useSettingsSync } from './hooks/useSettingsSync';
 
 interface ZoomableImageProps {
   src: string;
@@ -20,51 +24,93 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  const defaultSettings: ImageSettings = {
-    zoom: 1,
-    panX: 0,
-    panY: 0,
-    objectFit: 'contain',
-  };
-
-  // Use the provided settings or default
-  const imageSettings = settings || defaultSettings;
-  
+  // Dimensions and readiness tracking
   const {
-    zoom,
-    panX,
-    panY,
-    objectFit,
+    imageDimensions,
+    containerDimensions,
+    imageLoaded,
+    isInteractionReady,
+    updateContainerSize
+  } = useImageDimensions(src);
+
+  // Get zoom functionality
+  const {
+    scale,
+    setScale,
     handleZoomIn,
-    handleZoomOut,
-    handleReset,
+    handleZoomOut
+  } = useImageZoom(settings);
+
+  // Get pan functionality
+  const {
+    position,
+    setPosition,
     isPanning,
-    startPanning,
-    stopPanning,
-    onPanMove,
-    setObjectFit,
-  } = useZoomableImage({
-    imgRef,
-    containerRef,
-    initialSettings: imageSettings,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp
+  } = useImagePan(settings);
+
+  // Get object fit functionality
+  const {
+    fitMethod,
+    toggleFitMethod,
+    fitImageToContainer
+  } = useImageFit(settings, onSettingsChange);
+
+  // Sync settings with parent component
+  useSettingsSync({
+    scale,
+    position,
+    fitMethod,
     onSettingsChange,
+    isInteractionReady
   });
 
-  // Safeguard to ensure objectFit is valid for the component
-  const safeObjectFit = objectFit === 'fill' ? 'contain' : objectFit;
+  // Update container dimensions on resize
+  useEffect(() => {
+    const updateSize = () => updateContainerSize(containerRef);
+    updateSize();
+
+    window.addEventListener('resize', updateSize);
+    return () => {
+      window.removeEventListener('resize', updateSize);
+    };
+  }, [updateContainerSize]);
+
+  // Auto-fit image when loaded
+  useEffect(() => {
+    if (imageLoaded && containerDimensions.width > 0 && imageDimensions.width > 0) {
+      fitImageToContainer(
+        imageLoaded,
+        containerDimensions,
+        imageDimensions,
+        isInteractionReady,
+        setScale,
+        setPosition,
+        scale
+      );
+    }
+  }, [imageLoaded, containerDimensions, imageDimensions, fitImageToContainer, isInteractionReady, setScale, setPosition, scale]);
+
+  // Handle reset function
+  const handleReset = React.useCallback(() => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  }, [setScale, setPosition]);
 
   return (
     <div className="relative w-full h-full group">
       <div 
         ref={containerRef}
         className="relative w-full h-full overflow-hidden"
-        onMouseDown={startPanning}
-        onMouseUp={stopPanning}
-        onMouseLeave={stopPanning}
-        onMouseMove={isPanning ? onPanMove : undefined}
-        onTouchStart={startPanning}
-        onTouchEnd={stopPanning}
-        onTouchMove={isPanning ? onPanMove : undefined}
+        onMouseDown={(e) => handleMouseDown(e, isInteractionReady, containerRef)}
+        onMouseUp={(e) => handleMouseUp(e, isInteractionReady, containerRef)}
+        onMouseLeave={(e) => handleMouseUp(e, isInteractionReady, containerRef)}
+        onMouseMove={(e) => handleMouseMove(e, isInteractionReady)}
+        onTouchStart={() => {/* Touch events will be handled later */}}
+        onTouchEnd={() => {/* Touch events will be handled later */}}
+        onTouchMove={() => {/* Touch events will be handled later */}}
       >
         <img
           ref={imgRef}
@@ -72,8 +118,8 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
           alt={alt}
           className="transition-transform duration-200 ease-out"
           style={{
-            objectFit: safeObjectFit,
-            transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
+            objectFit: fitMethod,
+            transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
             transformOrigin: 'center',
             width: '100%',
             height: '100%',
@@ -83,12 +129,16 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
       </div>
       
       <ZoomControls
+        scale={scale}
+        fitMethod={fitMethod}
+        isInteractionReady={isInteractionReady}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
+        onToggleFitMethod={toggleFitMethod}
         onReset={handleReset}
-        onFitChange={(fit) => setObjectFit(fit)}
-        currentFit={safeObjectFit}
-        zoom={zoom}
+        canZoomIn={scale < 4}
+        canZoomOut={scale > 0.5}
+        canReset={scale !== 1 || position.x !== 0 || position.y !== 0}
       />
     </div>
   );

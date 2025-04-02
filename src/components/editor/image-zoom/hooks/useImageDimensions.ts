@@ -39,7 +39,6 @@ export function useImageDimensions(src: string) {
     // Only update state if dimensions have actually changed
     setContainerDimensions(prevDimensions => {
       if (prevDimensions.width !== width || prevDimensions.height !== height) {
-        // console.log('Container dimensions changed:', { width, height }); // Optional: for debugging
         return { width, height };
       }
       // Return previous state if no change to prevent re-render loop

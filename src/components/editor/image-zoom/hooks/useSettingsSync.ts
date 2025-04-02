@@ -1,44 +1,35 @@
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
-export function useSettingsSync(
-  scale: number,
-  position: { x: number; y: number },
-  fitMethod: 'contain' | 'cover',
-  imageLoaded: boolean,
-  isInteractionReady: boolean,
-  initialSettings?: ImageSettings,
-  onSettingsChange?: (settings: ImageSettings) => void
-) {
-  const lastSavedSettingsRef = useRef<string>(
-    JSON.stringify(initialSettings || {})
-  );
+interface UseSettingsSyncProps {
+  scale: number;
+  position: { x: number; y: number };
+  fitMethod: 'contain' | 'cover';
+  onSettingsChange?: (settings: ImageSettings) => void;
+  isInteractionReady: boolean;
+}
 
-  const saveSettings = useCallback(() => {
-    if (!onSettingsChange || !imageLoaded || !isInteractionReady) {
-      return;
-    }
-
-    const currentSettings: ImageSettings = {
-      scale,
-      position,
-      fitMethod
-    };
-    
-    const currentSettingsString = JSON.stringify(currentSettings);
-
-    if (currentSettingsString !== lastSavedSettingsRef.current) {
-      lastSavedSettingsRef.current = currentSettingsString;
-      onSettingsChange(currentSettings);
-    }
-  }, [scale, position, fitMethod, imageLoaded, isInteractionReady, onSettingsChange]);
-
+export function useSettingsSync({
+  scale,
+  position,
+  fitMethod,
+  onSettingsChange,
+  isInteractionReady
+}: UseSettingsSyncProps) {
+  // Sync settings with parent component when they change
   useEffect(() => {
-    lastSavedSettingsRef.current = JSON.stringify(initialSettings || {});
-  }, [initialSettings]);
-
-  return {
-    saveSettings
-  };
+    if (!onSettingsChange || !isInteractionReady) return;
+    
+    // Use debounce to avoid too many updates
+    const timeoutId = setTimeout(() => {
+      onSettingsChange({
+        scale,
+        position,
+        fitMethod
+      });
+    }, 200);
+    
+    return () => clearTimeout(timeoutId);
+  }, [scale, position, fitMethod, onSettingsChange, isInteractionReady]);
 }
