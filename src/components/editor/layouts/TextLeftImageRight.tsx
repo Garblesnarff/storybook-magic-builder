@@ -1,59 +1,48 @@
 
 import React from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
-import { ImagePlaceholder } from '../image-placeholder';
 import { ZoomableImage } from '../image-zoom';
+import { ImagePlaceholder } from '../image-placeholder';
 import { BookTextRenderer } from '../BookTextRenderer';
 
-interface TextLeftImageRightProps {
+interface LayoutProps {
   page: BookPage;
-  handleGenerateImage?: () => Promise<void>;
+  handleGenerateImage: () => Promise<void>;
   isGenerating?: boolean;
   previewText?: string;
   onImageSettingsChange?: (settings: ImageSettings) => void;
 }
 
-export const TextLeftImageRight: React.FC<TextLeftImageRightProps> = ({
-  page,
+export const TextLeftImageRight: React.FC<LayoutProps> = ({ 
+  page, 
   handleGenerateImage,
   isGenerating = false,
   previewText,
   onImageSettingsChange
 }) => {
-  // Add debugging to help troubleshoot image display issues
-  React.useEffect(() => {
-    if (page.image) {
-      console.log("Image source in TextLeftImageRight:", typeof page.image === 'string' ? 
-        (page.image.length > 100 ? page.image.substring(0, 100) + "..." : page.image) : 
-        "Not a string");
-    } else {
-      console.log("No image provided to TextLeftImageRight component");
-    }
-  }, [page.image]);
-  
   return (
     <div className="flex h-full">
-      {/* Text section */}
-      <div className="w-1/2 p-4 overflow-auto">
+      <div className="w-1/2 p-8 overflow-auto">
         <BookTextRenderer 
-          text={previewText || page.text || ''} 
-          textFormatting={page.textFormatting} 
+          text={page.text || ''}
+          textFormatting={page.textFormatting}
+          previewText={previewText}
         />
       </div>
-      
-      {/* Image section */}
-      <div className="w-1/2 h-full relative bg-slate-50">
+      <div className="w-1/2 h-full bg-gray-100 flex items-center justify-center">
         {page.image ? (
-          <ZoomableImage 
-            src={page.image} 
-            alt="Page illustration" 
-            settings={page.imageSettings}
-            onSettingsChange={onImageSettingsChange}
-          />
+          <div className="w-full h-full">
+            <ZoomableImage 
+              src={page.image} 
+              alt="Page illustration"
+              settings={page.imageSettings}
+              onSettingsChange={onImageSettingsChange}
+            />
+          </div>
         ) : (
-          <ImagePlaceholder 
-            onGenerate={handleGenerateImage}
+          <ImagePlaceholder
             isGenerating={isGenerating}
+            onGenerate={handleGenerateImage}
           />
         )}
       </div>

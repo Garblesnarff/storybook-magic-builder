@@ -41,7 +41,7 @@ export const ImageTopTextBottom: React.FC<LayoutProps> = ({
       </div>
       <div className="h-1/2 p-8 overflow-auto">
         <BookTextRenderer 
-          text={page.text} 
+          text={page.text || ''} 
           textFormatting={page.textFormatting}
           previewText={previewText}
         />

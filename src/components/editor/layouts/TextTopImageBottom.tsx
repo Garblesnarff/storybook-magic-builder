@@ -16,7 +16,7 @@ interface LayoutProps {
 export const TextTopImageBottom: React.FC<LayoutProps> = ({ 
   page, 
   handleGenerateImage,
-  isGenerating = false,
+  isGenerating = false, 
   previewText,
   onImageSettingsChange
 }) => {
@@ -24,7 +24,7 @@ export const TextTopImageBottom: React.FC<LayoutProps> = ({
     <div className="flex flex-col h-full">
       <div className="h-1/2 p-8 overflow-auto">
         <BookTextRenderer 
-          text={page.text} 
+          text={page.text || ''} 
           textFormatting={page.textFormatting}
           previewText={previewText}
         />
