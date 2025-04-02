@@ -21,11 +21,15 @@ export const TextLeftImageRight: React.FC<TextLeftImageRightProps> = ({
   onImageSettingsChange
 }) => {
   // Add debugging to help troubleshoot image display issues
-  if (page.image) {
-    console.log("Image source in TextLeftImageRight:", page.image.substring(0, 100) + "...");
-  } else {
-    console.log("No image provided to TextLeftImageRight component");
-  }
+  React.useEffect(() => {
+    if (page.image) {
+      console.log("Image source in TextLeftImageRight:", typeof page.image === 'string' ? 
+        (page.image.length > 100 ? page.image.substring(0, 100) + "..." : page.image) : 
+        "Not a string");
+    } else {
+      console.log("No image provided to TextLeftImageRight component");
+    }
+  }, [page.image]);
   
   return (
     <div className="flex h-full">
@@ -50,7 +54,6 @@ export const TextLeftImageRight: React.FC<TextLeftImageRightProps> = ({
           <ImagePlaceholder 
             onGenerate={handleGenerateImage}
             isGenerating={isGenerating}
-            pageText={page.text}
           />
         )}
       </div>

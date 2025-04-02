@@ -2,9 +2,9 @@
 import React, { useState } from 'react';
 import { ZoomControls } from './ZoomControls';
 import { useZoomableImage } from './useZoomableImage';
-import { DEFAULT_IMAGE_SETTINGS, ImageSettings } from '@/types/book';
+import { ImageSettings, DEFAULT_IMAGE_SETTINGS } from '@/types/book';
 
-interface ZoomableImageProps {
+export interface ZoomableImageProps {
   src: string;
   alt: string;
   settings?: ImageSettings | null;
@@ -22,18 +22,15 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
   
   // Debug the image source
   React.useEffect(() => {
-    if (!src) {
-      console.warn("ZoomableImage received empty src");
-    } else if (src.length > 100) { 
-      console.log("ZoomableImage src (first 100 chars):", src.substring(0, 100) + "...");
-    }
-  }, [src]);
+    console.log("ZoomableImage received src:", src ? src.substring(0, 50) + "..." : "undefined");
+    console.log("ZoomableImage received settings:", actualSettings);
+  }, [src, actualSettings]);
 
   const {
     containerRef,
     imageRef,
-    transform,
     scale,
+    transform,
     onWheel,
     onMouseDown,
     resetZoom,
@@ -42,6 +39,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
     canZoomIn,
     canZoomOut,
     canReset,
+    fitMethod
   } = useZoomableImage({
     initialScale: actualSettings.scale,
     initialPosition: actualSettings.position,
@@ -92,11 +90,14 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onReset={resetZoom}
+        onToggleFitMethod={() => {}} // Empty function as we're not implementing this yet
         canZoomIn={canZoomIn}
         canZoomOut={canZoomOut}
         canReset={canReset}
         scale={scale}
+        fitMethod={fitMethod}
+        isInteractionReady={true}
       />
     </div>
   );
-};
+}
