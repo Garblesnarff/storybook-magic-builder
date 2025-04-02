@@ -1,73 +1,59 @@
 
-import React, { useCallback, useMemo, memo } from 'react'; // <-- Add useMemo
+import React from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
-import { ZoomableImage } from '../image-zoom';
 import { ImagePlaceholder } from '../image-placeholder';
+import { ZoomableImage } from '../image-zoom';
 import { BookTextRenderer } from '../BookTextRenderer';
 
-interface LayoutProps {
+interface TextLeftImageRightProps {
   page: BookPage;
-  handleGenerateImage: () => Promise<void>;
+  handleGenerateImage?: () => Promise<void>;
   isGenerating?: boolean;
   previewText?: string;
   onImageSettingsChange?: (settings: ImageSettings) => void;
 }
 
-export const TextLeftImageRight: React.FC<LayoutProps> = memo(({ 
-  page, 
+export const TextLeftImageRight: React.FC<TextLeftImageRightProps> = ({
+  page,
   handleGenerateImage,
   isGenerating = false,
   previewText,
   onImageSettingsChange
 }) => {
-  // Memoized handler for image settings changes
-  const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
-    if (onImageSettingsChange) {
-      onImageSettingsChange(settings);
-    }
-  }, [onImageSettingsChange]);
-
-  // *** ADD THIS useMemo ***
-  const memoizedImageSettings = useMemo(() => {
-    // Explicitly cast the default object to satisfy the ImageSettings type
-    return page.imageSettings || { scale: 1, position: { x: 0, y: 0 }, fitMethod: 'contain' } as ImageSettings;
-  }, [
-    page.imageSettings?.scale,
-    page.imageSettings?.position?.x,
-    page.imageSettings?.position?.y,
-    page.imageSettings?.fitMethod
-  ]);
-  // ***********************
-
+  // Add debugging to help troubleshoot image display issues
+  if (page.image) {
+    console.log("Image source in TextLeftImageRight:", page.image.substring(0, 100) + "...");
+  } else {
+    console.log("No image provided to TextLeftImageRight component");
+  }
+  
   return (
     <div className="flex h-full">
-      <div className="w-1/2 p-8 overflow-auto">
+      {/* Text section */}
+      <div className="w-1/2 p-4 overflow-auto">
         <BookTextRenderer 
-          text={page.text} 
-          textFormatting={page.textFormatting}
-          previewText={previewText}
+          text={previewText || page.text || ''} 
+          textFormatting={page.textFormatting} 
         />
       </div>
-      <div className="w-1/2 h-full bg-gray-100 flex items-center justify-center">
+      
+      {/* Image section */}
+      <div className="w-1/2 h-full relative bg-slate-50">
         {page.image ? (
-          <div className="w-full h-full">
-            <ZoomableImage 
-              src={page.image} 
-              alt="Page illustration"
-              // *** USE THE MEMOIZED VALUE ***
-              initialSettings={memoizedImageSettings}
-              onSettingsChange={handleImageSettingsChange}
-            />
-          </div>
+          <ZoomableImage 
+            src={page.image} 
+            alt="Page illustration" 
+            settings={page.imageSettings}
+            onSettingsChange={onImageSettingsChange}
+          />
         ) : (
-          <ImagePlaceholder
-            isGenerating={isGenerating}
+          <ImagePlaceholder 
             onGenerate={handleGenerateImage}
+            isGenerating={isGenerating}
+            pageText={page.text}
           />
         )}
       </div>
     </div>
   );
-});
-
-TextLeftImageRight.displayName = 'TextLeftImageRight';
+};

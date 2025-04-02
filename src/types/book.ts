@@ -101,3 +101,10 @@ export const DEFAULT_PAGE: Omit<BookPage, 'id' | 'pageNumber'> = {
   text: DEFAULT_PAGE_TEXT,
   layout: 'text-left-image-right'
 };
+
+// Define default image settings that can be imported elsewhere
+export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
+  scale: 1,
+  position: { x: 0, y: 0 },
+  fitMethod: 'contain'
+};

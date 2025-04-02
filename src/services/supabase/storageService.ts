@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -25,6 +24,25 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     const filePath = `${bookId}/${pageId}_${Date.now()}.png`;
     
     console.log(`Uploading image to storage bucket: book_images/${filePath}`);
+    
+    // Check if the bucket exists, if not create it 
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bookImagesBucket = buckets?.find(bucket => bucket.name === 'book_images');
+    
+    if (!bookImagesBucket) {
+      // Try to create the bucket
+      console.log('Book images bucket not found, attempting to create it');
+      const { error: createError } = await supabase.storage.createBucket('book_images', {
+        public: true,
+        fileSizeLimit: 5242880 // 5MB
+      });
+      
+      if (createError) {
+        console.error('Error creating bucket:', createError);
+        toast.warning('Failed to create storage bucket, using fallback method');
+        return image; // Return original image as fallback
+      }
+    }
     
     // Upload to Supabase Storage
     const { data, error } = await supabase
