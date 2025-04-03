@@ -27,9 +27,8 @@ export const initializeStorage = async (): Promise<void> => {
       return;
     }
     
-    // Note: We don't need to try creating buckets in the client code anymore,
-    // as they've been created via SQL migration. This function now just verifies
-    // they exist or logs warnings if they don't.
+    // Note: With the SQL migrations, we've already created the buckets with proper policies
+    // This function now just verifies they exist or logs warnings
     
     if (!hasBookImages) {
       console.warn('book_images bucket not found - some features may not work properly');

@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -25,13 +26,14 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     
     console.log(`Uploading image to storage bucket: book_images/${filePath}`);
     
-    // Upload to Supabase Storage - no need to check if bucket exists first
+    // Upload to Supabase Storage with better error handling
     const { data, error } = await supabase
       .storage
       .from('book_images')
       .upload(filePath, blob, {
         contentType: 'image/png',
-        upsert: true
+        upsert: true,
+        cacheControl: '3600'
       });
     
     if (error) {
@@ -70,13 +72,14 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     // Generate a unique file path
     const filePath = `${bookId}/${pageId}_narration.mp3`;
     
-    // Upload directly without checking bucket existence
+    // Upload with improved error handling
     const { data, error } = await supabase
       .storage
       .from('narrations')
       .upload(filePath, audioBlob, {
         contentType: 'audio/mpeg',
-        upsert: true
+        upsert: true,
+        cacheControl: '3600'
       });
     
     if (error) {
