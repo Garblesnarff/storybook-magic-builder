@@ -25,26 +25,7 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     
     console.log(`Uploading image to storage bucket: book_images/${filePath}`);
     
-    // Check if the bucket exists, if not create it 
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const bookImagesBucket = buckets?.find(bucket => bucket.name === 'book_images');
-    
-    if (!bookImagesBucket) {
-      // Try to create the bucket
-      console.log('Book images bucket not found, attempting to create it');
-      const { error: createError } = await supabase.storage.createBucket('book_images', {
-        public: true,
-        fileSizeLimit: 5242880 // 5MB
-      });
-      
-      if (createError) {
-        console.error('Error creating bucket:', createError);
-        toast.warning('Failed to create storage bucket, using fallback method');
-        return image; // Return original image as fallback
-      }
-    }
-    
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage - no need to check if bucket exists first
     const { data, error } = await supabase
       .storage
       .from('book_images')
@@ -57,7 +38,6 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
       console.error('Error uploading image:', error);
       
       // IMPORTANT: Return the original image data so it's not lost
-      // This allows image to still be displayed even if storage upload fails
       toast.warning('Failed to save image to cloud storage, but the image will still be visible in your book');
       return image;
     }
@@ -75,6 +55,48 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     // Return the original image data as fallback
     toast.warning('Failed to save image to cloud storage, but the image will still be visible in your book');
     return image;
+  }
+};
+
+// Upload audio to Supabase Storage
+export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: string): Promise<string | null> => {
+  try {
+    // Validate inputs
+    if (!audioBlob || !bookId || !pageId) {
+      toast.error('Missing required information for audio upload');
+      return null;
+    }
+
+    // Generate a unique file path
+    const filePath = `${bookId}/${pageId}_narration.mp3`;
+    
+    // Upload directly without checking bucket existence
+    const { data, error } = await supabase
+      .storage
+      .from('narrations')
+      .upload(filePath, audioBlob, {
+        contentType: 'audio/mpeg',
+        upsert: true
+      });
+    
+    if (error) {
+      console.error('Error uploading audio:', error);
+      toast.error('Failed to upload narration audio');
+      return null;
+    }
+    
+    // Get the public URL for the uploaded audio
+    const { data: urlData } = supabase
+      .storage
+      .from('narrations')
+      .getPublicUrl(data.path);
+    
+    console.log("Audio uploaded, public URL:", urlData.publicUrl);
+    return urlData.publicUrl;
+  } catch (e) {
+    console.error('Failed to upload audio to storage', e);
+    toast.error('Failed to save narration audio');
+    return null;
   }
 };
 
@@ -120,48 +142,6 @@ export const deletePageImages = async (bookId: string, pageId: string): Promise<
   } catch (storageError) {
     console.error('Error deleting page images:', storageError);
     // Continue even if image deletion fails
-  }
-};
-
-// Upload audio to Supabase Storage
-export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: string): Promise<string | null> => {
-  try {
-    // Validate inputs
-    if (!audioBlob || !bookId || !pageId) {
-      toast.error('Missing required information for audio upload');
-      return null;
-    }
-
-    // Generate a unique file path
-    const filePath = `${bookId}/${pageId}_narration.mp3`;
-    
-    // Upload to Supabase Storage
-    const { data, error } = await supabase
-      .storage
-      .from('narrations')
-      .upload(filePath, audioBlob, {
-        contentType: 'audio/mpeg',
-        upsert: true
-      });
-    
-    if (error) {
-      console.error('Error uploading audio:', error);
-      toast.error('Failed to upload narration audio');
-      return null;
-    }
-    
-    // Get the public URL for the uploaded audio
-    const { data: urlData } = supabase
-      .storage
-      .from('narrations')
-      .getPublicUrl(data.path);
-    
-    console.log("Audio uploaded, public URL:", urlData.publicUrl);
-    return urlData.publicUrl;
-  } catch (e) {
-    console.error('Failed to upload audio to storage', e);
-    toast.error('Failed to save narration audio');
-    return null;
   }
 };
 
