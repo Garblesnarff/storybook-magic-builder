@@ -93,6 +93,18 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
     }
   }, [imageLoaded, containerDimensions, imageDimensions, fitImageToContainer, isInteractionReady, setScale, setPosition, scale]);
 
+  // Handle wheel events for zooming
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!isInteractionReady) return;
+    e.preventDefault();
+    
+    if (e.deltaY < 0) {
+      handleZoomIn();
+    } else {
+      handleZoomOut();
+    }
+  };
+
   // Handle reset function
   const handleReset = React.useCallback(() => {
     setScale(1);
@@ -108,9 +120,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
         onMouseUp={(e) => handleMouseUp(e, isInteractionReady, containerRef)}
         onMouseLeave={(e) => handleMouseUp(e, isInteractionReady, containerRef)}
         onMouseMove={(e) => handleMouseMove(e, isInteractionReady)}
-        onTouchStart={() => {/* Touch events will be handled later */}}
-        onTouchEnd={() => {/* Touch events will be handled later */}}
-        onTouchMove={() => {/* Touch events will be handled later */}}
+        onWheel={handleWheel}
       >
         <img
           ref={imgRef}
@@ -119,7 +129,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
           className="transition-transform duration-200 ease-out"
           style={{
             objectFit: fitMethod,
-            transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
+            transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
             transformOrigin: 'center',
             width: '100%',
             height: '100%',

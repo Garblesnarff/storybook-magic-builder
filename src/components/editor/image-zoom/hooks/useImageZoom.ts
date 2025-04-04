@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
@@ -14,7 +13,7 @@ export function useImageZoom(
     scaleRef.current = scale;
   }, [scale]);
 
-  // Zoom in with requestAnimationFrame for smoother transitions
+  // Zoom in with throttling for smoother transitions
   const handleZoomIn = useCallback(() => {
     // Throttle zoom operations
     const now = Date.now();
@@ -23,16 +22,15 @@ export function useImageZoom(
     }
     lastZoomTimeRef.current = now;
     
-    requestAnimationFrame(() => {
-      setScale(prev => {
-        // Round to nearest 0.25 after zoom to prevent floating point issues
-        const newScale = Math.min(prev + 0.25, 4);
-        return Math.round(newScale * 4) / 4; // Round to nearest 0.25
-      });
+    setScale(prev => {
+      // Increase by 0.25 up to max of 4
+      const newScale = Math.min(prev + 0.25, 4);
+      // Round to nearest 0.25 to prevent floating point issues
+      return Math.round(newScale * 4) / 4;
     });
   }, []);
 
-  // Zoom out with requestAnimationFrame for smoother transitions
+  // Zoom out with throttling for smoother transitions
   const handleZoomOut = useCallback(() => {
     // Throttle zoom operations
     const now = Date.now();
@@ -41,12 +39,11 @@ export function useImageZoom(
     }
     lastZoomTimeRef.current = now;
     
-    requestAnimationFrame(() => {
-      setScale(prev => {
-        // Round to nearest 0.25 after zoom to prevent floating point issues
-        const newScale = Math.max(prev - 0.25, 0.5);
-        return Math.round(newScale * 4) / 4; // Round to nearest 0.25
-      });
+    setScale(prev => {
+      // Decrease by 0.25 down to min of 0.5
+      const newScale = Math.max(prev - 0.25, 0.5);
+      // Round to nearest 0.25 to prevent floating point issues
+      return Math.round(newScale * 4) / 4;
     });
   }, []);
 
