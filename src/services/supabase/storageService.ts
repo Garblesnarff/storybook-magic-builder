@@ -54,9 +54,9 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
       console.error('Error uploading image:', error);
       
       // Check for specific error types and provide appropriate messaging
-      if (error.statusCode === '403') {
+      if (error.message?.includes('Permission denied') || error.message?.includes('Unauthorized')) {
         toast.error('Permission denied: Unable to save image to storage');
-      } else if (error.statusCode === '401') {
+      } else if (error.message?.includes('Authentication required')) {
         toast.error('Authentication required to save images');
       } else {
         toast.warning('Failed to save image to cloud storage, but the image will still be visible in your book');
@@ -116,9 +116,9 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
       console.error('Error uploading audio:', error);
       
       // Check for specific error types and provide appropriate messaging
-      if (error.statusCode === '403') {
+      if (error.message?.includes('Permission denied') || error.message?.includes('Unauthorized')) {
         toast.error('Permission denied: Unable to save narration to storage');
-      } else if (error.statusCode === '401') {
+      } else if (error.message?.includes('Authentication required')) {
         toast.error('Authentication required to save narration');
       } else {
         toast.error('Failed to upload narration audio');
