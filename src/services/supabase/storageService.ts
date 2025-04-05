@@ -2,13 +2,27 @@
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-// Upload an image to Supabase Storage
+// Helper function to check authentication
+const checkAuthentication = async (): Promise<boolean> => {
+  const { data } = await supabase.auth.getSession();
+  return !!data.session;
+};
+
+// Upload an image to Supabase Storage with improved error handling and auth checks
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
     // Check if image is already a URL (was previously uploaded)
     if (image.startsWith('https://') || image.startsWith('http://')) {
       console.log('Image is already a URL, skipping upload');
       return image;
+    }
+    
+    // Verify authentication before attempting upload
+    const isAuthenticated = await checkAuthentication();
+    if (!isAuthenticated) {
+      console.error('User is not authenticated - cannot upload image');
+      toast.error('Please sign in to save images');
+      return image; // Return original image as fallback
     }
     
     // Extract the base64 data from the string
@@ -39,8 +53,16 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     if (error) {
       console.error('Error uploading image:', error);
       
+      // Check for specific error types and provide appropriate messaging
+      if (error.statusCode === '403') {
+        toast.error('Permission denied: Unable to save image to storage');
+      } else if (error.statusCode === '401') {
+        toast.error('Authentication required to save images');
+      } else {
+        toast.warning('Failed to save image to cloud storage, but the image will still be visible in your book');
+      }
+      
       // IMPORTANT: Return the original image data so it's not lost
-      toast.warning('Failed to save image to cloud storage, but the image will still be visible in your book');
       return image;
     }
     
@@ -60,12 +82,20 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
   }
 };
 
-// Upload audio to Supabase Storage
+// Upload audio to Supabase Storage with improved error handling and auth checks
 export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: string): Promise<string | null> => {
   try {
     // Validate inputs
     if (!audioBlob || !bookId || !pageId) {
       toast.error('Missing required information for audio upload');
+      return null;
+    }
+
+    // Verify authentication before attempting upload
+    const isAuthenticated = await checkAuthentication();
+    if (!isAuthenticated) {
+      console.error('User is not authenticated - cannot upload audio');
+      toast.error('Please sign in to save narration audio');
       return null;
     }
 
@@ -84,7 +114,16 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     
     if (error) {
       console.error('Error uploading audio:', error);
-      toast.error('Failed to upload narration audio');
+      
+      // Check for specific error types and provide appropriate messaging
+      if (error.statusCode === '403') {
+        toast.error('Permission denied: Unable to save narration to storage');
+      } else if (error.statusCode === '401') {
+        toast.error('Authentication required to save narration');
+      } else {
+        toast.error('Failed to upload narration audio');
+      }
+      
       return null;
     }
     
@@ -106,6 +145,13 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
 // Delete images for a book from storage
 export const deleteBookImages = async (bookId: string): Promise<void> => {
   try {
+    // Verify authentication before attempting deletion
+    const isAuthenticated = await checkAuthentication();
+    if (!isAuthenticated) {
+      console.error('User is not authenticated - cannot delete images');
+      return;
+    }
+    
     const { data: storageData, error: storageError } = await supabase
       .storage
       .from('book_images')
@@ -127,6 +173,13 @@ export const deleteBookImages = async (bookId: string): Promise<void> => {
 // Delete page images from storage
 export const deletePageImages = async (bookId: string, pageId: string): Promise<void> => {
   try {
+    // Verify authentication before attempting deletion
+    const isAuthenticated = await checkAuthentication();
+    if (!isAuthenticated) {
+      console.error('User is not authenticated - cannot delete page images');
+      return;
+    }
+    
     const { data, error: listError } = await supabase
       .storage
       .from('book_images')
@@ -151,6 +204,13 @@ export const deletePageImages = async (bookId: string, pageId: string): Promise<
 // Delete narration audio for a page
 export const deletePageNarration = async (bookId: string, pageId: string): Promise<void> => {
   try {
+    // Verify authentication before attempting deletion
+    const isAuthenticated = await checkAuthentication();
+    if (!isAuthenticated) {
+      console.error('User is not authenticated - cannot delete narration');
+      return;
+    }
+    
     const { data, error: listError } = await supabase
       .storage
       .from('narrations')
