@@ -32,23 +32,8 @@ function App() {
         }
         
         if (!data.session) {
-          console.log('User is not authenticated. Attempting sign in with last session...');
-          
-          // Try to restore the session
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithLastSession();
-          
-          if (signInError) {
-            console.error('Error signing in with last session:', signInError);
-            toast.info('Some features like saving images require signing in');
-          } else if (signInData.session) {
-            console.log('Successfully signed in with last session:', signInData.session.user.id);
-            
-            // Check storage access now that we're authenticated
-            await initializeStorage();
-          } else {
-            console.log('No previous session found');
-            toast.info('Sign in to enable saving images and books');
-          }
+          console.log('User is not authenticated. No active session found.');
+          toast.info('Some features like saving images require signing in');
         } else {
           console.log('User is authenticated:', data.session.user.id);
           
