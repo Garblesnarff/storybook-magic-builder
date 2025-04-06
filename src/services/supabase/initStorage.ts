@@ -36,7 +36,7 @@ export const initializeStorage = async (): Promise<void> => {
         
         if (refreshError) {
           console.error('Failed to refresh authentication session:', refreshError);
-          toast.error('Please sign out and sign in again to fix storage issues');
+          toast.error('Authentication error: Please sign out and sign in again');
         } else {
           console.log('Session refreshed successfully');
           toast.success('Authentication refreshed');
