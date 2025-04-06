@@ -2,19 +2,51 @@
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-// Helper function to check authentication
-const checkAuthentication = async (): Promise<boolean> => {
-  const { data } = await supabase.auth.getSession();
+// Enhanced helper function to check authentication with retry mechanism
+const checkAndRefreshAuthentication = async (): Promise<boolean> => {
+  // First check for current session
+  const { data, error } = await supabase.auth.getSession();
+  
+  if (error) {
+    console.error('Error checking session:', error);
+    return false;
+  }
+  
   if (!data.session) {
     console.log('No session found. Attempting to refresh...');
+    
+    // Try to refresh the session
     const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    
     if (refreshError || !refreshData.session) {
       console.error('Failed to refresh session:', refreshError);
+      toast.error('Authentication expired. Please sign in again.');
       return false;
     }
+    
+    console.log('Session refreshed successfully');
     return true;
   }
+  
+  // Session exists but let's make sure token is fresh
+  const { error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError) {
+    console.error('Failed to refresh existing session:', refreshError);
+    return false;
+  }
+  
   return true;
+};
+
+// Function to get current auth status (for debugging)
+const logAuthStatus = async () => {
+  const { data } = await supabase.auth.getSession();
+  if (data.session) {
+    console.log('Current auth status: Authenticated as', data.session.user.id);
+    console.log('Token expires at:', new Date(data.session.expires_at! * 1000).toISOString());
+  } else {
+    console.log('Current auth status: Not authenticated');
+  }
 };
 
 // We don't need to create buckets anymore as they're created via SQL
@@ -23,7 +55,7 @@ export const ensureStorageBuckets = async (): Promise<void> => {
   console.log('Storage buckets are pre-configured via SQL migration');
 };
 
-// Upload an image to Supabase Storage with comprehensive error handling
+// Upload an image to Supabase Storage with comprehensive error handling and session management
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
     // Check if image is already a URL (was previously uploaded)
@@ -32,8 +64,11 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
       return image;
     }
     
-    // Verify authentication before attempting upload
-    const isAuthenticated = await checkAuthentication();
+    // Log current auth status before attempting upload
+    await logAuthStatus();
+    
+    // Verify and refresh authentication before attempting upload
+    const isAuthenticated = await checkAndRefreshAuthentication();
     if (!isAuthenticated) {
       console.error('User is not authenticated - cannot upload image');
       toast.error('Please sign in to save images');
@@ -60,27 +95,10 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     // Convert base64 to a Blob
     const blob = await fetch(`data:image/${fileType};base64,${base64Data}`).then(res => res.blob());
     
-    // Generate a unique file path
+    // Generate a unique file path with timestamp to avoid collisions
     const filePath = `${bookId}/${pageId}_${Date.now()}.${fileType}`;
     
     console.log(`Uploading image to storage bucket: book_images/${filePath}`);
-    
-    // Get current auth status before upload for debugging
-    const { data: authData } = await supabase.auth.getSession();
-    console.log('Auth status before upload:', authData.session ? 'Authenticated' : 'Not authenticated');
-    
-    // Debug user ID
-    if (authData.session) {
-      console.log('User ID:', authData.session.user.id);
-    } else {
-      console.error('No active session found. Upload will likely fail.');
-      // Try to refresh session one more time
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
-        toast.error('Authentication issue. Please sign in again.');
-        return null;
-      }
-    }
     
     // Upload to Supabase Storage with enhanced error handling
     const { data, error } = await supabase
@@ -95,20 +113,45 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     if (error) {
       console.error('Error uploading image:', error);
       
-      if (error.message?.includes('policy') || error.message?.includes('Unauthorized')) {
-        toast.error('Storage permission denied. Attempting to reconnect...');
-        
-        // Try to sign out and sign in again to refresh the session completely
-        await supabase.auth.signOut();
-        toast.error('Please sign in again to fix storage issues');
+      // Try a second upload with a fresh session
+      console.log('Attempting to refresh session and retry upload...');
+      
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshData.session) {
+        console.error('Session refresh failed before retry:', refreshError);
+        toast.error('Authentication issue. Please sign in again');
+        return null;
+      }
+      
+      console.log('Session refreshed, retrying upload...');
+      
+      // Retry the upload with refreshed credentials
+      const { data: retryData, error: retryError } = await supabase
+        .storage
+        .from('book_images')
+        .upload(filePath, blob, {
+          contentType: `image/${fileType}`,
+          upsert: true,
+          cacheControl: '3600'
+        });
+      
+      if (retryError) {
+        console.error('Retry upload failed:', retryError);
+        toast.error('Failed to save image to storage');
         
         // Return the image as base64 for now, so the UI still shows it
         return image;
-      } else {
-        toast.error('Failed to save image to cloud storage');
       }
       
-      return null;
+      // Get URL for the retry-uploaded file
+      const { data: retryUrlData } = supabase
+        .storage
+        .from('book_images')
+        .getPublicUrl(retryData.path);
+      
+      console.log('Successfully uploaded image on retry, URL:', retryUrlData.publicUrl);
+      return retryUrlData.publicUrl;
     }
     
     // Retrieve and return the public URL for the image
@@ -135,24 +178,16 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
       return null;
     }
 
-    // Verify authentication before attempting upload
-    const isAuthenticated = await checkAuthentication();
+    // Verify and refresh authentication before attempting upload
+    const isAuthenticated = await checkAndRefreshAuthentication();
     if (!isAuthenticated) {
       console.error('User is not authenticated - cannot upload audio');
       toast.error('Please sign in to save narration audio');
       return null;
     }
 
-    // Get current auth status before upload for debugging
-    const { data: authData } = await supabase.auth.getSession();
-    if (!authData.session) {
-      console.error('No active session found. Upload will likely fail.');
-      toast.error('Authentication issue. Please sign in again.');
-      return null;
-    }
-
-    // Generate a unique file path
-    const filePath = `${bookId}/${pageId}_narration.mp3`;
+    // Generate a unique file path with timestamp
+    const filePath = `${bookId}/${pageId}_narration_${Date.now()}.mp3`;
     
     // Upload with improved error handling
     const { data, error } = await supabase
@@ -167,14 +202,41 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     if (error) {
       console.error('Error uploading audio:', error);
       
-      if (error.message?.includes('policy') || error.message?.includes('Unauthorized')) {
-        toast.error('Storage permission denied. Please sign in again.');
+      // Try a second upload with a fresh session
+      console.log('Attempting to refresh session and retry audio upload...');
+      
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshData.session) {
+        console.error('Session refresh failed before audio retry:', refreshError);
+        toast.error('Authentication issue. Please sign in again');
         return null;
-      } else {
-        toast.error('Failed to upload narration audio');
       }
       
-      return null;
+      // Retry the upload with refreshed credentials
+      const { data: retryData, error: retryError } = await supabase
+        .storage
+        .from('narrations')
+        .upload(filePath, audioBlob, {
+          contentType: 'audio/mpeg',
+          upsert: true,
+          cacheControl: '3600'
+        });
+      
+      if (retryError) {
+        console.error('Retry audio upload failed:', retryError);
+        toast.error('Failed to upload narration audio');
+        return null;
+      }
+      
+      // Get URL for the retry-uploaded file
+      const { data: retryUrlData } = supabase
+        .storage
+        .from('narrations')
+        .getPublicUrl(retryData.path);
+      
+      console.log('Successfully uploaded audio on retry, URL:', retryUrlData.publicUrl);
+      return retryUrlData.publicUrl;
     }
     
     // Get the public URL for the uploaded audio
@@ -196,7 +258,7 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
 export const deleteBookImages = async (bookId: string): Promise<void> => {
   try {
     // Verify authentication before attempting deletion
-    const isAuthenticated = await checkAuthentication();
+    const isAuthenticated = await checkAndRefreshAuthentication();
     if (!isAuthenticated) {
       console.error('User is not authenticated - cannot delete images');
       return;
@@ -224,7 +286,7 @@ export const deleteBookImages = async (bookId: string): Promise<void> => {
 export const deletePageImages = async (bookId: string, pageId: string): Promise<void> => {
   try {
     // Verify authentication before attempting deletion
-    const isAuthenticated = await checkAuthentication();
+    const isAuthenticated = await checkAndRefreshAuthentication();
     if (!isAuthenticated) {
       console.error('User is not authenticated - cannot delete page images');
       return;
@@ -255,7 +317,7 @@ export const deletePageImages = async (bookId: string, pageId: string): Promise<
 export const deletePageNarration = async (bookId: string, pageId: string): Promise<void> => {
   try {
     // Verify authentication before attempting deletion
-    const isAuthenticated = await checkAuthentication();
+    const isAuthenticated = await checkAndRefreshAuthentication();
     if (!isAuthenticated) {
       console.error('User is not authenticated - cannot delete narration');
       return;

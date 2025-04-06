@@ -23,24 +23,45 @@ export const initializeStorage = async (): Promise<void> => {
     
     console.log('Checking storage buckets with user:', authData.session.user.id);
     
+    // Perform a full session refresh to ensure tokens are up-to-date
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    
+    if (refreshError) {
+      console.error('Failed to refresh session during storage initialization:', refreshError);
+      return;
+    }
+    
+    if (!refreshData.session) {
+      console.error('No session after refresh during storage initialization');
+      return;
+    }
+    
+    console.log('Session refreshed successfully during storage initialization');
+    
     // Verify we can list the buckets to check connection and permission
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
     
     if (listError) {
       console.error('Error listing storage buckets:', listError);
       
-      // If we get an auth error, try refreshing the session
-      if (listError.message?.includes('JWT') || listError.message?.includes('auth')) {
-        console.log('Auth error detected, refreshing session...');
-        const { error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError) {
-          console.error('Failed to refresh authentication session:', refreshError);
-          toast.error('Authentication error: Please sign out and sign in again');
-        } else {
-          console.log('Session refreshed successfully');
-          toast.success('Authentication refreshed');
-        }
+      // Try once more with fresh tokens
+      const { data: retryBuckets, error: retryError } = await supabase.storage.listBuckets();
+      
+      if (retryError) {
+        console.error('Failed to list buckets on retry:', retryError);
+        return;
+      }
+      
+      console.log('Successfully listed buckets on retry');
+      
+      // Check if both required buckets exist
+      const hasBookImages = retryBuckets?.some(bucket => bucket.id === 'book_images');
+      const hasNarrations = retryBuckets?.some(bucket => bucket.id === 'narrations');
+      
+      if (hasBookImages && hasNarrations) {
+        console.log('All required storage buckets are available');
+      } else {
+        console.warn('Not all required storage buckets were found - but they should exist via SQL migrations');
       }
       
       return;

@@ -22,61 +22,128 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Set up auth state management
   useEffect(() => {
-    // Set up auth state listener first
+    console.log('Setting up auth state listener');
+    
+    // Get initial session first
+    const getInitialSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting initial session:', error);
+          setLoading(false);
+          return;
+        }
+        
+        if (data?.session) {
+          console.log('Initial session found', data.session.user.id);
+          setSession(data.session);
+          setUser(data.session.user);
+          
+          // Auto-refresh the session
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.warn('Failed to refresh session on init:', refreshError);
+          } else {
+            console.log('Session refreshed on init');
+          }
+        } else {
+          console.log('No initial session found');
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Unexpected error during getInitialSession:', err);
+        setLoading(false);
+      }
+    };
+    
+    // Call immediately
+    getInitialSession();
+    
+    // Set up the subscription for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
+        console.log('Auth state changed:', event);
+        
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
         if (event === 'SIGNED_IN') {
-          // Handle sign in event
-          setTimeout(() => {
-            toast.success('Successfully signed in');
-            navigate('/books');
-          }, 0);
-        }
-        
-        if (event === 'SIGNED_OUT') {
-          // Handle sign out event
-          setTimeout(() => {
-            toast.info('Signed out');
-            navigate('/');
-          }, 0);
+          console.log('User signed in:', currentSession?.user.id);
+          toast.success('Successfully signed in');
+          navigate('/books');
+        } else if (event === 'SIGNED_OUT') {
+          console.log('User signed out');
+          toast.info('Signed out');
+          navigate('/');
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed');
+        } else if (event === 'USER_UPDATED') {
+          console.log('User updated');
         }
       }
     );
 
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setLoading(false);
-    });
-
+    // Cleanup subscription
     return () => {
       subscription.unsubscribe();
     };
   }, [navigate]);
 
+  // Manual session check (runs every 10 minutes as backup)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (user) {
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session) {
+          console.warn('Session lost during interval check, attempting refresh');
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (refreshError || !refreshData.session) {
+            console.error('Failed to refresh session during interval check:', refreshError);
+            setSession(null);
+            setUser(null);
+            toast.error('Your session has expired. Please sign in again.');
+            navigate('/auth');
+          } else {
+            console.log('Session refreshed during interval check');
+            setSession(refreshData.session);
+            setUser(refreshData.session?.user ?? null);
+          }
+        }
+      }
+    }, 10 * 60 * 1000); // Check every 10 minutes
+    
+    return () => clearInterval(interval);
+  }, [user, navigate]);
+
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     } catch (error: any) {
       toast.error(error.message || 'Error signing in');
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
       toast.success('Registration successful! Please check your email to confirm your account.');
     } catch (error: any) {
       toast.error(error.message || 'Error signing up');
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
