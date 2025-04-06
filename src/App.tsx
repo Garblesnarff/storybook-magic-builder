@@ -20,38 +20,77 @@ import { toast } from 'sonner';
 
 function App() {
   useEffect(() => {
-    // Check if storage is accessible by just listing buckets
-    initializeStorage().catch(err => {
-      console.error('Failed to check storage:', err);
-    });
-    
-    // Check authentication status
     const checkAuth = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error checking auth status:', error);
-        toast.error('Authentication error. Some features may not work.');
-      } else if (!data.session) {
-        console.log('User is not authenticated');
-        toast.info('Some features like saving images require signing in');
-      } else {
-        console.log('User is authenticated:', data.session.user.id);
+      try {
+        // Get current session
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error checking auth status:', error);
+          toast.error('Authentication error. Some features may not work.');
+          return;
+        }
+        
+        if (!data.session) {
+          console.log('User is not authenticated. Attempting sign in with last session...');
+          
+          // Try to restore the session
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithLastSession();
+          
+          if (signInError) {
+            console.error('Error signing in with last session:', signInError);
+            toast.info('Some features like saving images require signing in');
+          } else if (signInData.session) {
+            console.log('Successfully signed in with last session:', signInData.session.user.id);
+            
+            // Check storage access now that we're authenticated
+            await initializeStorage();
+          } else {
+            console.log('No previous session found');
+            toast.info('Sign in to enable saving images and books');
+          }
+        } else {
+          console.log('User is authenticated:', data.session.user.id);
+          
+          // Verify the session is valid
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.error('Session refresh failed, attempting to sign in again:', refreshError);
+            await supabase.auth.signOut();
+            toast.error('Session expired. Please sign in again.');
+          } else {
+            console.log('Session refreshed successfully');
+            
+            // Check storage access on sign in
+            await initializeStorage();
+          }
+        }
+      } catch (error) {
+        console.error('Unexpected error during auth check:', error);
+        toast.error('An error occurred while checking authentication status');
       }
     };
     
+    // Run the auth check immediately
     checkAuth();
     
     // Set up auth change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
+      
       if (event === 'SIGNED_IN') {
-        console.log('User signed in');
+        console.log('User signed in:', session?.user.id);
         toast.success('Successfully signed in');
         
         // Check storage access on sign in
-        initializeStorage().catch(console.error);
+        await initializeStorage();
       } else if (event === 'SIGNED_OUT') {
         console.log('User signed out');
         toast.info('You have been signed out');
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed');
+      } else if (event === 'USER_UPDATED') {
+        console.log('User updated');
       }
     });
     

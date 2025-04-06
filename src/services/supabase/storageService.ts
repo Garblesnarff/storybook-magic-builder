@@ -5,7 +5,16 @@ import { supabase } from '@/integrations/supabase/client';
 // Helper function to check authentication
 const checkAuthentication = async (): Promise<boolean> => {
   const { data } = await supabase.auth.getSession();
-  return !!data.session;
+  if (!data.session) {
+    console.log('No session found. Attempting to refresh...');
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshData.session) {
+      console.error('Failed to refresh session:', refreshError);
+      return false;
+    }
+    return true;
+  }
+  return true;
 };
 
 // We don't need to create buckets anymore as they're created via SQL
@@ -56,6 +65,15 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     
     console.log(`Uploading image to storage bucket: book_images/${filePath}`);
     
+    // Get current auth status before upload
+    const { data: authData } = await supabase.auth.getSession();
+    console.log('Auth status before upload:', authData.session ? 'Authenticated' : 'Not authenticated');
+    
+    // Debug user ID
+    if (authData.session) {
+      console.log('User ID:', authData.session.user.id);
+    }
+    
     // Upload to Supabase Storage with enhanced error handling
     const { data, error } = await supabase
       .storage
@@ -69,15 +87,41 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     if (error) {
       console.error('Error uploading image:', error);
       
-      if (error.message?.includes('policy')) {
-        toast.error('Storage permission denied. Please check if you are signed in.');
+      if (error.message?.includes('policy') || error.message?.includes('Unauthorized')) {
+        toast.error('Storage permission denied');
         
         // Try to refresh the auth session
-        const { error: refreshError } = await supabase.auth.refreshSession();
-        if (!refreshError) {
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (!refreshError && refreshData.session) {
+          console.log('Session refreshed successfully. User ID:', refreshData.session.user.id);
           toast.info('Session refreshed. Please try again.');
+          
+          // Try the upload again after refresh
+          const { data: retryData, error: retryError } = await supabase
+            .storage
+            .from('book_images')
+            .upload(filePath, blob, {
+              contentType: `image/${fileType}`,
+              upsert: true,
+              cacheControl: '3600'
+            });
+            
+          if (retryError) {
+            console.error('Retry upload failed:', retryError);
+            toast.error('Upload failed even after session refresh');
+            return null;
+          }
+          
+          // Get URL for the retry upload
+          const { data: retryUrlData } = supabase
+            .storage
+            .from('book_images')
+            .getPublicUrl(retryData.path);
+            
+          return retryUrlData.publicUrl;
         } else {
           toast.error('Authentication issue: Please sign out and sign in again');
+          console.error('Session refresh failed:', refreshError);
         }
       } else {
         toast.error('Failed to save image to cloud storage');
@@ -134,15 +178,41 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     if (error) {
       console.error('Error uploading audio:', error);
       
-      if (error.message?.includes('policy')) {
-        toast.error('Storage permission denied. Please check if you are signed in.');
+      if (error.message?.includes('policy') || error.message?.includes('Unauthorized')) {
+        toast.error('Storage permission denied');
         
         // Try to refresh the auth session
-        const { error: refreshError } = await supabase.auth.refreshSession();
-        if (!refreshError) {
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (!refreshError && refreshData.session) {
+          console.log('Session refreshed successfully');
           toast.info('Session refreshed. Please try again.');
+          
+          // Try the upload again after refresh
+          const { data: retryData, error: retryError } = await supabase
+            .storage
+            .from('narrations')
+            .upload(filePath, audioBlob, {
+              contentType: 'audio/mpeg',
+              upsert: true,
+              cacheControl: '3600'
+            });
+            
+          if (retryError) {
+            console.error('Retry upload failed:', retryError);
+            toast.error('Upload failed even after session refresh');
+            return null;
+          }
+          
+          // Get URL for the retry upload
+          const { data: retryUrlData } = supabase
+            .storage
+            .from('narrations')
+            .getPublicUrl(retryData.path);
+            
+          return retryUrlData.publicUrl;
         } else {
           toast.error('Authentication issue: Please sign out and sign in again');
+          console.error('Session refresh failed:', refreshError);
         }
       } else {
         toast.error('Failed to upload narration audio');
