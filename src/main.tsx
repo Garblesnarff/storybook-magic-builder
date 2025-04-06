@@ -7,13 +7,11 @@ import { AuthProvider } from './contexts/AuthContext';
 import { BookProvider } from './contexts/BookContext';
 import App from './App';
 import './index.css';
-import { initializeStorage } from './services/supabase/initStorage';
 
 // Create a client for React Query
 const queryClient = new QueryClient();
 
-// Initialize storage buckets
-initializeStorage().catch(console.error);
+// Note: removed initializeStorage call here since it's now handled in App.tsx
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

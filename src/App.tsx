@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,9 +20,9 @@ import { toast } from 'sonner';
 
 function App() {
   useEffect(() => {
-    // Initialize storage buckets when the app loads
+    // Check if storage is accessible by just listing buckets
     initializeStorage().catch(err => {
-      console.error('Failed to initialize storage:', err);
+      console.error('Failed to check storage:', err);
     });
     
     // Check authentication status
@@ -32,8 +33,7 @@ function App() {
         toast.error('Authentication error. Some features may not work.');
       } else if (!data.session) {
         console.log('User is not authenticated');
-        // Optional: Show a notification to the user that they need to sign in for full functionality
-        // toast.info('Sign in for full access to all features');
+        toast.info('Some features like saving images require signing in');
       } else {
         console.log('User is authenticated:', data.session.user.id);
       }
@@ -46,6 +46,9 @@ function App() {
       if (event === 'SIGNED_IN') {
         console.log('User signed in');
         toast.success('Successfully signed in');
+        
+        // Check storage access on sign in
+        initializeStorage().catch(console.error);
       } else if (event === 'SIGNED_OUT') {
         console.log('User signed out');
         toast.info('You have been signed out');
