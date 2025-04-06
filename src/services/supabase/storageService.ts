@@ -1,10 +1,51 @@
+
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 // Helper function to check authentication
 const checkAuthentication = async (): Promise<boolean> => {
   const { data } = await supabase.auth.getSession();
-  return !!data.session;
+  if (!data.session) {
+    console.error('User is not authenticated');
+    return false;
+  }
+  return true;
+};
+
+// Create storage buckets if they don't exist
+export const ensureStorageBuckets = async (): Promise<void> => {
+  try {
+    // Check if buckets exist
+    const { data: buckets } = await supabase.storage.listBuckets();
+    
+    // Create book_images bucket if it doesn't exist
+    if (!buckets?.find(b => b.name === 'book_images')) {
+      const { error: createBookImagesError } = await supabase.storage.createBucket('book_images', {
+        public: true
+      });
+      
+      if (createBookImagesError) {
+        console.error('Error creating book_images bucket:', createBookImagesError);
+      } else {
+        console.log('Created book_images bucket');
+      }
+    }
+    
+    // Create narrations bucket if it doesn't exist
+    if (!buckets?.find(b => b.name === 'narrations')) {
+      const { error: createNarrationsError } = await supabase.storage.createBucket('narrations', {
+        public: true
+      });
+      
+      if (createNarrationsError) {
+        console.error('Error creating narrations bucket:', createNarrationsError);
+      } else {
+        console.log('Created narrations bucket');
+      }
+    }
+  } catch (error) {
+    console.error('Error ensuring storage buckets:', error);
+  }
 };
 
 // Upload an image to Supabase Storage with comprehensive error handling
@@ -44,6 +85,9 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     // Convert base64 to a Blob
     const blob = await fetch(`data:image/${fileType};base64,${base64Data}`).then(res => res.blob());
     
+    // Make sure storage buckets exist
+    await ensureStorageBuckets();
+    
     // Generate a unique file path
     const filePath = `${bookId}/${pageId}_${Date.now()}.${fileType}`;
     
@@ -62,8 +106,13 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     if (error) {
       console.error('Error uploading image:', error);
       
-      // Specific error handling with detailed messages
-      if (error.message?.includes('Permission denied')) {
+      if (error.message?.includes('row-level security policy')) {
+        toast.error('Storage permission denied. Please check if you are signed in.');
+        
+        // Try to refresh the auth session
+        await supabase.auth.refreshSession();
+        toast.info('Session refreshed. Please try again.');
+      } else if (error.message?.includes('Permission denied')) {
         toast.error('Permission denied: Unable to save image');
       } else if (error.message?.includes('Unauthorized')) {
         toast.error('Authentication required to save images');
@@ -106,6 +155,9 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
       return null;
     }
 
+    // Make sure storage buckets exist
+    await ensureStorageBuckets();
+
     // Generate a unique file path
     const filePath = `${bookId}/${pageId}_narration.mp3`;
     
@@ -122,8 +174,13 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     if (error) {
       console.error('Error uploading audio:', error);
       
-      // Specific error handling for audio uploads
-      if (error.message?.includes('Permission denied')) {
+      if (error.message?.includes('row-level security policy')) {
+        toast.error('Storage permission denied. Please check if you are signed in.');
+        
+        // Try to refresh the auth session
+        await supabase.auth.refreshSession();
+        toast.info('Session refreshed. Please try again.');
+      } else if (error.message?.includes('Permission denied')) {
         toast.error('Permission denied: Unable to save narration');
       } else if (error.message?.includes('Unauthorized')) {
         toast.error('Authentication required to save narration');

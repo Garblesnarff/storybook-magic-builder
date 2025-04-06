@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { ensureStorageBuckets } from './storageService';
 
 /**
  * Initializes required storage buckets for the application
@@ -15,6 +16,9 @@ export const initializeStorage = async (): Promise<void> => {
       console.warn('User is not authenticated. Some storage operations may fail.');
     }
     
+    // Create buckets if they don't exist
+    await ensureStorageBuckets();
+    
     // List existing buckets to check what's already set up
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
     
@@ -26,12 +30,12 @@ export const initializeStorage = async (): Promise<void> => {
     console.log('Storage buckets currently configured:', 
       buckets?.map(b => b.name).join(', ') || 'none');
     
-    // Check if both required buckets exist, and if so we're done
+    // Check if both required buckets exist
     const hasBookImages = buckets?.some(bucket => bucket.name === 'book_images');
     const hasNarrations = buckets?.some(bucket => bucket.name === 'narrations');
     
     if (hasBookImages && hasNarrations) {
-      console.log('All required storage buckets are already available');
+      console.log('All required storage buckets are available');
     } else {
       console.warn('Required storage buckets are missing - functionality may be limited');
       console.warn('Missing buckets:', 
