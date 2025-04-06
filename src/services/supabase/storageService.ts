@@ -7,7 +7,7 @@ const checkAuthentication = async (): Promise<boolean> => {
   return !!data.session;
 };
 
-// Upload an image to Supabase Storage with improved error handling and auth checks
+// Upload an image to Supabase Storage with comprehensive error handling
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
     // Check if image is already a URL (was previously uploaded)
@@ -21,30 +21,40 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     if (!isAuthenticated) {
       console.error('User is not authenticated - cannot upload image');
       toast.error('Please sign in to save images');
-      return image; // Return original image as fallback
+      return null;
+    }
+    
+    // Ensure bookId and pageId exist
+    if (!bookId || !pageId) {
+      console.error('Missing bookId or pageId for image upload');
+      toast.error('Invalid book or page information');
+      return null;
     }
     
     // Extract the base64 data from the string
-    const base64Data = image.split(',')[1];
-    if (!base64Data) {
-      console.log('Invalid base64 data in image');
-      return image; // Return the original image to avoid breaking the UI
+    const base64Match = image.match(/^data:image\/(\w+);base64,(.+)$/);
+    if (!base64Match) {
+      console.error('Invalid base64 image format');
+      toast.error('Image format is invalid');
+      return null;
     }
     
+    const [, fileType, base64Data] = base64Match;
+    
     // Convert base64 to a Blob
-    const blob = await fetch(`data:image/png;base64,${base64Data}`).then(res => res.blob());
+    const blob = await fetch(`data:image/${fileType};base64,${base64Data}`).then(res => res.blob());
     
     // Generate a unique file path
-    const filePath = `${bookId}/${pageId}_${Date.now()}.png`;
+    const filePath = `${bookId}/${pageId}_${Date.now()}.${fileType}`;
     
     console.log(`Uploading image to storage bucket: book_images/${filePath}`);
     
-    // Upload to Supabase Storage with better error handling
+    // Upload to Supabase Storage with enhanced error handling
     const { data, error } = await supabase
       .storage
       .from('book_images')
       .upload(filePath, blob, {
-        contentType: 'image/png',
+        contentType: `image/${fileType}`,
         upsert: true,
         cacheControl: '3600'
       });
@@ -52,20 +62,19 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     if (error) {
       console.error('Error uploading image:', error);
       
-      // Check for specific error types and provide appropriate messaging
-      if (error.message?.includes('Permission denied') || error.message?.includes('Unauthorized')) {
-        toast.error('Permission denied: Unable to save image to storage');
-      } else if (error.message?.includes('Authentication required')) {
+      // Specific error handling with detailed messages
+      if (error.message?.includes('Permission denied')) {
+        toast.error('Permission denied: Unable to save image');
+      } else if (error.message?.includes('Unauthorized')) {
         toast.error('Authentication required to save images');
       } else {
-        toast.warning('Failed to save image to cloud storage, but the image will still be visible in your book');
+        toast.error('Failed to save image to cloud storage');
       }
       
-      // IMPORTANT: Return the original image data so it's not lost
-      return image;
+      return null;
     }
     
-    // Return the public URL for the image
+    // Retrieve and return the public URL for the image
     const { data: urlData } = supabase
       .storage
       .from('book_images')
@@ -74,14 +83,13 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     console.log('Successfully uploaded image, URL:', urlData.publicUrl);
     return urlData.publicUrl;
   } catch (e) {
-    console.error('Failed to upload image to storage', e);
-    // Return the original image data as fallback
-    toast.warning('Failed to save image to cloud storage, but the image will still be visible in your book');
-    return image;
+    console.error('Unexpected error in image upload:', e);
+    toast.error('An unexpected error occurred while uploading the image');
+    return null;
   }
 };
 
-// Upload audio to Supabase Storage with improved error handling and auth checks
+// Upload audio to Supabase Storage with comprehensive error handling
 export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: string): Promise<string | null> => {
   try {
     // Validate inputs
@@ -114,10 +122,10 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     if (error) {
       console.error('Error uploading audio:', error);
       
-      // Check for specific error types and provide appropriate messaging
-      if (error.message?.includes('Permission denied') || error.message?.includes('Unauthorized')) {
-        toast.error('Permission denied: Unable to save narration to storage');
-      } else if (error.message?.includes('Authentication required')) {
+      // Specific error handling for audio uploads
+      if (error.message?.includes('Permission denied')) {
+        toast.error('Permission denied: Unable to save narration');
+      } else if (error.message?.includes('Unauthorized')) {
         toast.error('Authentication required to save narration');
       } else {
         toast.error('Failed to upload narration audio');
@@ -135,8 +143,8 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     console.log("Audio uploaded, public URL:", urlData.publicUrl);
     return urlData.publicUrl;
   } catch (e) {
-    console.error('Failed to upload audio to storage', e);
-    toast.error('Failed to save narration audio');
+    console.error('Unexpected error in audio upload:', e);
+    toast.error('An unexpected error occurred while uploading audio');
     return null;
   }
 };
