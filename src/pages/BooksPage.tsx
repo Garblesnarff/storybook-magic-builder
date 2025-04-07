@@ -1,237 +1,51 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Layout } from '@/components/Layout';
 import { BookList } from '@/components/BookList';
-import { useBook } from '@/contexts/BookContext';
-import { useNavigate } from 'react-router-dom';
-import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { EditorLoading } from '@/components/editor/EditorLoading';
+import { BookLoadingState } from '@/components/books/BookLoadingState';
+import { AuthRequiredState } from '@/components/books/AuthRequiredState';
+import { EmptyBooksState } from '@/components/books/EmptyBooksState';
+import { useBookPageState } from '@/hooks/books/useBookPageState';
 
 const BooksPage: React.FC = () => {
-  const { 
-    books, 
-    createBook, 
-    createBookFromTemplate, 
+  const {
+    books,
+    user,
     updateBook,
-    deleteBook, 
-    loading: booksLoading,
-    error: booksError,
-    retryLoading
-  } = useBook();
+    isInitialLoading,
+    isLoadingStuck,
+    isAuthenticated,
+    handleCreateBook,
+    handleCreateBookFromTemplate,
+    handleDeleteBook,
+    handleRetry,
+    handleHardRefresh
+  } = useBookPageState();
   
-  const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [retryAttempt, setRetryAttempt] = useState(0);
-  const [isStuck, setIsStuck] = useState(false);
-  
-  // Report any errors that occur during book loading
-  useEffect(() => {
-    if (booksError) {
-      console.error('Error loading books:', booksError);
-      toast.error('Failed to load books. Please try again.');
-    }
-  }, [booksError]);
-  
-  // Track when initial loading is complete to avoid getting stuck in loading state
-  useEffect(() => {
-    // If user exists and loading has been going on for a while, consider it complete
-    if (!authLoading && user) {
-      const timer = setTimeout(() => {
-        console.log("Setting initial load complete due to timeout");
-        setInitialLoadComplete(true);
-        
-        // If still loading after 8 seconds, consider it stuck
-        if (booksLoading) {
-          const stuckTimer = setTimeout(() => {
-            console.log("Books loading is taking too long, considering stuck");
-            setIsStuck(true);
-          }, 5000); // 5 more seconds after initial load timeout
-          
-          return () => clearTimeout(stuckTimer);
-        }
-      }, 3000); // 3 seconds max to load books
-      
-      return () => clearTimeout(timer);
-    }
-    
-    // If not authenticated, mark load as complete immediately
-    if (!authLoading && !user) {
-      setInitialLoadComplete(true);
-    }
-    
-    // If books loading completes naturally, mark as complete
-    if (!booksLoading && user) {
-      setInitialLoadComplete(true);
-      setIsStuck(false); // Reset stuck state if loading completes
-    }
-  }, [authLoading, user, booksLoading]);
-
-  // Auto-retry logic
-  useEffect(() => {
-    if (booksLoading && initialLoadComplete && retryAttempt < 2) {
-      const timer = setTimeout(() => {
-        console.log(`Auto-retry attempt ${retryAttempt + 1}`);
-        retryLoading();
-        setRetryAttempt(prev => prev + 1);
-      }, 3000); // Wait 3 seconds before auto-retrying
-      
-      return () => clearTimeout(timer);
-    }
-  }, [booksLoading, initialLoadComplete, retryAttempt, retryLoading]);
-  
-  const handleCreateBook = async () => {
-    try {
-      const newBookId = await createBook();
-      if (newBookId) {
-        navigate(`/editor/${newBookId}`);
-        toast.success('Book created successfully');
-      }
-    } catch (error) {
-      console.error('Error creating book', error);
-      toast.error('Failed to create book');
-    }
-  };
-  
-  const handleCreateBookFromTemplate = async (template: any) => {
-    try {
-      const newBookId = await createBookFromTemplate(template);
-      if (newBookId) {
-        navigate(`/editor/${newBookId}`);
-        toast.success('Book created from template');
-      }
-    } catch (error) {
-      console.error('Error creating book from template', error);
-      toast.error('Failed to create book from template');
-    }
-  };
-  
-  const handleDeleteBook = async (id: string) => {
-    try {
-      await deleteBook(id);
-      toast.success('Book deleted');
-    } catch (error) {
-      console.error('Error deleting book', error);
-      toast.error('Failed to delete book');
-    }
-  };
-
-  const handleRetry = () => {
-    console.log('Manually retrying book loading');
-    retryLoading();
-    setInitialLoadComplete(false);
-    setIsStuck(false);
-    setRetryAttempt(0);
-    
-    // Set a new timer to detect if still stuck
-    setTimeout(() => {
-      setInitialLoadComplete(true);
-    }, 5000);
-  };
-
-  const handleHardRefresh = () => {
-    // Force a hard reload of the page
-    window.location.reload();
-  };
-  
-  // Show loading state while authenticating or loading books
-  if ((authLoading || (booksLoading && !initialLoadComplete)) && user) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8 px-4">
-          <EditorLoading />
-        </div>
-      </Layout>
-    );
-  }
-  
-  // Show retry options if stuck loading or taking too long
-  if ((initialLoadComplete && booksLoading) || isStuck) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8 px-4">
-          <div className="flex flex-col items-center justify-center min-h-[60vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
-            <p className="text-gray-600 mb-4">
-              {isStuck ? 'Loading is taking longer than expected...' : 'Loading your books...'}
-            </p>
-            
-            <div className="flex flex-col gap-2">
-              <Button 
-                onClick={handleRetry}
-                variant="outline"
-                className="mt-2"
-              >
-                Retry loading books
-              </Button>
-              
-              <Button 
-                onClick={handleHardRefresh}
-                variant="secondary"
-                className="mt-2"
-              >
-                Refresh page
-              </Button>
-              
-              <Button 
-                onClick={() => navigate('/')}
-                variant="ghost"
-                className="mt-2"
-              >
-                Return to home
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-  
-  // Show a specific message if there's an authentication issue
-  if (!user) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8 px-4">
-          <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 bg-white/80 backdrop-blur-sm rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
-            <p className="text-gray-600 mb-8 text-center">
-              Please sign in to view and create books.
-            </p>
-            <Button 
-              onClick={() => navigate('/auth')}
-              className="bg-amber-500 hover:bg-amber-600 text-white font-semibold"
-              size="lg"
-            >
-              Go to Sign In
-            </Button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-  
-  // Show book list when everything is loaded
   return (
     <Layout rootClassName="bg-books-background bg-cover bg-center bg-no-repeat"> 
       <div className="container mx-auto py-8 px-4">
-        {books.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[60vh] p-8 bg-white/80 backdrop-blur-sm rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-4">Welcome to Children's Book Generator!</h2>
-            <p className="text-gray-600 mb-8 text-center">
-              You don't have any books yet. Create your first book to get started!
-            </p>
-            <Button 
-              onClick={handleCreateBook}
-              className="bg-amber-500 hover:bg-amber-600 text-white font-semibold"
-              size="lg"
-            >
-              Create Your First Book
-            </Button>
-          </div>
-        ) : (
+        {isInitialLoading && (
+          <BookLoadingState />
+        )}
+        
+        {isLoadingStuck && (
+          <BookLoadingState 
+            isStuck={true}
+            onRetry={handleRetry}
+            onHardRefresh={handleHardRefresh}
+          />
+        )}
+        
+        {!isAuthenticated && !isInitialLoading && !isLoadingStuck && (
+          <AuthRequiredState />
+        )}
+        
+        {isAuthenticated && !isInitialLoading && !isLoadingStuck && books.length === 0 && (
+          <EmptyBooksState onCreateBook={handleCreateBook} />
+        )}
+        
+        {isAuthenticated && !isInitialLoading && !isLoadingStuck && books.length > 0 && (
           <BookList
             books={books}
             onCreateBook={handleCreateBook}
