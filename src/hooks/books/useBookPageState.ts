@@ -40,7 +40,7 @@ export function useBookPageState() {
         console.log("Setting initial load complete due to timeout");
         setInitialLoadComplete(true);
         
-        // If still loading after 8 seconds, consider it stuck
+        // If still loading after timeout, consider it stuck
         if (booksLoading) {
           const stuckTimer = setTimeout(() => {
             console.log("Books loading is taking too long, considering stuck");
@@ -66,9 +66,9 @@ export function useBookPageState() {
     }
   }, [authLoading, user, booksLoading]);
 
-  // Auto-retry logic
+  // Auto-retry logic - only retry once automatically
   useEffect(() => {
-    if (booksLoading && initialLoadComplete && retryAttempt < 2) {
+    if (booksLoading && initialLoadComplete && retryAttempt < 1) {
       const timer = setTimeout(() => {
         console.log(`Auto-retry attempt ${retryAttempt + 1}`);
         retryLoading();

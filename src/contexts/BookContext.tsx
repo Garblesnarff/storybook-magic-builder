@@ -73,19 +73,14 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   }, [authLoading, user, bookManager.loading, bookManager.books.length]);
   
-  // Simplified retry function that doesn't depend on bookManager directly
+  // Retry function that triggers a force refresh
   const retryLoading = () => {
     console.log('Retrying book loading...');
     setRetryCount(prev => prev + 1);
-  };
-  
-  // Only call forceRefresh when retryCount changes, not on every render
-  useEffect(() => {
-    if (retryCount > 0 && bookManager.forceRefresh) {
-      console.log(`Triggering forceRefresh due to retry #${retryCount}`);
+    if (bookManager.forceRefresh) {
       bookManager.forceRefresh();
     }
-  }, [retryCount, bookManager]);
+  };
   
   // Combine the book manager with our retry function
   const contextValue = {

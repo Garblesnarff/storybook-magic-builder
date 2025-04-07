@@ -27,12 +27,6 @@ export function useBookOperations(refreshCounter = 0) {
       return;
     }
     
-    // Skip if already initialized and no refresh requested
-    if (hasInitialized && books.length > 0 && refreshCounter === 0) {
-      console.log('Books already loaded, skipping initialization');
-      return;
-    }
-    
     // If no user, clear books
     if (!user) {
       console.log('No user, clearing books');
@@ -40,6 +34,12 @@ export function useBookOperations(refreshCounter = 0) {
       setCurrentBook(null);
       setLoading(false);
       setHasInitialized(true);
+      return;
+    }
+    
+    // Skip if already initialized and no refresh requested
+    if (hasInitialized && books.length > 0 && refreshCounter === 0) {
+      console.log('Books already loaded, skipping initialization');
       return;
     }
     
@@ -52,6 +52,7 @@ export function useBookOperations(refreshCounter = 0) {
       const fetchedBooks = await loadAllBooks();
       console.log('Total books fetched:', fetchedBooks.length);
       
+      // Filter books specifically for this user
       const userBooks = fetchedBooks.filter(book => book.userId === user.id);
       console.log(`Found ${userBooks.length} books for user ${user.id}`);
       
@@ -64,12 +65,12 @@ export function useBookOperations(refreshCounter = 0) {
       }
       
       setHasInitialized(true);
+      setLoading(false);
     } catch (e) {
       console.error('Error initializing books', e);
       setError('Failed to load books');
-      toast.error('Failed to load your books. Please try again.');
-    } finally {
       setLoading(false);
+      toast.error('Failed to load your books. Please try again.');
     }
   }, [user, books.length, hasInitialized, refreshCounter, authLoading]);
 
@@ -90,12 +91,6 @@ export function useBookOperations(refreshCounter = 0) {
     }
   }, [refreshCounter, initializeBooks]);
 
-  const forceRefresh = useCallback(() => {
-    console.log('Force refresh requested in useBookOperations');
-    setHasInitialized(false);
-    initializeBooks();
-  }, [initializeBooks]);
-
   const createBook = useCallback(async (): Promise<string | null> => {
     if (!user) {
       toast.error('You must be logged in to create a book');
@@ -103,13 +98,19 @@ export function useBookOperations(refreshCounter = 0) {
     }
     
     try {
+      setLoading(true);
       const newBook = await createNewBook(user.id);
       console.log('New book created:', newBook.id);
+      
+      // Add to local state
       setBooks(prevBooks => [...prevBooks, newBook]);
       setCurrentBook(newBook);
+      
+      setLoading(false);
       return newBook.id;
     } catch (error) {
       console.error('Error creating book:', error);
+      setLoading(false);
       toast.error('Failed to create new book');
       return null;
     }
@@ -122,17 +123,34 @@ export function useBookOperations(refreshCounter = 0) {
     }
     
     try {
-      const newBook = template.createBook();
-      const savedBook = await createNewBook(user.id);
-      const mergedBook = { ...savedBook, ...newBook, id: savedBook.id, userId: user.id };
+      setLoading(true);
+      
+      // Create base book with user ID
+      const newBook = await createNewBook(user.id);
+      
+      // Apply template to the new book
+      const templateBook = template.createBook();
+      const mergedBook = { 
+        ...newBook, 
+        ...templateBook, 
+        id: newBook.id, 
+        userId: user.id,
+        createdAt: newBook.createdAt,
+        updatedAt: newBook.updatedAt
+      };
+      
+      // Save the merged book
       await updateBookService(mergedBook, books);
       
       console.log('New book created from template:', mergedBook.id);
       setBooks(prevBooks => [...prevBooks, mergedBook]);
       setCurrentBook(mergedBook);
+      
+      setLoading(false);
       return mergedBook.id;
     } catch (error) {
       console.error('Error creating book from template:', error);
+      setLoading(false);
       toast.error('Failed to create book from template');
       return null;
     }
@@ -140,40 +158,54 @@ export function useBookOperations(refreshCounter = 0) {
 
   const loadBook = useCallback(async (id: string): Promise<Book | null> => {
     try {
+      setLoading(true);
       console.log('Loading book with ID:', id);
+      
       const book = await loadBookById(id);
+      
       if (book) {
         console.log('Book loaded successfully:', book.id);
         setCurrentBook(book);
+        setLoading(false);
         return book;
       }
+      
       console.log('Book not found with ID:', id);
+      setLoading(false);
       return null;
     } catch (error) {
       console.error('Error loading book:', error);
+      setLoading(false);
       toast.error('Failed to load book');
       return null;
     }
   }, []);
 
-  const updateBookState = useCallback(async (updatedBook: Book): Promise<void> => {
+  const updateBook = useCallback(async (updatedBook: Book): Promise<void> => {
     try {
+      setLoading(true);
       console.log('Updating book:', updatedBook.id);
+      
       const updatedBooksResult = await updateBookService(updatedBook, books); 
       setBooks(updatedBooksResult);
       
       if (currentBook?.id === updatedBook.id) { 
         setCurrentBook({ ...updatedBook });
       }
+      
+      setLoading(false);
     } catch (error) {
       console.error('Error updating book:', error);
+      setLoading(false);
       toast.error('Failed to update book');
     }
   }, [books, currentBook]);
 
   const deleteBook = useCallback(async (id: string): Promise<void> => {
     try {
+      setLoading(true);
       console.log('Deleting book:', id);
+      
       const updatedBooksResult = await deleteBookService(id, books); 
       setBooks(updatedBooksResult);
       
@@ -181,9 +213,11 @@ export function useBookOperations(refreshCounter = 0) {
         setCurrentBook(updatedBooksResult.length ? updatedBooksResult[0] : null);
       }
       
+      setLoading(false);
       toast.success('Book deleted successfully');
     } catch (error) {
       console.error('Error deleting book:', error);
+      setLoading(false);
       toast.error('Failed to delete book');
     }
   }, [books, currentBook]);
@@ -193,7 +227,7 @@ export function useBookOperations(refreshCounter = 0) {
     currentBook,
     createBook,
     createBookFromTemplate,
-    updateBook: updateBookState,
+    updateBook,
     deleteBook,
     loadBook,
     loading,
@@ -201,6 +235,10 @@ export function useBookOperations(refreshCounter = 0) {
     setBooks,
     setCurrentBook,
     initializeBooks,
-    forceRefresh
+    forceRefresh: () => {
+      console.log('Force refresh requested in useBookOperations');
+      setHasInitialized(false);
+      initializeBooks();
+    }
   };
 }
