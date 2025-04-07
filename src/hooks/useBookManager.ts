@@ -3,9 +3,12 @@ import { Book } from '../types/book';
 import { BookTemplate } from '@/data/bookTemplates';
 import { useBookOperations } from './useBookOperations';
 import { usePageOperations } from './usePageOperations';
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 
 export function useBookManager() {
+  // Add a refreshCounter state to force refresh
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  
   const {
     books,
     currentBook,
@@ -18,8 +21,8 @@ export function useBookManager() {
     error: bookError,
     setBooks,
     setCurrentBook,
-    initializeBooks, // Make sure this exists in useBookOperations
-  } = useBookOperations();
+    initializeBooks,
+  } = useBookOperations(refreshCounter);
 
   const {
     addPage,
@@ -32,14 +35,10 @@ export function useBookManager() {
   } = usePageOperations(books, currentBook, setBooks, setCurrentBook);
 
   // Add a force refresh function
-  const forceRefresh = useCallback(async () => {
+  const forceRefresh = useCallback(() => {
     console.log('Force refreshing books data...');
-    if (typeof initializeBooks === 'function') {
-      await initializeBooks();
-    } else {
-      console.warn('initializeBooks is not available');
-    }
-  }, [initializeBooks]);
+    setRefreshCounter(prev => prev + 1);
+  }, []);
 
   // Combine loading and error states
   const loading = bookLoading || pageLoading;

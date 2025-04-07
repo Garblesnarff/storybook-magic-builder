@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Book } from '../types/book';
 import { 
@@ -12,14 +11,13 @@ import { BookTemplate } from '@/data/bookTemplates';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
-export function useBookOperations() {
+export function useBookOperations(refreshCounter = 0) {
   const [books, setBooks] = useState<Book[]>([]);
   const [currentBook, setCurrentBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  const [initCount, setInitCount] = useState(0);
-
+  
   const initializeBooks = useCallback(async () => {
     try {
       if (!user) {
@@ -52,15 +50,17 @@ export function useBookOperations() {
     }
   }, [user]);
 
-  // This effect runs when the user changes or when initCount is incremented
+  // This effect runs when the user changes or when refreshCounter is incremented
   useEffect(() => {
+    console.log('Initializing books, refreshCounter:', refreshCounter);
     initializeBooks();
-  }, [initializeBooks, initCount]);
+  }, [initializeBooks, refreshCounter]);
 
   // Function to force a re-initialization
   const forceRefresh = useCallback(() => {
-    setInitCount(prev => prev + 1);
-  }, []);
+    console.log('Force refresh requested in useBookOperations');
+    initializeBooks();
+  }, [initializeBooks]);
 
   const createBook = useCallback(async (): Promise<string | null> => {
     if (!user) {

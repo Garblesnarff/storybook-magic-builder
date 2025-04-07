@@ -24,6 +24,7 @@ const BooksPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
   
   // Report any errors that occur during book loading
   useEffect(() => {
@@ -49,6 +50,21 @@ const BooksPage: React.FC = () => {
       setInitialLoadComplete(true);
     }
   }, [authLoading, user]);
+
+  // Auto-retry logic
+  useEffect(() => {
+    if (booksLoading && retryAttempt < 3) {
+      const timer = setTimeout(() => {
+        if (booksLoading) {
+          console.log(`Auto-retry attempt ${retryAttempt + 1}`);
+          retryLoading();
+          setRetryAttempt(prev => prev + 1);
+        }
+      }, 5000); // Wait 5 seconds before auto-retrying
+      
+      return () => clearTimeout(timer);
+    }
+  }, [booksLoading, retryAttempt, retryLoading]);
   
   const handleCreateBook = async () => {
     try {
@@ -91,6 +107,14 @@ const BooksPage: React.FC = () => {
     retryLoading();
     setInitialLoadComplete(false);
     setTimeout(() => setInitialLoadComplete(true), 5000);
+    
+    // Reset retry attempts counter
+    setRetryAttempt(0);
+  };
+
+  const handleHardRefresh = () => {
+    // Force a hard reload of the page
+    window.location.reload();
   };
   
   // Show a comprehensive loading state with retry button if it takes too long
@@ -104,14 +128,24 @@ const BooksPage: React.FC = () => {
               {authLoading ? 'Verifying your account...' : 'Loading your books...'}
             </p>
             
-            {!authLoading && initialLoadComplete && (
-              <Button 
-                onClick={handleRetry}
-                variant="outline"
-                className="mt-4"
-              >
-                Loading taking too long? Click to retry
-              </Button>
+            {(initialLoadComplete || retryAttempt > 0) && (
+              <div className="flex flex-col gap-2">
+                <Button 
+                  onClick={handleRetry}
+                  variant="outline"
+                  className="mt-2"
+                >
+                  Retry loading books
+                </Button>
+                
+                <Button 
+                  onClick={handleHardRefresh}
+                  variant="secondary"
+                  className="mt-2"
+                >
+                  Refresh page
+                </Button>
+              </div>
             )}
           </div>
         </div>

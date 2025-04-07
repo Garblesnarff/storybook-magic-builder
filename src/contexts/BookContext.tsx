@@ -1,8 +1,9 @@
 
-import React, { createContext, useContext, ReactNode, useState } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { Book, BookPage } from '../types/book';
 import { useBookManager } from '../hooks/useBookManager';
 import { BookTemplate } from '@/data/bookTemplates';
+import { toast } from 'sonner';
 
 interface BookContextProps {
   books: Book[];
@@ -19,7 +20,7 @@ interface BookContextProps {
   duplicatePage: (id: string) => Promise<string | undefined>;
   loading: boolean;
   error: string | null;
-  retryLoading: () => void; // Add retry functionality
+  retryLoading: () => void;
 }
 
 // Create the context with a default empty implementation to avoid undefined errors
@@ -53,8 +54,9 @@ export const useBook = () => {
 
 // Provider component that wraps the parts of our app that need the context
 export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const bookManager = useBookManager();
+  // Use a simple state for retryCount instead of useState to avoid hook order issues
   const [retryCount, setRetryCount] = useState(0);
+  const bookManager = useBookManager();
   
   // Add retry functionality to force a refresh
   const retryLoading = () => {
@@ -68,6 +70,13 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.warn('forceRefresh not available in bookManager');
     }
   };
+  
+  // Pass the retryCount to the bookManager to trigger reloads
+  useEffect(() => {
+    if (retryCount > 0 && bookManager.forceRefresh) {
+      bookManager.forceRefresh();
+    }
+  }, [retryCount, bookManager]);
   
   return (
     <BookContext.Provider value={{ ...bookManager, retryLoading }}>
