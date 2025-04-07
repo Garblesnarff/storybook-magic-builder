@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { EditorLoading } from '@/components/editor/EditorLoading';
 
 const BooksPage: React.FC = () => {
   const { 
@@ -25,6 +26,7 @@ const BooksPage: React.FC = () => {
   const navigate = useNavigate();
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState(0);
+  const [isStuck, setIsStuck] = useState(false);
   
   // Report any errors that occur during book loading
   useEffect(() => {
@@ -36,35 +38,50 @@ const BooksPage: React.FC = () => {
   
   // Track when initial loading is complete to avoid getting stuck in loading state
   useEffect(() => {
+    // If user exists and loading has been going on for a while, consider it complete
     if (!authLoading && user) {
-      // Set a timeout to ensure we don't get stuck in loading
       const timer = setTimeout(() => {
+        console.log("Setting initial load complete due to timeout");
         setInitialLoadComplete(true);
-      }, 3000); // Give it 3 seconds max to load books
+        
+        // If still loading after 8 seconds, consider it stuck
+        if (booksLoading) {
+          const stuckTimer = setTimeout(() => {
+            console.log("Books loading is taking too long, considering stuck");
+            setIsStuck(true);
+          }, 5000); // 5 more seconds after initial load timeout
+          
+          return () => clearTimeout(stuckTimer);
+        }
+      }, 3000); // 3 seconds max to load books
       
       return () => clearTimeout(timer);
     }
     
+    // If not authenticated, mark load as complete immediately
     if (!authLoading && !user) {
-      // If not authenticated, mark load as complete immediately
       setInitialLoadComplete(true);
     }
-  }, [authLoading, user]);
+    
+    // If books loading completes naturally, mark as complete
+    if (!booksLoading && user) {
+      setInitialLoadComplete(true);
+      setIsStuck(false); // Reset stuck state if loading completes
+    }
+  }, [authLoading, user, booksLoading]);
 
   // Auto-retry logic
   useEffect(() => {
-    if (booksLoading && retryAttempt < 3) {
+    if (booksLoading && initialLoadComplete && retryAttempt < 2) {
       const timer = setTimeout(() => {
-        if (booksLoading) {
-          console.log(`Auto-retry attempt ${retryAttempt + 1}`);
-          retryLoading();
-          setRetryAttempt(prev => prev + 1);
-        }
-      }, 5000); // Wait 5 seconds before auto-retrying
+        console.log(`Auto-retry attempt ${retryAttempt + 1}`);
+        retryLoading();
+        setRetryAttempt(prev => prev + 1);
+      }, 3000); // Wait 3 seconds before auto-retrying
       
       return () => clearTimeout(timer);
     }
-  }, [booksLoading, retryAttempt, retryLoading]);
+  }, [booksLoading, initialLoadComplete, retryAttempt, retryLoading]);
   
   const handleCreateBook = async () => {
     try {
@@ -106,10 +123,13 @@ const BooksPage: React.FC = () => {
     console.log('Manually retrying book loading');
     retryLoading();
     setInitialLoadComplete(false);
-    setTimeout(() => setInitialLoadComplete(true), 5000);
-    
-    // Reset retry attempts counter
+    setIsStuck(false);
     setRetryAttempt(0);
+    
+    // Set a new timer to detect if still stuck
+    setTimeout(() => {
+      setInitialLoadComplete(true);
+    }, 5000);
   };
 
   const handleHardRefresh = () => {
@@ -117,36 +137,53 @@ const BooksPage: React.FC = () => {
     window.location.reload();
   };
   
-  // Show a comprehensive loading state with retry button if it takes too long
+  // Show loading state while authenticating or loading books
   if ((authLoading || (booksLoading && !initialLoadComplete)) && user) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8 px-4">
+          <EditorLoading />
+        </div>
+      </Layout>
+    );
+  }
+  
+  // Show retry options if stuck loading or taking too long
+  if ((initialLoadComplete && booksLoading) || isStuck) {
     return (
       <Layout>
         <div className="container mx-auto py-8 px-4">
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
             <p className="text-gray-600 mb-4">
-              {authLoading ? 'Verifying your account...' : 'Loading your books...'}
+              {isStuck ? 'Loading is taking longer than expected...' : 'Loading your books...'}
             </p>
             
-            {(initialLoadComplete || retryAttempt > 0) && (
-              <div className="flex flex-col gap-2">
-                <Button 
-                  onClick={handleRetry}
-                  variant="outline"
-                  className="mt-2"
-                >
-                  Retry loading books
-                </Button>
-                
-                <Button 
-                  onClick={handleHardRefresh}
-                  variant="secondary"
-                  className="mt-2"
-                >
-                  Refresh page
-                </Button>
-              </div>
-            )}
+            <div className="flex flex-col gap-2">
+              <Button 
+                onClick={handleRetry}
+                variant="outline"
+                className="mt-2"
+              >
+                Retry loading books
+              </Button>
+              
+              <Button 
+                onClick={handleHardRefresh}
+                variant="secondary"
+                className="mt-2"
+              >
+                Refresh page
+              </Button>
+              
+              <Button 
+                onClick={() => navigate('/')}
+                variant="ghost"
+                className="mt-2"
+              >
+                Return to home
+              </Button>
+            </div>
           </div>
         </div>
       </Layout>
@@ -176,6 +213,7 @@ const BooksPage: React.FC = () => {
     );
   }
   
+  // Show book list when everything is loaded
   return (
     <Layout rootClassName="bg-books-background bg-cover bg-center bg-no-repeat"> 
       <div className="container mx-auto py-8 px-4">

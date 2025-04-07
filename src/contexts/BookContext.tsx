@@ -45,7 +45,6 @@ const BookContext = createContext<BookContextProps>({
 // Custom hook to use the book context
 export const useBook = () => {
   const context = useContext(BookContext);
-  // We still want to throw an error if useBook is used outside of a provider
   if (!context) {
     throw new Error('useBook must be used within a BookProvider');
   }
@@ -54,32 +53,34 @@ export const useBook = () => {
 
 // Provider component that wraps the parts of our app that need the context
 export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Use a simple state for retryCount instead of useState to avoid hook order issues
+  // Create a local state for retry count
   const [retryCount, setRetryCount] = useState(0);
+  
+  // Use bookManager outside of the useEffect to avoid re-creating it on every render
   const bookManager = useBookManager();
   
-  // Add retry functionality to force a refresh
+  // Simplified retry function that doesn't depend on bookManager directly
   const retryLoading = () => {
     console.log('Retrying book loading...');
     setRetryCount(prev => prev + 1);
-    
-    // Force the book manager to reinitialize
-    if (bookManager.forceRefresh) {
-      bookManager.forceRefresh();
-    } else {
-      console.warn('forceRefresh not available in bookManager');
-    }
   };
   
-  // Pass the retryCount to the bookManager to trigger reloads
+  // Only call forceRefresh when retryCount changes, not on every render
   useEffect(() => {
     if (retryCount > 0 && bookManager.forceRefresh) {
+      console.log(`Triggering forceRefresh due to retry #${retryCount}`);
       bookManager.forceRefresh();
     }
   }, [retryCount, bookManager]);
   
+  // Combine the book manager with our retry function
+  const contextValue = {
+    ...bookManager,
+    retryLoading
+  };
+  
   return (
-    <BookContext.Provider value={{ ...bookManager, retryLoading }}>
+    <BookContext.Provider value={contextValue}>
       {children}
     </BookContext.Provider>
   );

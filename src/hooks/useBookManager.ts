@@ -3,11 +3,12 @@ import { Book } from '../types/book';
 import { BookTemplate } from '@/data/bookTemplates';
 import { useBookOperations } from './useBookOperations';
 import { usePageOperations } from './usePageOperations';
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 
 export function useBookManager() {
-  // Add a refreshCounter state to force refresh
-  const [refreshCounter, setRefreshCounter] = useState(0);
+  // Use a ref to track the refresh counter to avoid re-renders causing loops
+  const refreshCounterRef = useRef(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const {
     books,
@@ -22,7 +23,7 @@ export function useBookManager() {
     setBooks,
     setCurrentBook,
     initializeBooks,
-  } = useBookOperations(refreshCounter);
+  } = useBookOperations(refreshTrigger);
 
   const {
     addPage,
@@ -34,10 +35,11 @@ export function useBookManager() {
     pageError
   } = usePageOperations(books, currentBook, setBooks, setCurrentBook);
 
-  // Add a force refresh function
+  // Add a force refresh function with debounce to prevent multiple rapid calls
   const forceRefresh = useCallback(() => {
     console.log('Force refreshing books data...');
-    setRefreshCounter(prev => prev + 1);
+    refreshCounterRef.current += 1;
+    setRefreshTrigger(refreshCounterRef.current);
   }, []);
 
   // Combine loading and error states

@@ -16,49 +16,58 @@ export function useBookOperations(refreshCounter = 0) {
   const [currentBook, setCurrentBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const { user } = useAuth();
   
   const initializeBooks = useCallback(async () => {
+    if (hasInitialized && books.length > 0 && refreshCounter === 0) {
+      console.log('Books already loaded, skipping initialization');
+      return;
+    }
+    
+    if (!user) {
+      console.log('No user, skipping book initialization');
+      setBooks([]);
+      setLoading(false);
+      setHasInitialized(true);
+      return;
+    }
+    
     try {
-      if (!user) {
-        console.log('No user, skipping book initialization');
-        setBooks([]);
-        setLoading(false);
-        return;
-      }
-      
       setLoading(true);
       setError(null);
-      console.log('Loading books from Supabase...');
+      console.log(`Loading books from Supabase for user: ${user.id} (refresh: ${refreshCounter})`);
       
       const fetchedBooks = await loadAllBooks();
       
       const userBooks = fetchedBooks.filter(book => book.userId === user.id);
+      console.log(`Found ${userBooks.length} books for user ${user.id}`);
+      
       setBooks(userBooks);
       
       if (userBooks.length) {
-        console.log(`Found ${userBooks.length} existing books for the user`);
+        console.log(`Loaded ${userBooks.length} existing books for the user`);
       } else {
         console.log('No books found for the user');
       }
       
+      setHasInitialized(true);
     } catch (e) {
       console.error('Error initializing books', e);
       setError('Failed to load books');
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, books.length, hasInitialized, refreshCounter]);
 
-  // This effect runs when the user changes or when refreshCounter is incremented
   useEffect(() => {
     console.log('Initializing books, refreshCounter:', refreshCounter);
     initializeBooks();
   }, [initializeBooks, refreshCounter]);
 
-  // Function to force a re-initialization
   const forceRefresh = useCallback(() => {
     console.log('Force refresh requested in useBookOperations');
+    setHasInitialized(false);
     initializeBooks();
   }, [initializeBooks]);
 
