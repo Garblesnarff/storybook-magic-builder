@@ -58,7 +58,15 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Add retry functionality to force a refresh
   const retryLoading = () => {
+    console.log('Retrying book loading...');
     setRetryCount(prev => prev + 1);
+    
+    // Force the book manager to reinitialize
+    if (bookManager.forceRefresh) {
+      bookManager.forceRefresh();
+    } else {
+      console.warn('forceRefresh not available in bookManager');
+    }
   };
   
   return (

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Book } from '../types/book';
 import { 
@@ -17,39 +18,49 @@ export function useBookOperations() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const [initCount, setInitCount] = useState(0);
 
-  useEffect(() => {
-    async function fetchBooks() {
-      try {
-        setLoading(true);
-        console.log('Loading books from Supabase...');
-        const fetchedBooks = await loadAllBooks();
-        
-        const userBooks = user ? fetchedBooks.filter(book => book.userId === user.id) : fetchedBooks;
-        setBooks(userBooks);
-        
-        if (userBooks.length) {
-          console.log(`Found ${userBooks.length} existing books for the user`);
-        } else {
-          console.log('No books found for the user');
-        }
-        
+  const initializeBooks = useCallback(async () => {
+    try {
+      if (!user) {
+        console.log('No user, skipping book initialization');
+        setBooks([]);
         setLoading(false);
-      } catch (e) {
-        console.error('Error initializing books', e);
-        setError('Failed to load books');
-        setLoading(false);
+        return;
       }
-    }
-
-    if (user) {
-      fetchBooks();
-    } else {
-      setBooks([]);
+      
+      setLoading(true);
+      setError(null);
+      console.log('Loading books from Supabase...');
+      
+      const fetchedBooks = await loadAllBooks();
+      
+      const userBooks = fetchedBooks.filter(book => book.userId === user.id);
+      setBooks(userBooks);
+      
+      if (userBooks.length) {
+        console.log(`Found ${userBooks.length} existing books for the user`);
+      } else {
+        console.log('No books found for the user');
+      }
+      
+    } catch (e) {
+      console.error('Error initializing books', e);
+      setError('Failed to load books');
+    } finally {
       setLoading(false);
     }
-    
   }, [user]);
+
+  // This effect runs when the user changes or when initCount is incremented
+  useEffect(() => {
+    initializeBooks();
+  }, [initializeBooks, initCount]);
+
+  // Function to force a re-initialization
+  const forceRefresh = useCallback(() => {
+    setInitCount(prev => prev + 1);
+  }, []);
 
   const createBook = useCallback(async (): Promise<string | null> => {
     if (!user) {
@@ -147,6 +158,8 @@ export function useBookOperations() {
     loading,
     error,
     setBooks,
-    setCurrentBook
+    setCurrentBook,
+    initializeBooks,
+    forceRefresh
   };
 }

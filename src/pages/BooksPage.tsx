@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { BookList } from '@/components/BookList';
 import { useBook } from '@/contexts/BookContext';
@@ -16,20 +16,39 @@ const BooksPage: React.FC = () => {
     createBookFromTemplate, 
     updateBook,
     deleteBook, 
-    loading,
-    error
+    loading: booksLoading,
+    error: booksError,
+    retryLoading
   } = useBook();
   
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   // Report any errors that occur during book loading
   useEffect(() => {
-    if (error) {
-      console.error('Error loading books:', error);
+    if (booksError) {
+      console.error('Error loading books:', booksError);
       toast.error('Failed to load books. Please try again.');
     }
-  }, [error]);
+  }, [booksError]);
+  
+  // Track when initial loading is complete to avoid getting stuck in loading state
+  useEffect(() => {
+    if (!authLoading && user) {
+      // Set a timeout to ensure we don't get stuck in loading
+      const timer = setTimeout(() => {
+        setInitialLoadComplete(true);
+      }, 3000); // Give it 3 seconds max to load books
+      
+      return () => clearTimeout(timer);
+    }
+    
+    if (!authLoading && !user) {
+      // If not authenticated, mark load as complete immediately
+      setInitialLoadComplete(true);
+    }
+  }, [authLoading, user]);
   
   const handleCreateBook = async () => {
     try {
@@ -66,17 +85,34 @@ const BooksPage: React.FC = () => {
       toast.error('Failed to delete book');
     }
   };
+
+  const handleRetry = () => {
+    console.log('Manually retrying book loading');
+    retryLoading();
+    setInitialLoadComplete(false);
+    setTimeout(() => setInitialLoadComplete(true), 5000);
+  };
   
-  // Show a comprehensive loading state that clearly indicates what's happening
-  if (authLoading || loading) {
+  // Show a comprehensive loading state with retry button if it takes too long
+  if ((authLoading || (booksLoading && !initialLoadComplete)) && user) {
     return (
       <Layout>
         <div className="container mx-auto py-8 px-4">
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-4">
               {authLoading ? 'Verifying your account...' : 'Loading your books...'}
             </p>
+            
+            {!authLoading && initialLoadComplete && (
+              <Button 
+                onClick={handleRetry}
+                variant="outline"
+                className="mt-4"
+              >
+                Loading taking too long? Click to retry
+              </Button>
+            )}
           </div>
         </div>
       </Layout>

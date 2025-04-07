@@ -3,6 +3,7 @@ import { Book } from '../types/book';
 import { BookTemplate } from '@/data/bookTemplates';
 import { useBookOperations } from './useBookOperations';
 import { usePageOperations } from './usePageOperations';
+import { useCallback } from 'react';
 
 export function useBookManager() {
   const {
@@ -16,7 +17,8 @@ export function useBookManager() {
     loading: bookLoading,
     error: bookError,
     setBooks,
-    setCurrentBook
+    setCurrentBook,
+    initializeBooks, // Make sure this exists in useBookOperations
   } = useBookOperations();
 
   const {
@@ -28,6 +30,16 @@ export function useBookManager() {
     pageLoading,
     pageError
   } = usePageOperations(books, currentBook, setBooks, setCurrentBook);
+
+  // Add a force refresh function
+  const forceRefresh = useCallback(async () => {
+    console.log('Force refreshing books data...');
+    if (typeof initializeBooks === 'function') {
+      await initializeBooks();
+    } else {
+      console.warn('initializeBooks is not available');
+    }
+  }, [initializeBooks]);
 
   // Combine loading and error states
   const loading = bookLoading || pageLoading;
@@ -47,6 +59,7 @@ export function useBookManager() {
     reorderPage,
     duplicatePage,
     loading,
-    error
+    error,
+    forceRefresh
   };
 }
