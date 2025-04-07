@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { uploadAudio } from '@/services/supabase/storageService';
+import { uploadAudio } from '@/services/supabase/storage';
 import { toast } from 'sonner';
 
 // Helper to convert Base64 to Blob
