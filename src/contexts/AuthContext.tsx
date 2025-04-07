@@ -26,7 +26,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     console.log('Setting up auth state listener');
     
-    // Get initial session first
+    // Set up the subscription for auth state changes FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        console.log('Auth state changed:', event);
+        
+        if (event === 'SIGNED_IN') {
+          console.log('User signed in:', currentSession?.user.id);
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          toast.success('Successfully signed in');
+          navigate('/books');
+        } else if (event === 'SIGNED_OUT') {
+          console.log('User signed out');
+          setSession(null);
+          setUser(null);
+          toast.info('Signed out');
+          navigate('/');
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed');
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+        } else if (event === 'USER_UPDATED') {
+          console.log('User updated');
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+        }
+      }
+    );
+
+    // THEN get initial session
     const getInitialSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
@@ -62,30 +91,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     // Call immediately
     getInitialSession();
-    
-    // Set up the subscription for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        console.log('Auth state changed:', event);
-        
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-
-        if (event === 'SIGNED_IN') {
-          console.log('User signed in:', currentSession?.user.id);
-          toast.success('Successfully signed in');
-          navigate('/books');
-        } else if (event === 'SIGNED_OUT') {
-          console.log('User signed out');
-          toast.info('Signed out');
-          navigate('/');
-        } else if (event === 'TOKEN_REFRESHED') {
-          console.log('Token refreshed');
-        } else if (event === 'USER_UPDATED') {
-          console.log('User updated');
-        }
-      }
-    );
 
     // Cleanup subscription
     return () => {
@@ -93,32 +98,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [navigate]);
 
-  // Manual session check (runs every 10 minutes as backup)
+  // Manual session check (runs every 5 minutes as backup) - reduced from 10 minutes
   useEffect(() => {
     const interval = setInterval(async () => {
-      if (user) {
+      if (!loading) { // Only run if initial loading is complete
+        console.log('Performing regular session check...');
         const { data, error } = await supabase.auth.getSession();
-        if (error || !data.session) {
-          console.warn('Session lost during interval check, attempting refresh');
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-          
-          if (refreshError || !refreshData.session) {
-            console.error('Failed to refresh session during interval check:', refreshError);
-            setSession(null);
-            setUser(null);
-            toast.error('Your session has expired. Please sign in again.');
-            navigate('/auth');
+        
+        if (error) {
+          console.error('Error checking session:', error);
+          return;
+        }
+        
+        if (!data.session && user) {
+          // We think we're logged in but session is gone
+          console.warn('Session lost, updating state');
+          setSession(null);
+          setUser(null);
+          toast.error('Your session has expired. Please sign in again.');
+          navigate('/auth');
+        } else if (data.session) {
+          // We have a session, refresh it
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.error('Failed to refresh token during interval check:', refreshError);
           } else {
             console.log('Session refreshed during interval check');
-            setSession(refreshData.session);
-            setUser(refreshData.session?.user ?? null);
           }
         }
       }
-    }, 10 * 60 * 1000); // Check every 10 minutes
+    }, 5 * 60 * 1000); // Check every 5 minutes
     
     return () => clearInterval(interval);
-  }, [user, navigate]);
+  }, [user, navigate, loading]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -149,11 +161,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signOut = async () => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error: any) {
       toast.error(error.message || 'Error signing out');
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 

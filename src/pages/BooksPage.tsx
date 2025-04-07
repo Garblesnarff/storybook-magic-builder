@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { BookList } from '@/components/BookList';
 import { useBook } from '@/contexts/BookContext';
@@ -16,11 +16,20 @@ const BooksPage: React.FC = () => {
     createBookFromTemplate, 
     updateBook,
     deleteBook, 
-    loading 
+    loading,
+    error
   } = useBook();
   
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  
+  // Report any errors that occur during book loading
+  useEffect(() => {
+    if (error) {
+      console.error('Error loading books:', error);
+      toast.error('Failed to load books. Please try again.');
+    }
+  }, [error]);
   
   const handleCreateBook = async () => {
     try {
@@ -58,26 +67,39 @@ const BooksPage: React.FC = () => {
     }
   };
   
-  if (loading) {
+  // Show a comprehensive loading state that clearly indicates what's happening
+  if (authLoading || loading) {
     return (
       <Layout>
         <div className="container mx-auto py-8 px-4">
-          <div className="flex justify-between items-center mb-8">
-            <Skeleton className="h-8 w-40" />
-            <Skeleton className="h-10 w-32" />
+          <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+            <p className="text-gray-600">
+              {authLoading ? 'Verifying your account...' : 'Loading your books...'}
+            </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex flex-col">
-                <Skeleton className="aspect-[3/4] w-full rounded-xl" />
-                <Skeleton className="h-6 w-3/4 mt-4" />
-                <Skeleton className="h-4 w-1/2 mt-2" />
-                <div className="flex justify-between mt-4">
-                  <Skeleton className="h-8 w-8" />
-                  <Skeleton className="h-8 w-20" />
-                </div>
-              </div>
-            ))}
+        </div>
+      </Layout>
+    );
+  }
+  
+  // Show a specific message if there's an authentication issue
+  if (!user) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8 px-4">
+          <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 bg-white/80 backdrop-blur-sm rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+            <p className="text-gray-600 mb-8 text-center">
+              Please sign in to view and create books.
+            </p>
+            <Button 
+              onClick={() => navigate('/auth')}
+              className="bg-amber-500 hover:bg-amber-600 text-white font-semibold"
+              size="lg"
+            >
+              Go to Sign In
+            </Button>
           </div>
         </div>
       </Layout>

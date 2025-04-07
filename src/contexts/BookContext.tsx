@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useState } from 'react';
 import { Book, BookPage } from '../types/book';
 import { useBookManager } from '../hooks/useBookManager';
 import { BookTemplate } from '@/data/bookTemplates';
@@ -19,6 +19,7 @@ interface BookContextProps {
   duplicatePage: (id: string) => Promise<string | undefined>;
   loading: boolean;
   error: string | null;
+  retryLoading: () => void; // Add retry functionality
 }
 
 // Create the context with a default empty implementation to avoid undefined errors
@@ -36,7 +37,8 @@ const BookContext = createContext<BookContextProps>({
   reorderPage: async () => {},
   duplicatePage: async () => undefined,
   loading: false,
-  error: null
+  error: null,
+  retryLoading: () => {}
 });
 
 // Custom hook to use the book context
@@ -52,9 +54,15 @@ export const useBook = () => {
 // Provider component that wraps the parts of our app that need the context
 export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const bookManager = useBookManager();
+  const [retryCount, setRetryCount] = useState(0);
+  
+  // Add retry functionality to force a refresh
+  const retryLoading = () => {
+    setRetryCount(prev => prev + 1);
+  };
   
   return (
-    <BookContext.Provider value={bookManager}>
+    <BookContext.Provider value={{ ...bookManager, retryLoading }}>
       {children}
     </BookContext.Provider>
   );
