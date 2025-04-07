@@ -4,11 +4,22 @@ import { BookTemplate } from '@/data/bookTemplates';
 import { useBookOperations } from './useBookOperations';
 import { usePageOperations } from './usePageOperations';
 import { useCallback, useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useBookManager() {
   // Use a ref to track the refresh counter to avoid re-renders causing loops
   const refreshCounterRef = useRef(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { user, loading: authLoading } = useAuth();
+  
+  // Log the current state for debugging
+  useEffect(() => {
+    console.log('useBookManager: Auth state -', {
+      authLoading,
+      hasUser: !!user,
+      refreshTrigger
+    });
+  }, [authLoading, user, refreshTrigger]);
   
   const {
     books,
@@ -42,8 +53,20 @@ export function useBookManager() {
     setRefreshTrigger(refreshCounterRef.current);
   }, []);
 
+  // Force refresh when auth state changes
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log('Auth state updated with user, triggering book refresh');
+      // Small delay to ensure auth is fully ready
+      const timer = setTimeout(() => {
+        forceRefresh();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [authLoading, user, forceRefresh]);
+
   // Combine loading and error states
-  const loading = bookLoading || pageLoading;
+  const loading = authLoading || bookLoading || pageLoading;
   const error = bookError || pageError;
 
   return {

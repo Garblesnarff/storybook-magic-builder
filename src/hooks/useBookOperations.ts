@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Book } from '../types/book';
 import { 
@@ -17,28 +18,39 @@ export function useBookOperations(refreshCounter = 0) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   
   const initializeBooks = useCallback(async () => {
+    // Don't fetch books if auth is still loading - wait for it to complete
+    if (authLoading) {
+      console.log('Auth still loading, deferring book initialization');
+      return;
+    }
+    
+    // Skip if already initialized and no refresh requested
     if (hasInitialized && books.length > 0 && refreshCounter === 0) {
       console.log('Books already loaded, skipping initialization');
       return;
     }
     
+    // If no user, clear books
     if (!user) {
-      console.log('No user, skipping book initialization');
+      console.log('No user, clearing books');
       setBooks([]);
+      setCurrentBook(null);
       setLoading(false);
       setHasInitialized(true);
       return;
     }
     
+    // Fetch books
     try {
       setLoading(true);
       setError(null);
       console.log(`Loading books from Supabase for user: ${user.id} (refresh: ${refreshCounter})`);
       
       const fetchedBooks = await loadAllBooks();
+      console.log('Total books fetched:', fetchedBooks.length);
       
       const userBooks = fetchedBooks.filter(book => book.userId === user.id);
       console.log(`Found ${userBooks.length} books for user ${user.id}`);
@@ -55,15 +67,28 @@ export function useBookOperations(refreshCounter = 0) {
     } catch (e) {
       console.error('Error initializing books', e);
       setError('Failed to load books');
+      toast.error('Failed to load your books. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [user, books.length, hasInitialized, refreshCounter]);
+  }, [user, books.length, hasInitialized, refreshCounter, authLoading]);
 
+  // Separate effect for auth loading changes
   useEffect(() => {
-    console.log('Initializing books, refreshCounter:', refreshCounter);
-    initializeBooks();
-  }, [initializeBooks, refreshCounter]);
+    if (!authLoading && user) {
+      console.log('Auth loading completed with user, initializing books');
+      initializeBooks();
+    }
+  }, [authLoading, user, initializeBooks]);
+
+  // Effect for refresh counter changes
+  useEffect(() => {
+    if (refreshCounter > 0) {
+      console.log('Refresh requested, initializing books');
+      setHasInitialized(false); // Force refresh
+      initializeBooks();
+    }
+  }, [refreshCounter, initializeBooks]);
 
   const forceRefresh = useCallback(() => {
     console.log('Force refresh requested in useBookOperations');
@@ -79,6 +104,7 @@ export function useBookOperations(refreshCounter = 0) {
     
     try {
       const newBook = await createNewBook(user.id);
+      console.log('New book created:', newBook.id);
       setBooks(prevBooks => [...prevBooks, newBook]);
       setCurrentBook(newBook);
       return newBook.id;
@@ -101,6 +127,7 @@ export function useBookOperations(refreshCounter = 0) {
       const mergedBook = { ...savedBook, ...newBook, id: savedBook.id, userId: user.id };
       await updateBookService(mergedBook, books);
       
+      console.log('New book created from template:', mergedBook.id);
       setBooks(prevBooks => [...prevBooks, mergedBook]);
       setCurrentBook(mergedBook);
       return mergedBook.id;
@@ -113,11 +140,14 @@ export function useBookOperations(refreshCounter = 0) {
 
   const loadBook = useCallback(async (id: string): Promise<Book | null> => {
     try {
+      console.log('Loading book with ID:', id);
       const book = await loadBookById(id);
       if (book) {
+        console.log('Book loaded successfully:', book.id);
         setCurrentBook(book);
         return book;
       }
+      console.log('Book not found with ID:', id);
       return null;
     } catch (error) {
       console.error('Error loading book:', error);
@@ -128,6 +158,7 @@ export function useBookOperations(refreshCounter = 0) {
 
   const updateBookState = useCallback(async (updatedBook: Book): Promise<void> => {
     try {
+      console.log('Updating book:', updatedBook.id);
       const updatedBooksResult = await updateBookService(updatedBook, books); 
       setBooks(updatedBooksResult);
       
@@ -142,6 +173,7 @@ export function useBookOperations(refreshCounter = 0) {
 
   const deleteBook = useCallback(async (id: string): Promise<void> => {
     try {
+      console.log('Deleting book:', id);
       const updatedBooksResult = await deleteBookService(id, books); 
       setBooks(updatedBooksResult);
       

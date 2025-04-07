@@ -23,7 +23,7 @@ function App() {
     // Create session check function
     const checkAuth = async () => {
       try {
-        console.log('App.tsx: Checking auth status...');
+        console.log('App.tsx: Initial auth check starting...');
         
         // Get current session
         const { data, error } = await supabase.auth.getSession();
@@ -35,30 +35,34 @@ function App() {
         }
         
         if (!data.session) {
-          console.log('User is not authenticated. No active session found.');
-          toast.info('Some features like saving images require signing in');
+          console.log('No active session found.');
         } else {
-          console.log('User is authenticated:', data.session.user.id);
+          console.log('Active session found for user:', data.session.user.id);
           
           // Verify the session is valid and tokens are fresh
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-          
-          if (refreshError) {
-            console.error('Session refresh failed:', refreshError);
-            await supabase.auth.signOut();
-            toast.error('Session expired. Please sign in again.');
-          } else {
-            console.log('Session refreshed successfully in App.tsx');
-            console.log('Token will expire at:', 
-              new Date(refreshData.session!.expires_at! * 1000).toISOString());
+          try {
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
             
-            // Check storage access with refreshed session
-            await initializeStorage();
+            if (refreshError) {
+              console.error('Session refresh failed:', refreshError);
+              await supabase.auth.signOut();
+              toast.error('Session expired. Please sign in again.');
+            } else {
+              console.log('Session refreshed successfully');
+              
+              // Initialize storage with refreshed token
+              await initializeStorage();
+            }
+          } catch (refreshException) {
+            console.error('Exception during session refresh:', refreshException);
+            toast.error('Authentication error occurred. Please sign in again.');
           }
         }
       } catch (error) {
         console.error('Unexpected error during auth check:', error);
         toast.error('An error occurred while checking authentication status');
+      } finally {
+        console.log('App.tsx: Initial auth check complete');
       }
     };
     
@@ -71,7 +75,6 @@ function App() {
       
       if (event === 'SIGNED_IN') {
         console.log('User signed in:', session?.user.id);
-        
         // Check storage access on sign in
         await initializeStorage();
       } else if (event === 'SIGNED_OUT') {
@@ -80,18 +83,20 @@ function App() {
         console.log('Token refreshed in auth listener');
         // Initialize storage after token refresh
         await initializeStorage();
-      } else if (event === 'USER_UPDATED') {
-        console.log('User updated');
       }
     });
     
     // Add a background interval that refreshes the session periodically
     const tokenRefreshInterval = setInterval(async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (data.session) {
-        console.log('Background token refresh: Refreshing session...');
-        await supabase.auth.refreshSession();
-        console.log('Background token refresh completed');
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (data.session) {
+          console.log('Background token refresh: Refreshing session...');
+          await supabase.auth.refreshSession();
+          console.log('Background token refresh completed');
+        }
+      } catch (error) {
+        console.error('Error during background token refresh:', error);
       }
     }, 5 * 60 * 1000); // Every 5 minutes
     

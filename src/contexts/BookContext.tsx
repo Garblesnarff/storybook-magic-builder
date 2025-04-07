@@ -4,6 +4,7 @@ import { Book, BookPage } from '../types/book';
 import { useBookManager } from '../hooks/useBookManager';
 import { BookTemplate } from '@/data/bookTemplates';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BookContextProps {
   books: Book[];
@@ -56,8 +57,21 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Create a local state for retry count
   const [retryCount, setRetryCount] = useState(0);
   
-  // Use bookManager outside of the useEffect to avoid re-creating it on every render
+  // Get authentication state
+  const { user, loading: authLoading } = useAuth();
+  
+  // Use bookManager hook to manage books
   const bookManager = useBookManager();
+  
+  // Log for debugging
+  useEffect(() => {
+    console.log('BookProvider: Auth state -', {
+      authLoading,
+      hasUser: !!user,
+      booksLoading: bookManager.loading,
+      booksCount: bookManager.books.length
+    });
+  }, [authLoading, user, bookManager.loading, bookManager.books.length]);
   
   // Simplified retry function that doesn't depend on bookManager directly
   const retryLoading = () => {

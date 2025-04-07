@@ -15,12 +15,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const [authCheckComplete, setAuthCheckComplete] = useState(false);
   const [showRetry, setShowRetry] = useState(false);
   
+  // Log the current auth state for debugging
+  useEffect(() => {
+    console.log('ProtectedRoute: Auth state -', {
+      authLoading,
+      authCheckComplete,
+      hasUser: !!user,
+      hasSession: !!session
+    });
+  }, [authLoading, authCheckComplete, user, session]);
+  
   // Set a timeout to ensure we don't get stuck in the loading state
   useEffect(() => {
     // If auth is still loading after 3 seconds, show retry option
     const timer = setTimeout(() => {
       if (authLoading) {
-        console.log('Auth check taking too long, showing retry option');
+        console.log('ProtectedRoute: Auth check taking too long, showing retry option');
         setShowRetry(true);
       }
     }, 3000); // 3 second timeout
@@ -28,7 +38,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     // If auth is still loading after 10 seconds, force completion
     const forceTimer = setTimeout(() => {
       if (authLoading) {
-        console.log('Auth check taking too long, forcing completion');
+        console.log('ProtectedRoute: Auth check taking too long, forcing completion');
         setAuthCheckComplete(true);
       }
     }, 10000); // 10 second timeout
@@ -46,16 +56,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }, [authLoading]);
   
-  // Monitor session validity
+  // Monitor session validity and redirect if not authenticated
   useEffect(() => {
-    if (!authLoading && !user && !session) {
+    if (!authLoading && authCheckComplete && !user && !session) {
+      console.log('ProtectedRoute: No user/session found after auth check completed');
       // Only show the toast if we weren't already on the auth page
       if (window.location.pathname !== '/auth') {
         toast.info('Please sign in to access this page');
         navigate('/auth');
       }
     }
-  }, [user, authLoading, session, navigate]);
+  }, [user, authLoading, session, navigate, authCheckComplete]);
 
   const handleRetry = () => {
     // Reset states
@@ -66,12 +77,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   };
 
   // Show a more informative loading state
-  if ((authLoading && !authCheckComplete) || (authCheckComplete && !user && !session)) {
+  if (authLoading && !authCheckComplete) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
         <p className="text-gray-600 mb-4">Verifying your account...</p>
-        {(showRetry || authCheckComplete) && (
+        {showRetry && (
           <div className="flex flex-col gap-2">
             <Button 
               onClick={handleRetry}
@@ -96,11 +107,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // If auth check is complete but no user, redirect to auth page
   if (authCheckComplete && !user) {
-    console.log('No user found, redirecting to auth page');
+    console.log('ProtectedRoute: No user found, redirecting to auth page');
     return <Navigate to="/auth" />;
   }
 
   // Render children if authenticated
-  console.log('User is authenticated, rendering protected content');
+  console.log('ProtectedRoute: User is authenticated, rendering protected content');
   return <>{children}</>;
 };
