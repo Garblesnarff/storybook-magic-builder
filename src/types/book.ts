@@ -1,3 +1,4 @@
+
 export interface Book {
   id: string;
   title: string;
@@ -9,7 +10,7 @@ export interface Book {
     width: number;
     height: number;
   };
-  userId: string; // Added userId field
+  userId: string;
   pages: BookPage[];
   createdAt: string;
   updatedAt: string;
@@ -17,6 +18,7 @@ export interface Book {
 
 export interface BookPage {
   id: string;
+  bookId: string; // Adding the missing bookId property
   pageNumber: number;
   text: string;
   image?: string;
@@ -34,6 +36,7 @@ export interface TextFormatting {
   isBold?: boolean;
   isItalic?: boolean;
   imageStyle?: string;
+  // Remove alignment if it's not part of the interface
 }
 
 export interface ImageSettings {
@@ -96,7 +99,7 @@ export const DEFAULT_BOOK: Omit<Book, 'id' | 'pages' | 'createdAt' | 'updatedAt'
 
 export const DEFAULT_PAGE_TEXT = 'Once upon a time...';
 
-export const DEFAULT_PAGE: Omit<BookPage, 'id' | 'pageNumber'> = {
+export const DEFAULT_PAGE: Omit<BookPage, 'id' | 'pageNumber' | 'bookId'> = {
   text: DEFAULT_PAGE_TEXT,
   layout: 'text-left-image-right'
 };

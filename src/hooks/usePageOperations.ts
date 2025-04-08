@@ -1,5 +1,6 @@
+
 // src/hooks/usePageOperations.ts
-import { useState, useCallback } from 'react'; // Added useCallback
+import { useState, useCallback } from 'react';
 import { Book, BookPage } from '../types/book';
 import { toast } from 'sonner';
 import {
@@ -8,7 +9,7 @@ import {
   deletePage as deletePageService,
   reorderPage as reorderPageService,
   duplicatePage as duplicatePageService
-} from '../services/pageOperations'; // Assuming these names
+} from '../services/pageOperations';
 // Import the function to fetch the book again
 import { loadBookById } from '../services/bookOperations';
 
@@ -19,11 +20,10 @@ export function usePageOperations(
   setBooks: React.Dispatch<React.SetStateAction<Book[]>>,
   setCurrentBook: React.Dispatch<React.SetStateAction<Book | null>>
 ) {
-  const [pageLoading, setPageLoading] = useState(false); // Maybe rename to isProcessing
+  const [pageLoading, setPageLoading] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
   // Modify addPage to return the new page ID
-  // (Assuming addPageService returns [updatedBooks, newPageId])
   const addPage = useCallback(async (): Promise<string | undefined> => {
     if (!currentBook) return undefined;
     setPageLoading(true);
@@ -44,9 +44,9 @@ export function usePageOperations(
     } finally {
       setPageLoading(false);
     }
-  }, [currentBook, books, setBooks, setCurrentBook]); // Added dependencies
+  }, [currentBook, books, setBooks, setCurrentBook]);
 
-  // --- Replace the ENTIRE updatePage function ---
+  // Updated updatePage function
   const updatePage = async (pageToUpdate: BookPage): Promise<void> => {
     if (!currentBook) return;
     console.log(`updatePage: Received request to update page ${pageToUpdate.id}`);
@@ -57,13 +57,11 @@ export function usePageOperations(
 
     try {
       // Call the service function which handles DB update and image upload (if needed)
-      // This service MUST ensure the database row has the final public URL if an image was uploaded.
-      await updatePageService(pageToUpdate, currentBook, books); // Pass the potentially base64 image
+      await updatePageService(pageToUpdate);
 
       console.log(`updatePage: updatePageService completed for page ${pageToUpdate.id}. Fetching updated book state...`);
 
-      // *** Force a refresh of the book data from the source of truth (database) ***
-      // This ensures we get the final state, including the public image URL
+      // Force a refresh of the book data from the source of truth (database)
       const refreshedBook = await loadBookById(currentBook.id);
 
       if (refreshedBook) {
@@ -73,7 +71,6 @@ export function usePageOperations(
          setBooks(prevBooks => prevBooks.map(b => b.id === refreshedBook.id ? refreshedBook : b));
       } else {
          console.error(`updatePage: Failed to reload book ${currentBook.id} after update.`);
-         // Handle error - maybe revert? For now, just log.
          toast.error("Failed to refresh book data after saving.");
       }
 
@@ -81,12 +78,10 @@ export function usePageOperations(
       console.error('Error during updatePage process:', error);
       setPageError('Failed to update page');
       toast.error('Failed to save page changes.');
-      // No explicit rollback needed as we didn't do optimistic UI updates here
     } finally {
       setPageLoading(false);
     }
   };
-  // --- End of replaced updatePage function ---
 
   const deletePage = useCallback(async (id: string): Promise<void> => {
     if (!currentBook) return;
@@ -109,7 +104,7 @@ export function usePageOperations(
     } finally {
       setPageLoading(false);
     }
-  }, [currentBook, books, setBooks, setCurrentBook]); // Added dependencies
+  }, [currentBook, books, setBooks, setCurrentBook]);
 
   const reorderPage = useCallback(async (id: string, newPosition: number): Promise<void> => {
     if (!currentBook) return;
@@ -129,7 +124,7 @@ export function usePageOperations(
     } finally {
       setPageLoading(false);
     }
-  }, [currentBook, books, setBooks, setCurrentBook]); // Added dependencies
+  }, [currentBook, books, setBooks, setCurrentBook]);
 
   // (Assuming duplicatePageService returns [updatedBooks, newPageId])
   const duplicatePage = useCallback(async (id: string): Promise<string | undefined> => {
@@ -152,7 +147,7 @@ export function usePageOperations(
     } finally {
       setPageLoading(false);
     }
-  }, [currentBook, books, setBooks, setCurrentBook]); // Added dependencies
+  }, [currentBook, books, setBooks, setCurrentBook]);
 
 
   return {

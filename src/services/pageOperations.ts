@@ -1,3 +1,4 @@
+
 import { Book, BookPage } from '../types/book';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteBookImages } from './supabase/storageService';
@@ -6,20 +7,23 @@ import { deleteBookImages } from './supabase/storageService';
 import { uploadImage, deletePageImages } from './supabase/storageService';
 
 export const createBook = async (title: string, books: Book[]): Promise<Book[]> => {
+  const newBookId = uuidv4();
+  const newPageId = uuidv4();
+  
   const newBook: Book = {
-    id: uuidv4(),
+    id: newBookId,
     title: title,
     pages: [{
-      id: uuidv4(),
-      bookId: uuidv4(),
+      id: newPageId,
+      bookId: newBookId,
+      pageNumber: 1,
       text: 'This is the first page of your new book! Click here to edit the text.',
       image: '',
       layout: 'text-left-image-right',
       textFormatting: {
         fontFamily: 'Arial',
         fontSize: 16,
-        fontColor: '#000000',
-        alignment: 'left',
+        fontColor: '#000000'
       },
       imageSettings: {
         scale: 1,
@@ -27,24 +31,42 @@ export const createBook = async (title: string, books: Book[]): Promise<Book[]> 
         fitMethod: 'contain'
       }
     }],
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    author: 'Anonymous',
+    description: '',
+    orientation: 'portrait',
+    dimensions: {
+      width: 8.5,
+      height: 11
+    },
+    userId: ''
   };
 
   return [...books, newBook];
 };
 
 export const createBookFromTemplate = async (template: any, books: Book[]): Promise<Book[]> => {
+  const newBookId = uuidv4();
+  
   const newBook: Book = {
-    id: uuidv4(),
+    id: newBookId,
     title: template.title,
     pages: template.pages.map((page: any) => ({
       ...page,
       id: uuidv4(),
-      bookId: uuidv4(),
+      bookId: newBookId,
     })),
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    author: 'Anonymous',
+    description: '',
+    orientation: 'portrait',
+    dimensions: {
+      width: 8.5,
+      height: 11
+    },
+    userId: ''
   };
 
   return [...books, newBook];
@@ -67,17 +89,19 @@ export const deleteBook = async (id: string, books: Book[]): Promise<Book[]> => 
 };
 
 export const addPage = async (book: Book, allBooks: Book[]): Promise<[Book[], string]> => {
+  const newPageId = uuidv4();
+  
   const newPage: BookPage = {
-    id: uuidv4(),
+    id: newPageId,
     bookId: book.id,
+    pageNumber: book.pages.length + 1,
     text: 'New page content. Click here to edit the text.',
     image: '',
     layout: 'text-left-image-right',
     textFormatting: {
       fontFamily: 'Arial',
       fontSize: 16,
-      fontColor: '#000000',
-      alignment: 'left',
+      fontColor: '#000000'
     },
     imageSettings: {
       scale: 1,
@@ -89,7 +113,7 @@ export const addPage = async (book: Book, allBooks: Book[]): Promise<[Book[], st
   const updatedBook: Book = {
     ...book,
     pages: [...book.pages, newPage],
-    updatedAt: new Date(),
+    updatedAt: new Date().toISOString(),
   };
 
   const updatedBooks = allBooks.map(b => b.id === book.id ? updatedBook : b);
@@ -120,7 +144,7 @@ export const updatePage = async (page: BookPage): Promise<void> => {
     // Update the page in the database
     const updatedPage = {
       ...page,
-      updatedAt: new Date(),
+      updatedAt: new Date().toISOString(),
     };
 
     // Simulate API call
@@ -149,7 +173,7 @@ export const deletePage = async (pageId: string, book: Book, allBooks: Book[]): 
     const updatedBook: Book = {
       ...book,
       pages: book.pages.filter(page => page.id !== pageId),
-      updatedAt: new Date(),
+      updatedAt: new Date().toISOString(),
     };
 
     const updatedBooks = allBooks.map(b => b.id === book.id ? updatedBook : b);
@@ -176,7 +200,7 @@ export const reorderPage = async (id: string, newPosition: number, book: Book, a
   const updatedBook: Book = {
     ...book,
     pages: updatedPages,
-    updatedAt: new Date(),
+    updatedAt: new Date().toISOString(),
   };
 
   return allBooks.map(b => b.id === book.id ? updatedBook : b);
@@ -190,16 +214,18 @@ export const duplicatePage = async (id: string, book: Book, allBooks: Book[]): P
     return [allBooks, undefined];
   }
 
+  const newPageId = uuidv4();
+  
   const newPage: BookPage = {
     ...pageToDuplicate,
-    id: uuidv4(),
+    id: newPageId,
     bookId: book.id,
   };
 
   const updatedBook: Book = {
     ...book,
     pages: [...book.pages, newPage],
-    updatedAt: new Date(),
+    updatedAt: new Date().toISOString(),
   };
 
   const updatedBooks = allBooks.map(b => b.id === book.id ? updatedBook : b);

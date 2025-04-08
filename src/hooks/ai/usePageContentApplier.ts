@@ -62,18 +62,16 @@ export function usePageContentApplier(
     
     setProcessingStory(true);
     try {
-      // Get the book ID from the current page
-      const bookId = currentPageData.bookId;
-      if (!bookId) {
+      if (!currentPageData.bookId) {
         toast.error('Could not determine book ID');
         return;
       }
       
-      console.log(`Generating image for page ${currentPageData.id} in book ${bookId}`);
+      console.log(`Generating image for page ${currentPageData.id} in book ${currentPageData.bookId}`);
       const imageStyle = currentPageData.textFormatting?.imageStyle || 'REALISTIC';
       
       // Generate and upload the image, returning the storage URL
-      const imageUrl = await generateImage(prompt, imageStyle, bookId, currentPageData.id);
+      const imageUrl = await generateImage(prompt, imageStyle, currentPageData.bookId, currentPageData.id);
       
       if (imageUrl) {
         console.log('Image URL from generation:', imageUrl);
@@ -115,8 +113,7 @@ export function usePageContentApplier(
     setIsGenerating(true);
     
     try {
-      const bookId = currentPageData.bookId;
-      if (!bookId) {
+      if (!currentPageData.bookId) {
         toast.error('Could not determine book ID');
         return;
       }
@@ -129,7 +126,7 @@ export function usePageContentApplier(
       const imageUrl = await generateImage(
         currentPageData.text,
         imageStyle,
-        bookId,
+        currentPageData.bookId,
         currentPageData.id
       );
       
