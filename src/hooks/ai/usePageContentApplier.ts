@@ -76,17 +76,26 @@ export function usePageContentApplier(
       if (imageUrl) {
         console.log('Image URL from generation:', imageUrl);
         
-        // Create updated page object
+        // Create a deep copy of the current page data to avoid reference issues
+        const pageToUpdate = JSON.parse(JSON.stringify(currentPageData));
+        
+        // Create updated page object with the new image
         const updatedPage = {
-          ...currentPageData,
+          ...pageToUpdate,
           image: imageUrl
         };
+        
+        console.log('Updated page data before setting:', updatedPage);
         
         // Update local state first for immediate feedback
         setCurrentPageData(updatedPage);
         
-        // Update in database
-        await updatePage(updatedPage);
+        // Update in database with a slight delay to ensure UI updates first
+        setTimeout(async () => {
+          console.log('Saving page with new image to database:', updatedPage);
+          await updatePage(updatedPage);
+          console.log('Database update complete for image');
+        }, 100);
         
         toast.success('Image applied to page');
       }
@@ -133,17 +142,28 @@ export function usePageContentApplier(
       if (imageUrl) {
         console.log('Generated image URL:', imageUrl);
         
-        // Create updated page object
+        // Create a deep copy of the current page data to avoid reference issues
+        const pageToUpdate = JSON.parse(JSON.stringify(currentPageData));
+        
+        // Create updated page object with the new image
         const updatedPage = {
-          ...currentPageData,
+          ...pageToUpdate,
           image: imageUrl
         };
+        
+        console.log('Updating page data with new image:', updatedPage);
         
         // Update local state first for immediate feedback
         setCurrentPageData(updatedPage);
         
-        // Update in database
-        await updatePage(updatedPage);
+        // Update in database with a slight delay to ensure UI updates first
+        setTimeout(async () => {
+          console.log('Saving page with generated image to database:', updatedPage);
+          await updatePage(updatedPage);
+          console.log('Database update complete for generated image');
+        }, 100);
+        
+        toast.success('Image generated and applied to page');
       }
     } catch (error) {
       console.error('Error generating image:', error);

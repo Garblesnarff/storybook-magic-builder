@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useBook } from '@/contexts/BookContext';
 import { useBookLoading } from './page/useBookLoading';
@@ -11,6 +10,7 @@ import { useTextEditor } from './page/useTextEditor';
 import { useImageSettings } from './page/useImageSettings';
 import { useBookTitle } from './page/useBookTitle';
 import { BookPage, ImageSettings } from '@/types/book';
+import { toast } from 'sonner';
 
 export const usePageState = (bookId?: string) => {
   // Use the book context
@@ -40,18 +40,33 @@ export const usePageState = (bookId?: string) => {
   // Get current page data
   const { currentPageData, setCurrentPageData } = usePageData(currentBook, selectedPageId);
   
-  // Create wrapper for updatePage to handle saving state
+  // Create wrapper for updatePage to handle saving state and ensure proper state updates
   const updatePage = useCallback(async (page: BookPage): Promise<void> => {
     try {
+      // Log the update operation
+      console.log(`updatePage in usePageState called for page ${page.id}`);
       trackSavingOperation();
-      await contextUpdatePage(page);
+      
+      // Make a deep copy of the page to avoid reference issues
+      const pageToUpdate = JSON.parse(JSON.stringify(page));
+      
+      // Update the local state immediately for responsive UI
+      if (currentPageData && currentPageData.id === page.id) {
+        console.log('Updating local state with new page data');
+        setCurrentPageData(pageToUpdate);
+      }
+      
+      // Persist to the database
+      await contextUpdatePage(pageToUpdate);
+      console.log(`Page ${page.id} successfully updated in database`);
     } catch (error) {
       console.error('Error in updatePage:', error);
+      toast.error('Failed to update page');
       throw error;
     } finally {
       completeSavingOperation();
     }
-  }, [contextUpdatePage, trackSavingOperation, completeSavingOperation]);
+  }, [contextUpdatePage, trackSavingOperation, completeSavingOperation, currentPageData, setCurrentPageData]);
   
   // Page operations (add, delete, duplicate, reorder)
   const {

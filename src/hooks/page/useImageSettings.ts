@@ -30,11 +30,14 @@ export function useImageSettings(
       }
     }
 
+    // Create a local copy of the current page data to avoid reference issues
+    const pageDataCopy = {...currentPageData};
+
     imageSettingsTimeoutRef.current = setTimeout(async () => {
-      console.log(`useImageSettings: Debounced timeout fired. Calling updatePage for page ${currentPageData.id}`);
+      console.log(`useImageSettings: Debounced timeout fired. Calling updatePage for page ${pageDataCopy.id}`);
       
-      if (!currentPageData) {
-        console.warn("useImageSettings: currentPageData became null during debounce, skipping save.");
+      if (!pageDataCopy) {
+        console.warn("useImageSettings: pageDataCopy is null during debounce, skipping save.");
         if (isImageSaveDebouncing.current) {
           completeSavingOperation();
           isImageSaveDebouncing.current = false;
@@ -44,15 +47,15 @@ export function useImageSettings(
       }
       
       const updatedPage = {
-        ...currentPageData,
+        ...pageDataCopy,
         imageSettings: settings
       };
 
       try {
         await updatePage(updatedPage);
-        console.log(`useImageSettings: updatePage successful for page ${currentPageData.id}`);
+        console.log(`useImageSettings: updatePage successful for page ${pageDataCopy.id}`);
       } catch (error) {
-        console.error(`useImageSettings: updatePage failed for page ${currentPageData.id}`, error);
+        console.error(`useImageSettings: updatePage failed for page ${pageDataCopy.id}`, error);
       } finally {
         imageSettingsTimeoutRef.current = null;
         if (isImageSaveDebouncing.current) {
