@@ -12,10 +12,11 @@ export interface BookTemplate {
 }
 
 // Helper function to create pages based on a template
-const createTemplatePages = (layouts: PageLayout[], texts: string[]): BookPage[] => {
+const createTemplatePages = (layouts: PageLayout[], texts: string[], bookId: string): BookPage[] => {
   return layouts.map((layout, index) => ({
     ...DEFAULT_PAGE,
     id: uuidv4(),
+    bookId, // Add the bookId to each page
     pageNumber: index,
     text: texts[index] || DEFAULT_PAGE.text,
     layout
@@ -43,6 +44,7 @@ export const bookTemplates: BookTemplate[] = [
           {
             ...DEFAULT_PAGE,
             id: uuidv4(),
+            bookId: id, // Add bookId here
             pageNumber: 0,
             layout: "text-left-image-right"
           }
@@ -78,7 +80,7 @@ export const bookTemplates: BookTemplate[] = [
         title: "My Alphabet Book",
         createdAt: now,
         updatedAt: now,
-        pages: createTemplatePages(layouts, texts)
+        pages: createTemplatePages(layouts, texts, id) // Pass the book ID
       };
     }
   },
@@ -109,7 +111,7 @@ export const bookTemplates: BookTemplate[] = [
         title: "My Counting Book",
         createdAt: now,
         updatedAt: now,
-        pages: createTemplatePages(layouts, texts)
+        pages: createTemplatePages(layouts, texts, id) // Pass the book ID
       };
     }
   },
@@ -160,7 +162,7 @@ export const bookTemplates: BookTemplate[] = [
         title: "My Story Book",
         createdAt: now,
         updatedAt: now,
-        pages: createTemplatePages(layouts, texts)
+        pages: createTemplatePages(layouts, texts, id) // Pass the book ID
       };
     }
   },
@@ -203,7 +205,7 @@ export const bookTemplates: BookTemplate[] = [
         title: "My Bedtime Book",
         createdAt: now,
         updatedAt: now,
-        pages: createTemplatePages(layouts, texts)
+        pages: createTemplatePages(layouts, texts, id) // Pass the book ID
       };
     }
   }

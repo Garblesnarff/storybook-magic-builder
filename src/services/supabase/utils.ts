@@ -40,6 +40,7 @@ export const databasePageToBookPage = (dbPage: any): BookPage => {
   
   return {
     id: dbPage.id,
+    bookId: dbPage.book_id, // Make sure to include bookId
     pageNumber: dbPage.page_number,
     text: dbPage.text || '', // Use empty string if null, not default text
     image: dbPage.image_url,

@@ -44,6 +44,7 @@ export const fetchBookFromDatabase = async (bookId: string): Promise<Book | null
 
       return {
         id: dbPage.id,
+        bookId: bookId, // Ensure bookId is set correctly
         pageNumber: dbPage.page_number,
         text: dbPage.text || '',
         image: dbPage.image_url,

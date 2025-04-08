@@ -15,7 +15,7 @@ export const createBook = async (title: string, books: Book[]): Promise<Book[]> 
     title: title,
     pages: [{
       id: newPageId,
-      bookId: newBookId,
+      bookId: newBookId, // Add bookId here
       pageNumber: 1,
       text: 'This is the first page of your new book! Click here to edit the text.',
       image: '',
@@ -55,7 +55,7 @@ export const createBookFromTemplate = async (template: any, books: Book[]): Prom
     pages: template.pages.map((page: any) => ({
       ...page,
       id: uuidv4(),
-      bookId: newBookId,
+      bookId: newBookId, // Add bookId here
     })),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -93,7 +93,7 @@ export const addPage = async (book: Book, allBooks: Book[]): Promise<[Book[], st
   
   const newPage: BookPage = {
     id: newPageId,
-    bookId: book.id,
+    bookId: book.id, // Add bookId here
     pageNumber: book.pages.length + 1,
     text: 'New page content. Click here to edit the text.',
     image: '',
@@ -219,7 +219,7 @@ export const duplicatePage = async (id: string, book: Book, allBooks: Book[]): P
   const newPage: BookPage = {
     ...pageToDuplicate,
     id: newPageId,
-    bookId: book.id,
+    bookId: book.id, // Ensure bookId is set correctly
   };
 
   const updatedBook: Book = {

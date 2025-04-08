@@ -1,3 +1,4 @@
+
 import { Book, BookPage, DEFAULT_BOOK, DEFAULT_PAGE, DEFAULT_PAGE_TEXT } from '../types/book';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -12,11 +13,12 @@ import {
  * Core book creation and management functions
  */
 export const createNewBook = async (userId: string): Promise<Book> => {
+  const newBookId = uuidv4();
   const newBook: Book = {
     ...DEFAULT_BOOK,
-    id: uuidv4(),
+    id: newBookId,
     userId: userId,
-    pages: [createNewPage(0)],
+    pages: [createNewPage(0, newBookId)], // Pass bookId to createNewPage
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -26,10 +28,11 @@ export const createNewBook = async (userId: string): Promise<Book> => {
   return savedBook || newBook; // Fallback to the local book if save fails
 };
 
-export const createNewPage = (pageNumber: number): BookPage => {
+export const createNewPage = (pageNumber: number, bookId: string): BookPage => {
   return {
     ...DEFAULT_PAGE,
     id: uuidv4(),
+    bookId, // Set the bookId
     pageNumber,
     text: DEFAULT_PAGE_TEXT  // Ensure we use the constant here
   };

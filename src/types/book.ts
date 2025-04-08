@@ -1,4 +1,3 @@
-
 export interface Book {
   id: string;
   title: string;
@@ -18,7 +17,7 @@ export interface Book {
 
 export interface BookPage {
   id: string;
-  bookId: string; // Adding the missing bookId property
+  bookId: string;
   pageNumber: number;
   text: string;
   image?: string;
@@ -36,7 +35,6 @@ export interface TextFormatting {
   isBold?: boolean;
   isItalic?: boolean;
   imageStyle?: string;
-  // Remove alignment if it's not part of the interface
 }
 
 export interface ImageSettings {
@@ -45,7 +43,6 @@ export interface ImageSettings {
   fitMethod: 'contain' | 'cover' | 'fill';
 }
 
-// Updated PageLayout type to include all layout values used in the codebase
 export type PageLayout =
   | 'text-left-image-right'
   | 'text-right-image-left'
@@ -58,7 +55,6 @@ export type PageLayout =
   | 'full-page-text'
   | 'full-page-image';
 
-// Add missing layouts mapping for the LayoutSettings component
 export const layoutNames: Record<PageLayout, string> = {
   'text-left-image-right': 'Text Left, Image Right',
   'text-right-image-left': 'Text Right, Image Left',
@@ -72,7 +68,6 @@ export const layoutNames: Record<PageLayout, string> = {
   'full-page-image': 'Full Page Image'
 };
 
-// Enhance IMAGE_STYLES to include detailed descriptions for the prompt
 export const IMAGE_STYLES = [
   { id: 'REALISTIC', name: 'Realistic', description: 'realistic, detailed, photorealistic style' },
   { id: 'CARTOON', name: 'Cartoon', description: 'cartoon style, animated, colorful, kid-friendly' },
@@ -83,7 +78,6 @@ export const IMAGE_STYLES = [
   { id: 'VINTAGE', name: 'Vintage', description: 'vintage illustration style, retro, nostalgic' }
 ];
 
-// Helper function to get style description by ID
 export function getStyleDescriptionById(styleId: string): string {
   const style = IMAGE_STYLES.find(style => style.id === styleId);
   return style?.description || 'realistic, detailed style';
