@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { IMAGE_STYLES } from '@/types/book';
+import { IMAGE_STYLES, getStyleDescriptionById } from '@/types/book';
 import {
   Select,
   SelectContent,
@@ -31,6 +31,17 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
   onGenerate,
   onApply
 }) => {
+  // On component mount, apply default image style from localStorage
+  useEffect(() => {
+    const defaultStyle = localStorage.getItem('defaultImageStyle');
+    if (defaultStyle) {
+      setImageStyle(defaultStyle);
+    }
+  }, [setImageStyle]);
+
+  // Get the current style name for display
+  const currentStyleName = IMAGE_STYLES.find(style => style.id === imageStyle)?.name || 'Realistic';
+  
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -50,6 +61,9 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
             ))}
           </SelectContent>
         </Select>
+        <p className="text-xs text-gray-500 mt-1">
+          {IMAGE_STYLES.find(style => style.id === imageStyle)?.description}
+        </p>
       </div>
       
       <Button 
@@ -60,12 +74,12 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
         {isGenerating ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Generating...
+            Generating {currentStyleName.toLowerCase()} image...
           </>
         ) : (
           <>
             <Sparkles className="mr-2 h-4 w-4" />
-            Generate Image
+            Generate {currentStyleName} Image
           </>
         )}
       </Button>

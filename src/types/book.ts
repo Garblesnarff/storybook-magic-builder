@@ -1,4 +1,3 @@
-
 export interface Book {
   id: string;
   title: string;
@@ -70,16 +69,22 @@ export const layoutNames: Record<PageLayout, string> = {
   'full-page-image': 'Full Page Image'
 };
 
-// Add missing IMAGE_STYLES constant for the ImageSettings component
+// Enhance IMAGE_STYLES to include detailed descriptions for the prompt
 export const IMAGE_STYLES = [
-  { id: 'REALISTIC', name: 'Realistic' },
-  { id: 'CARTOON', name: 'Cartoon' },
-  { id: 'WATERCOLOR', name: 'Watercolor' },
-  { id: 'SKETCH', name: 'Sketch' },
-  { id: 'ABSTRACT', name: 'Abstract' },
-  { id: 'FANTASY', name: 'Fantasy' },
-  { id: 'VINTAGE', name: 'Vintage' }
+  { id: 'REALISTIC', name: 'Realistic', description: 'realistic, detailed, photorealistic style' },
+  { id: 'CARTOON', name: 'Cartoon', description: 'cartoon style, animated, colorful, kid-friendly' },
+  { id: 'WATERCOLOR', name: 'Watercolor', description: 'watercolor painting style, soft brushstrokes, artistic' },
+  { id: 'SKETCH', name: 'Pencil Sketch', description: 'pencil sketch style, hand-drawn, detailed linework' },
+  { id: 'ABSTRACT', name: 'Abstract', description: 'abstract art style, non-representational, colorful shapes' },
+  { id: 'FANTASY', name: 'Fantasy', description: 'fantasy illustration style, magical, whimsical' },
+  { id: 'VINTAGE', name: 'Vintage', description: 'vintage illustration style, retro, nostalgic' }
 ];
+
+// Helper function to get style description by ID
+export function getStyleDescriptionById(styleId: string): string {
+  const style = IMAGE_STYLES.find(style => style.id === styleId);
+  return style?.description || 'realistic, detailed style';
+}
 
 export const DEFAULT_BOOK: Omit<Book, 'id' | 'pages' | 'createdAt' | 'updatedAt' | 'userId'> = {
   title: 'Untitled Book',
