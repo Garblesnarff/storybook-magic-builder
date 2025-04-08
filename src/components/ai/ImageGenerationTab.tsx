@@ -21,6 +21,8 @@ interface ImageGenerationTabProps {
   generatedImage: string | null;
   onGenerate: () => Promise<void>;
   onApply: () => void;
+  bookId?: string;
+  pageId?: string;
 }
 
 export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
@@ -30,10 +32,13 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
   isGenerating,
   generatedImage,
   onGenerate,
-  onApply
+  onApply,
+  bookId,
+  pageId
 }) => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   // On component mount, apply default image style from localStorage
   useEffect(() => {
@@ -57,6 +62,13 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
     }
   };
 
+  // Reset image load error when getting a new image
+  useEffect(() => {
+    if (generatedImage) {
+      setImageLoadError(false);
+    }
+  }, [generatedImage]);
+
   // Handle generate with additional error catching
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -65,10 +77,16 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
     }
 
     setError(null);
+    setImageLoadError(false);
     
     try {
       console.log('Starting image generation with prompt:', prompt.substring(0, 50));
+      if (bookId && pageId) {
+        console.log(`For book ID: ${bookId}, page ID: ${pageId}`);
+      }
+      
       await onGenerate();
+      
       // Reset retry count on successful generation
       setRetryCount(0);
     } catch (err) {
@@ -168,6 +186,18 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
         </div>
       )}
       
+      {imageLoadError && !error && (
+        <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800 text-sm">
+          <div className="flex items-start">
+            <AlertCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Image display issue</p>
+              <p className="mt-1">The image was generated but couldn't be displayed properly. You can still apply it to the page.</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {generatedImage && !error && (
         <div className="space-y-4 mt-4">
           <div className="border rounded-md overflow-hidden">
@@ -175,6 +205,11 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
               src={generatedImage} 
               alt="AI generated" 
               className="w-full h-auto"
+              onError={(e) => {
+                console.error('Generated image failed to load in preview');
+                setImageLoadError(true);
+                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZWVlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTk5OTkiPkltYWdlIGdlbmVyYXRlZCBidXQgY291bGRuJ3QgYmUgZGlzcGxheWVkPC90ZXh0Pjwvc3ZnPg==';
+              }}
             />
           </div>
           <Button 

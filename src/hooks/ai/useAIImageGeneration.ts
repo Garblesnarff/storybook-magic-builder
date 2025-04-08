@@ -2,12 +2,13 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { uploadImage } from '@/services/supabase/storageService';
 
 export function useAIImageGeneration() {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
-  const generateImage = async (prompt: string, imageStyle: string = 'REALISTIC') => {
+  const generateImage = async (prompt: string, imageStyle: string = 'REALISTIC', bookId?: string, pageId?: string) => {
     if (!prompt.trim()) {
       toast.error('Please enter a prompt first');
       return null;
@@ -18,6 +19,7 @@ export function useAIImageGeneration() {
 
     try {
       console.log(`Generating image with prompt: "${prompt.substring(0, 30)}..." and style: ${imageStyle}`);
+      console.log(`Book ID: ${bookId || 'not provided'}, Page ID: ${pageId || 'not provided'}`);
       
       const response = await supabase.functions.invoke('generate-image', {
         body: JSON.stringify({ 
@@ -57,12 +59,33 @@ export function useAIImageGeneration() {
         return null;
       }
 
-      // Format and return the image data
+      // Format the base64 image data
       const imageData = `data:image/png;base64,${response.data.image}`;
       console.log('Image generated successfully');
       setGeneratedImage(imageData);
-      toast.success('Image generated successfully!');
-      return imageData;
+      
+      // If book ID and page ID are provided, upload to storage
+      if (bookId && pageId) {
+        console.log('Uploading image to storage...');
+        const imageUrl = await uploadImage(imageData, bookId, pageId);
+        
+        if (imageUrl) {
+          console.log('Image uploaded successfully:', imageUrl);
+          // Return the public URL instead of the base64 data
+          toast.success('Image generated and uploaded successfully!');
+          return imageUrl;
+        } else {
+          console.error('Failed to upload image to storage');
+          toast.error('Image upload failed', {
+            description: 'Generated image could not be saved to storage'
+          });
+          // Still return the base64 data so the user can see the image
+          return imageData;
+        }
+      } else {
+        toast.success('Image generated successfully!');
+        return imageData;
+      }
     } catch (error) {
       console.error('Image generation error:', error);
       toast.error('Image generation failed', {

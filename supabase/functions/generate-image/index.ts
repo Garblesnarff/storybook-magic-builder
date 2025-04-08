@@ -104,9 +104,6 @@ serve(async (req) => {
     
     console.log(`Sending image generation request to Gemini API endpoint: ${url}`);
     
-    // Log the request body for debugging
-    console.log('Request body:', JSON.stringify(requestBody, null, 2));
-    
     // Make the request to Gemini API with the key as a query parameter
     const response = await fetch(`${url}?key=${apiKey}`, {
       method: 'POST',
@@ -117,11 +114,7 @@ serve(async (req) => {
     });
 
     console.log('Gemini API response status:', response.status);
-    console.log('Gemini API response status text:', response.statusText);
     
-    const responseHeaders = Object.fromEntries([...response.headers]);
-    console.log('Gemini API response headers:', JSON.stringify(responseHeaders, null, 2));
-
     // Handle API error responses
     if (!response.ok) {
       const errorText = await response.text();
@@ -179,38 +172,31 @@ serve(async (req) => {
           console.log('Parts types:', data.candidates[0].content.parts.map(part => 
             Object.keys(part).join(', ')
           ));
-        }
-      }
-    } else {
-      console.log('No candidates found in response');
-      console.log('Full response:', JSON.stringify(data, null, 2));
-    }
-    
-    // Extract the image data from the response
-    if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-      const parts = data.candidates[0].content.parts;
-      
-      for (const part of parts) {
-        // Check for inline data which would contain the image
-        if (part.inlineData) {
-          console.log('Image data found successfully');
           
-          // Return just the base64 data for compatibility with existing frontend
-          return new Response(
-            JSON.stringify({ 
-              image: part.inlineData.data
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          // Extract the image data from the response
+          for (const part of data.candidates[0].content.parts) {
+            // Check for inline data which would contain the image
+            if (part.inlineData) {
+              console.log('Image data found successfully');
+              
+              // Return just the base64 data for compatibility with existing frontend
+              return new Response(
+                JSON.stringify({ 
+                  image: part.inlineData.data,
+                  success: true
+                }),
+                { 
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+                }
+              );
             }
-          );
+          }
         }
       }
     }
     
     // If no image was found in the response
     console.log('No image found in Gemini response');
-    console.log('Full response structure:', JSON.stringify(data, null, 2));
     
     return new Response(
       JSON.stringify({ 

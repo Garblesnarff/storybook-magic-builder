@@ -1,166 +1,207 @@
-
-import { Book, BookPage, DEFAULT_PAGE_TEXT } from '../types/book';
+import { Book, BookPage } from '../types/book';
 import { v4 as uuidv4 } from 'uuid';
-import { createNewPage, updateBook } from './bookOperations';
-import { 
-  addPageToSupabase,
-  updatePageInSupabase,
-  deletePageFromSupabase,
-  reorderPagesInSupabase
-} from './supabaseStorage';
+import { deleteBookImages } from './supabase/storageService';
 
-/**
- * Page-specific operations
- */
-// Modify return type to include the new page ID
-export const addPage = async (currentBook: Book, books: Book[]): Promise<[Book[], string | undefined]> => {
-  if (!currentBook) return [books, undefined];
+// Import the storage service functions
+import { uploadImage, deletePageImages } from './supabase/storageService';
 
-  const newPageNumber = currentBook.pages.length;
-  const newPageFromDb = await addPageToSupabase(currentBook.id, newPageNumber); // Capture the result
-  let newPageId: string | undefined = undefined;
-  let pageToAdd: BookPage;
-  
-  if (!newPageFromDb) {
-    // Fallback to local creation if Supabase fails
-    console.warn("Supabase failed to add page, creating locally.");
-    pageToAdd = createNewPage(newPageNumber);
-    // newPageId remains undefined in fallback
-  } else {
-    // Use the page returned from Supabase
-    pageToAdd = newPageFromDb;
-    newPageId = newPageFromDb.id; // Capture the ID
+export const createBook = async (title: string, books: Book[]): Promise<Book[]> => {
+  const newBook: Book = {
+    id: uuidv4(),
+    title: title,
+    pages: [{
+      id: uuidv4(),
+      bookId: uuidv4(),
+      text: 'This is the first page of your new book! Click here to edit the text.',
+      image: '',
+      layout: 'text-left-image-right',
+      textFormatting: {
+        fontFamily: 'Arial',
+        fontSize: 16,
+        fontColor: '#000000',
+        alignment: 'left',
+      },
+      imageSettings: {
+        scale: 1,
+        position: { x: 0, y: 0 },
+        fitMethod: 'contain'
+      }
+    }],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  return [...books, newBook];
+};
+
+export const createBookFromTemplate = async (template: any, books: Book[]): Promise<Book[]> => {
+  const newBook: Book = {
+    id: uuidv4(),
+    title: template.title,
+    pages: template.pages.map((page: any) => ({
+      ...page,
+      id: uuidv4(),
+      bookId: uuidv4(),
+    })),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  return [...books, newBook];
+};
+
+export const updateBook = async (bookToUpdate: Book, books: Book[]): Promise<Book[]> => {
+  return books.map(book => book.id === bookToUpdate.id ? bookToUpdate : book);
+};
+
+export const deleteBook = async (id: string, books: Book[]): Promise<Book[]> => {
+  // Before deleting the book, delete all associated images from storage
+  try {
+    await deleteBookImages(id);
+  } catch (storageError) {
+    console.error('Error deleting book images:', storageError);
+    // Continue with book deletion even if image deletion fails
   }
-  
-  // Update with the page (either from Supabase or local fallback)
-  const updatedBook = {
-    ...currentBook,
-    pages: [...currentBook.pages, pageToAdd],
-    updatedAt: new Date().toISOString()
-  };
 
-  // Assume updateBook returns the updated books array, and await it
-  const updatedBooksArray = await updateBook(updatedBook, books); 
-  
-  // Return the updated books array and the new page ID
-  return [updatedBooksArray, newPageId]; 
+  return books.filter(book => book.id !== id);
 };
 
-export const updatePage = async (updatedPage: BookPage, currentBook: Book, books: Book[]): Promise<Book[]> => {
-  // Removed erroneous pasted block from addPage fallback
-  if (!currentBook) return books;
+export const addPage = async (book: Book, allBooks: Book[]): Promise<[Book[], string]> => {
+  const newPage: BookPage = {
+    id: uuidv4(),
+    bookId: book.id,
+    text: 'New page content. Click here to edit the text.',
+    image: '',
+    layout: 'text-left-image-right',
+    textFormatting: {
+      fontFamily: 'Arial',
+      fontSize: 16,
+      fontColor: '#000000',
+      alignment: 'left',
+    },
+    imageSettings: {
+      scale: 1,
+      position: { x: 0, y: 0 },
+      fitMethod: 'contain'
+    }
+  };
 
-  // Update page in Supabase
-  await updatePageInSupabase(currentBook.id, updatedPage);
-  
-  // Update local state
-  const updatedPages = currentBook.pages.map(page => 
-    page.id === updatedPage.id ? updatedPage : page
-  );
+  const updatedBook: Book = {
+    ...book,
+    pages: [...book.pages, newPage],
+    updatedAt: new Date(),
+  };
 
-  const updatedBook = {
-    ...currentBook,
+  const updatedBooks = allBooks.map(b => b.id === book.id ? updatedBook : b);
+  return [updatedBooks, newPage.id];
+};
+
+// Update the updatePage function to handle base64 images and upload them to storage
+export const updatePage = async (page: BookPage): Promise<void> => {
+  try {
+    // Check if the page image is a base64 string that needs to be uploaded
+    if (page.image && page.image.startsWith('data:image')) {
+      console.log(`Uploading base64 image for page ${page.id} in book ${page.bookId}`);
+      
+      // Upload the image to storage and get the public URL
+      const imageUrl = await uploadImage(page.image, page.bookId, page.id);
+      
+      if (imageUrl) {
+        console.log(`Image uploaded successfully. Public URL: ${imageUrl}`);
+        // Update the page object with the new image URL
+        page.image = imageUrl;
+      } else {
+        console.error('Failed to upload image to storage');
+        // If upload fails, continue with the original base64 image
+        console.log('Continuing with base64 image data');
+      }
+    }
+    
+    // Update the page in the database
+    const updatedPage = {
+      ...page,
+      updatedAt: new Date(),
+    };
+
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log('Page updated successfully:', updatedPage);
+  } catch (error) {
+    console.error('Error in updatePage:', error);
+    throw error;
+  }
+};
+
+// Update the deletePage function to also delete associated images
+export const deletePage = async (pageId: string, book: Book, allBooks: Book[]): Promise<Book[]> => {
+  try {
+    console.log(`Deleting page ${pageId} from book ${book.id}`);
+    
+    // Attempt to delete any stored images associated with this page
+    try {
+      await deletePageImages(book.id, pageId);
+      console.log(`Deleted storage images for page ${pageId}`);
+    } catch (storageError) {
+      console.error('Error deleting page images:', storageError);
+      // Continue with page deletion even if image deletion fails
+    }
+    
+    const updatedBook: Book = {
+      ...book,
+      pages: book.pages.filter(page => page.id !== pageId),
+      updatedAt: new Date(),
+    };
+
+    const updatedBooks = allBooks.map(b => b.id === book.id ? updatedBook : b);
+    return updatedBooks;
+  } catch (error) {
+    console.error('Error in deletePage:', error);
+    throw error;
+  }
+};
+
+export const reorderPage = async (id: string, newPosition: number, book: Book, allBooks: Book[]): Promise<Book[]> => {
+  const pageToReorderIndex = book.pages.findIndex(page => page.id === id);
+
+  if (pageToReorderIndex === -1) {
+    console.error('Page not found in book');
+    return allBooks;
+  }
+
+  const pageToReorder = book.pages[pageToReorderIndex];
+  const updatedPages = [...book.pages];
+  updatedPages.splice(pageToReorderIndex, 1);
+  updatedPages.splice(newPosition, 0, pageToReorder);
+
+  const updatedBook: Book = {
+    ...book,
     pages: updatedPages,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date(),
   };
 
-  return books.map(book => book.id === updatedBook.id ? updatedBook : book);
+  return allBooks.map(b => b.id === book.id ? updatedBook : b);
 };
 
-export const deletePage = async (id: string, currentBook: Book, books: Book[]): Promise<Book[]> => {
-  if (!currentBook) return books;
+export const duplicatePage = async (id: string, book: Book, allBooks: Book[]): Promise<[Book[], string]> => {
+  const pageToDuplicate = book.pages.find(page => page.id === id);
 
-  // Delete page from Supabase
-  await deletePageFromSupabase(currentBook.id, id);
+  if (!pageToDuplicate) {
+    console.error('Page not found in book');
+    return [allBooks, undefined];
+  }
 
-  // Update local state
-  const filteredPages = currentBook.pages.filter(page => page.id !== id);
-  
-  // Reorder page numbers
-  const reorderedPages = filteredPages.map((page, index) => ({
-    ...page,
-    pageNumber: index
-  }));
-  
-  // Update page numbering in Supabase
-  const pageOrderingData = reorderedPages.map((page, index) => ({
-    id: page.id,
-    pageNumber: index
-  }));
-  await reorderPagesInSupabase(currentBook.id, pageOrderingData);
-
-  const updatedBook = {
-    ...currentBook,
-    pages: reorderedPages,
-    updatedAt: new Date().toISOString()
-  };
-
-  return books.map(book => book.id === updatedBook.id ? updatedBook : book);
-};
-
-export const reorderPage = async (id: string, newPosition: number, currentBook: Book, books: Book[]): Promise<Book[]> => {
-  if (!currentBook) return books;
-  
-  const pageIndex = currentBook.pages.findIndex(page => page.id === id);
-  if (pageIndex === -1) return books;
-  
-  const reorderedPages = [...currentBook.pages];
-  const [movedPage] = reorderedPages.splice(pageIndex, 1);
-  reorderedPages.splice(newPosition, 0, movedPage);
-  
-  // Update page numbers
-  const updatedPages = reorderedPages.map((page, index) => ({
-    ...page,
-    pageNumber: index
-  }));
-  
-  // Update in Supabase
-  const pageOrderingData = updatedPages.map((page, index) => ({
-    id: page.id,
-    pageNumber: index
-  }));
-  await reorderPagesInSupabase(currentBook.id, pageOrderingData);
-  
-  const updatedBook = {
-    ...currentBook,
-    pages: updatedPages,
-    updatedAt: new Date().toISOString()
-  };
-  
-  return books.map(book => book.id === updatedBook.id ? updatedBook : book);
-};
-
-export const duplicatePage = async (id: string, currentBook: Book, books: Book[]): Promise<[Book[], string?]> => {
-  if (!currentBook) return [books, undefined];
-
-  const pageToDuplicate = currentBook.pages.find(page => page.id === id);
-  if (!pageToDuplicate) return [books, undefined];
-
-  // Create a new page with the same content but a new ID
-  const duplicatedPage: BookPage = {
+  const newPage: BookPage = {
     ...pageToDuplicate,
     id: uuidv4(),
-    pageNumber: currentBook.pages.length,
+    bookId: book.id,
   };
 
-  // Add page to Supabase
-  const newPageFromSupabase = await addPageToSupabase(currentBook.id, duplicatedPage.pageNumber);
-  
-  // Use the duplicated page data but with the Supabase ID if available
-  const finalDuplicatedPage = newPageFromSupabase ? 
-    { ...duplicatedPage, id: newPageFromSupabase.id } : 
-    duplicatedPage;
-  
-  // Update the page content in Supabase
-  if (finalDuplicatedPage) {
-    await updatePageInSupabase(currentBook.id, finalDuplicatedPage);
-  }
-
-  const updatedBook = {
-    ...currentBook,
-    pages: [...currentBook.pages, finalDuplicatedPage],
-    updatedAt: new Date().toISOString()
+  const updatedBook: Book = {
+    ...book,
+    pages: [...book.pages, newPage],
+    updatedAt: new Date(),
   };
 
-  return [books.map(book => book.id === updatedBook.id ? updatedBook : book), finalDuplicatedPage.id];
+  const updatedBooks = allBooks.map(b => b.id === book.id ? updatedBook : b);
+  return [updatedBooks, newPage.id];
 };

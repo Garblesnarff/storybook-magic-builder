@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { BookPage } from '@/types/book';
+import { BookPage, Book } from '@/types/book';
 import { useAITextGeneration } from './ai/useAITextGeneration';
 import { useAIImageGeneration } from './ai/useAIImageGeneration';
 import { usePageContentApplier } from './ai/usePageContentApplier';
@@ -9,7 +9,8 @@ export function useAIOperations(
   currentPageData: BookPage | null, 
   updatePage: (page: BookPage) => Promise<void>, 
   setCurrentPageData: (page: BookPage | null) => void,
-  onAddPage?: () => Promise<string | undefined> // Update expected return type
+  onAddPage?: () => Promise<string | undefined>,
+  currentBook?: Book | null
 ) {
   // Use the separate hook modules for AI operations
   const { 
@@ -34,6 +35,14 @@ export function useAIOperations(
     handleApplyAIImage
   } = usePageContentApplier(currentPageData, updatePage, setCurrentPageData, onAddPage);
 
+  // Enhanced version of generateImage that includes book context
+  const generateImageWithContext = async (prompt: string, style: string = 'REALISTIC') => {
+    if (currentBook && currentPageData) {
+      return generateImage(prompt, style, currentBook.id, currentPageData.id);
+    }
+    return generateImage(prompt, style);
+  };
+
   return {
     // Original functions for direct page updates
     isGenerating,
@@ -50,6 +59,6 @@ export function useAIOperations(
     setGeneratedText,
     setGeneratedImage,
     generateText,
-    generateImage
+    generateImage: generateImageWithContext
   };
 }
