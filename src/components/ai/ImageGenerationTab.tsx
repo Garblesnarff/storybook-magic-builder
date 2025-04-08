@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { IMAGE_STYLES } from '@/types/book';
+import { IMAGE_STYLES, getStyleDescriptionById } from '@/types/book';
 import {
   Select,
   SelectContent,
@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from 'sonner';
 
 interface ImageGenerationTabProps {
   prompt: string;
@@ -43,26 +42,6 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
   // Get the current style name for display
   const currentStyleName = IMAGE_STYLES.find(style => style.id === imageStyle)?.name || 'Realistic';
   
-  // Handle the generate button click with proper error handling
-  const handleGenerateClick = async () => {
-    if (!prompt.trim()) {
-      toast.error('Please enter a prompt first');
-      return;
-    }
-    
-    try {
-      await onGenerate();
-    } catch (error) {
-      console.error('Error generating image:', error);
-      toast.error('Failed to generate image');
-    }
-  };
-
-  // Debugging to help track state changes
-  useEffect(() => {
-    console.log('ImageGenerationTab state updated:', { generatedImage, isGenerating });
-  }, [generatedImage, isGenerating]);
-  
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -88,7 +67,7 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
       </div>
       
       <Button 
-        onClick={handleGenerateClick} 
+        onClick={onGenerate} 
         className="w-full"
         disabled={isGenerating || !prompt.trim()}
       >
@@ -112,14 +91,10 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
               src={generatedImage} 
               alt="AI generated" 
               className="w-full h-auto"
-              key={generatedImage} // Add key to force re-render when image changes
             />
           </div>
           <Button 
-            onClick={() => {
-              onApply();
-              toast.success('Image applied to page');
-            }} 
+            onClick={onApply} 
             disabled={!generatedImage}
             className="w-full"
           >

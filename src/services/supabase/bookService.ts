@@ -1,24 +1,17 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Book, BookPage, PageLayout, ImageSettings } from '@/types/book';
 
 // Function to fetch a book from the database
 export const fetchBookFromDatabase = async (bookId: string): Promise<Book | null> => {
   try {
-    console.log(`Fetching book with ID: ${bookId}`);
     const { data: bookData, error: bookError } = await supabase
       .from('books')
       .select('*')
       .eq('id', bookId)
       .single();
 
-    if (bookError) {
+    if (bookError || !bookData) {
       console.error('Error fetching book:', bookError);
-      return null;
-    }
-
-    if (!bookData) {
-      console.log(`No book found with ID: ${bookId}`);
       return null;
     }
 
@@ -33,8 +26,6 @@ export const fetchBookFromDatabase = async (bookId: string): Promise<Book | null
       console.error('Error fetching pages:', pagesError);
       return null;
     }
-
-    console.log(`Found ${pagesData?.length || 0} pages for book ${bookId}`);
 
     // Transform database pages to BookPage objects
     const pages: BookPage[] = (pagesData || []).map(dbPage => {
@@ -110,12 +101,9 @@ export const uploadImageToSupabase = async (file: File, userId: string, bookId: 
       return null;
     }
 
-    // Get the public URL
-    const { data: publicUrlData } = supabase.storage
-      .from('book-images')
-      .getPublicUrl(filePath);
-
-    return publicUrlData.publicUrl;
+    // Construct public URL
+    const publicUrl = `https://your-supabase-url/storage/v1/object/public/book-images/${filePath}`; // Replace with your Supabase URL
+    return publicUrl;
   } catch (error) {
     console.error('Error during image upload:', error);
     return null;
@@ -125,7 +113,6 @@ export const uploadImageToSupabase = async (file: File, userId: string, bookId: 
 // All the book operations that were previously missing
 export const saveBookToSupabase = async (book: Book): Promise<boolean> => {
   try {
-    console.log(`Saving book ${book.id} to Supabase`);
     const { error } = await supabase
       .from('books')
       .update({
@@ -158,7 +145,6 @@ export const loadBookFromSupabase = async (bookId: string): Promise<Book | null>
 
 export const loadBooksFromSupabase = async (): Promise<Book[]> => {
   try {
-    console.log('Loading all books from Supabase');
     const { data, error } = await supabase
       .from('books')
       .select('*')
@@ -169,19 +155,13 @@ export const loadBooksFromSupabase = async (): Promise<Book[]> => {
       return [];
     }
 
-    console.log(`Found ${data?.length || 0} books in database`);
-    
-    // Load detailed book information including pages
     const books: Book[] = [];
     
     for (const bookData of data || []) {
-      const book = await fetchBookFromDatabase(bookData.id);
-      if (book) {
-        books.push(book);
-      }
+      const book = await loadBookFromSupabase(bookData.id);
+      if (book) books.push(book);
     }
 
-    console.log(`Successfully loaded ${books.length} books with complete data`);
     return books;
   } catch (e) {
     console.error('Failed to load books from Supabase:', e);
@@ -191,7 +171,6 @@ export const loadBooksFromSupabase = async (): Promise<Book[]> => {
 
 export const createBookInSupabase = async (book: Book): Promise<Book | null> => {
   try {
-    console.log(`Creating new book in Supabase: ${book.id}`);
     const { data, error } = await supabase
       .from('books')
       .insert({
@@ -218,8 +197,6 @@ export const createBookInSupabase = async (book: Book): Promise<Book | null> => 
     // Add the first page
     if (book.pages && book.pages.length > 0) {
       const firstPage = book.pages[0];
-      console.log(`Adding first page ${firstPage.id} to book ${book.id}`);
-      
       const { error: pageError } = await supabase
         .from('book_pages')
         .insert({
@@ -254,8 +231,6 @@ export const createBookInSupabase = async (book: Book): Promise<Book | null> => 
 
 export const deleteBookFromSupabase = async (bookId: string): Promise<boolean> => {
   try {
-    console.log(`Deleting book ${bookId} from Supabase`);
-    
     // First delete all pages associated with this book
     const { error: pagesError } = await supabase
       .from('book_pages')
@@ -278,7 +253,6 @@ export const deleteBookFromSupabase = async (bookId: string): Promise<boolean> =
       return false;
     }
 
-    console.log(`Successfully deleted book ${bookId}`);
     return true;
   } catch (e) {
     console.error('Failed to delete book from Supabase:', e);

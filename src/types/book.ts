@@ -71,20 +71,19 @@ export const layoutNames: Record<PageLayout, string> = {
 
 // Enhance IMAGE_STYLES to include detailed descriptions for the prompt
 export const IMAGE_STYLES = [
-  { id: 'REALISTIC', name: 'Realistic', description: 'Realistic, detailed, photorealistic style' },
-  { id: 'CARTOON', name: 'Cartoon', description: 'Cartoon-style illustration, vibrant colors, simplified shapes' },
-  { id: 'WATERCOLOR', name: 'Watercolor', description: 'Soft watercolor painting style with gentle color blends and visible brushstrokes' },
-  { id: 'SKETCH', name: 'Pencil Sketch', description: 'Pencil sketch style, hand-drawn, detailed linework' },
-  { id: 'PIXEL_ART', name: 'Pixel Art', description: '8-bit or 16-bit style pixel art, nostalgic video game aesthetic' },
-  { id: 'CLAY', name: 'Clay Animation', description: 'Clay animation style, 3D claymation look with visible texture' }
-] as const;
-
-export type ImageStyle = typeof IMAGE_STYLES[number]['id'];
+  { id: 'REALISTIC', name: 'Realistic', description: 'realistic, detailed, photorealistic style' },
+  { id: 'CARTOON', name: 'Cartoon', description: 'cartoon style, animated, colorful, kid-friendly' },
+  { id: 'WATERCOLOR', name: 'Watercolor', description: 'watercolor painting style, soft brushstrokes, artistic' },
+  { id: 'SKETCH', name: 'Pencil Sketch', description: 'pencil sketch style, hand-drawn, detailed linework' },
+  { id: 'ABSTRACT', name: 'Abstract', description: 'abstract art style, non-representational, colorful shapes' },
+  { id: 'FANTASY', name: 'Fantasy', description: 'fantasy illustration style, magical, whimsical' },
+  { id: 'VINTAGE', name: 'Vintage', description: 'vintage illustration style, retro, nostalgic' }
+];
 
 // Helper function to get style description by ID
 export function getStyleDescriptionById(styleId: string): string {
   const style = IMAGE_STYLES.find(style => style.id === styleId);
-  return style?.description || 'Realistic, detailed style';
+  return style?.description || 'realistic, detailed style';
 }
 
 export const DEFAULT_BOOK: Omit<Book, 'id' | 'pages' | 'createdAt' | 'updatedAt' | 'userId'> = {
@@ -100,11 +99,4 @@ export const DEFAULT_PAGE_TEXT = 'Once upon a time...';
 export const DEFAULT_PAGE: Omit<BookPage, 'id' | 'pageNumber'> = {
   text: DEFAULT_PAGE_TEXT,
   layout: 'text-left-image-right'
-};
-
-// Define default image settings that can be imported elsewhere
-export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
-  scale: 1,
-  position: { x: 0, y: 0 },
-  fitMethod: 'contain'
 };

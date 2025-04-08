@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BookPage, PageLayout, ImageSettings } from '@/types/book';
 import { TextLeftImageRight } from './layouts/TextLeftImageRight';
 import { ImageLeftTextRight } from './layouts/ImageLeftTextRight';
@@ -30,19 +30,6 @@ export const PageEditor: React.FC<PageEditorProps> = ({
   previewText,
   onImageSettingsChange
 }) => {
-  // Add debugging for the current page data
-  useEffect(() => {
-    if (currentPageData) {
-      console.log("PageEditor received page data:", { 
-        id: currentPageData.id, 
-        text: currentPageData.text?.substring(0, 20),
-        hasImage: !!currentPageData.image,
-        imageType: currentPageData.image ? 
-          (currentPageData.image.startsWith('data:') ? 'base64' : 'URL') : 'none'
-      });
-    }
-  }, [currentPageData]);
-
   if (!currentPageData) {
     return <EmptyPagePlaceholder />;
   }

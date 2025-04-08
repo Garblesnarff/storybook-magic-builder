@@ -1,4 +1,3 @@
-
 // src/hooks/usePageOperations.ts
 import { useState, useCallback } from 'react'; // Added useCallback
 import { Book, BookPage } from '../types/book';

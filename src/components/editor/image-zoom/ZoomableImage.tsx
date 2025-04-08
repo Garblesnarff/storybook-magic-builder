@@ -1,144 +1,77 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { ImageSettings } from '@/types/book';
+import React, { useCallback, memo } from 'react';
+import { cn } from '@/lib/utils';
+import { ZoomableImageProps } from './types';
 import { ZoomControls } from './ZoomControls';
-import { useImageDimensions } from './hooks/useImageDimensions';
-import { useImageZoom } from './hooks/useImageZoom';
-import { useImagePan } from './hooks/useImagePan';
-import { useImageFit } from './hooks/useImageFit';
-import { useSettingsSync } from './hooks/useSettingsSync';
+import { useZoomableImage } from './useZoomableImage';
 
-interface ZoomableImageProps {
-  src: string;
-  alt: string;
-  settings?: ImageSettings;
-  onSettingsChange?: (settings: ImageSettings) => void;
-}
-
-export const ZoomableImage: React.FC<ZoomableImageProps> = ({
-  src,
+// Using memo to prevent unnecessary re-renders
+export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({ 
+  src, 
   alt,
-  settings,
-  onSettingsChange,
+  className = '',
+  initialSettings,
+  onSettingsChange
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  // Dimensions and readiness tracking
   const {
-    imageDimensions,
-    containerDimensions,
+    scale,
+    position,
+    fitMethod,
+    isPanning,
     imageLoaded,
     isInteractionReady,
-    updateContainerSize
-  } = useImageDimensions(src);
-
-  // Get zoom functionality
-  const {
-    scale,
-    setScale,
-    handleZoomIn,
-    handleZoomOut
-  } = useImageZoom(settings);
-
-  // Get pan functionality
-  const {
-    position,
-    setPosition,
-    isPanning,
+    containerRef,
+    imageRef,
     handleMouseDown,
     handleMouseMove,
-    handleMouseUp
-  } = useImagePan(settings);
-
-  // Get object fit functionality
-  const {
-    fitMethod,
+    handleMouseUp,
+    handleZoomIn,
+    handleZoomOut,
     toggleFitMethod,
-    fitImageToContainer
-  } = useImageFit(settings, onSettingsChange);
+    handleReset
+  } = useZoomableImage(src, initialSettings, onSettingsChange);
 
-  // Sync settings with parent component
-  useSettingsSync({
-    scale,
-    position,
-    fitMethod,
-    onSettingsChange,
-    isInteractionReady
-  });
-
-  // Update container dimensions on resize
-  useEffect(() => {
-    const updateSize = () => updateContainerSize(containerRef);
-    updateSize();
-
-    window.addEventListener('resize', updateSize);
-    return () => {
-      window.removeEventListener('resize', updateSize);
-    };
-  }, [updateContainerSize]);
-
-  // Auto-fit image when loaded
-  useEffect(() => {
-    if (imageLoaded && containerDimensions.width > 0 && imageDimensions.width > 0) {
-      fitImageToContainer(
-        imageLoaded,
-        containerDimensions,
-        imageDimensions,
-        isInteractionReady,
-        setScale,
-        setPosition,
-        scale
-      );
-    }
-  }, [imageLoaded, containerDimensions, imageDimensions, fitImageToContainer, isInteractionReady, setScale, setPosition, scale]);
-
-  // Handle wheel events for zooming
-  const handleWheel = (e: React.WheelEvent) => {
-    if (!isInteractionReady) return;
-    e.preventDefault();
-    
-    if (e.deltaY < 0) {
-      handleZoomIn();
-    } else {
-      handleZoomOut();
-    }
-  };
-
-  // Handle reset function
-  const handleReset = React.useCallback(() => {
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-  }, [setScale, setPosition]);
+  // Handle mouse events in component to ensure we have access to current state
+  const handleMouseLeave = useCallback((e: React.MouseEvent) => {
+    handleMouseUp(e);
+  }, [handleMouseUp]);
 
   return (
-    <div className="relative w-full h-full group">
-      <div 
-        ref={containerRef}
-        className="relative w-full h-full overflow-hidden"
-        onMouseDown={(e) => handleMouseDown(e, isInteractionReady, containerRef)}
-        onMouseUp={(e) => handleMouseUp(e, isInteractionReady, containerRef)}
-        onMouseLeave={(e) => handleMouseUp(e, isInteractionReady, containerRef)}
-        onMouseMove={(e) => handleMouseMove(e, isInteractionReady)}
-        onWheel={handleWheel}
-      >
-        <img
-          ref={imgRef}
-          src={src}
-          alt={alt}
-          className="transition-transform duration-200 ease-out"
-          style={{
-            objectFit: fitMethod,
-            transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-            transformOrigin: 'center',
-            width: '100%',
-            height: '100%',
-          }}
-          onDragStart={(e) => e.preventDefault()}
-        />
-      </div>
+    <div 
+      ref={containerRef}
+      className="relative w-full h-full overflow-hidden"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+    >
+      {imageLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center w-full h-full">
+          <img
+            ref={imageRef}
+            src={src}
+            alt={alt}
+            className={cn(
+              "select-none will-change-transform",
+              fitMethod === 'contain' ? "object-contain" : "object-cover",
+              isPanning ? "cursor-grabbing" : "cursor-grab",
+              className
+            )}
+            style={{ 
+              transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+              transition: isPanning ? 'none' : 'transform 0.15s ease-out',
+              transformOrigin: 'center',
+              maxWidth: "none", // Remove max-width constraint to allow proper scaling
+              maxHeight: "none", // Remove max-height constraint to allow proper scaling
+            }}
+            draggable="false"
+            onLoad={() => imageRef.current && imageRef.current.complete && imageRef.current.naturalWidth > 0 && imageRef.current.naturalHeight > 0 ? handleMouseDown : null}
+            onDragStart={(e) => e.preventDefault()}
+          />
+        </div>
+      )}
       
-      <ZoomControls
+      <ZoomControls 
         scale={scale}
         fitMethod={fitMethod}
         isInteractionReady={isInteractionReady}
@@ -146,10 +79,9 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
         onZoomOut={handleZoomOut}
         onToggleFitMethod={toggleFitMethod}
         onReset={handleReset}
-        canZoomIn={scale < 4}
-        canZoomOut={scale > 0.5}
-        canReset={scale !== 1 || position.x !== 0 || position.y !== 0}
       />
     </div>
   );
-};
+});
+
+ZoomableImage.displayName = 'ZoomableImage';

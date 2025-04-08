@@ -1,141 +1,216 @@
-import { useState } from 'react';
-import { BookPage } from '@/types/book';
+
+import { useState, useCallback } from 'react';
+// Import missing types and DEFAULT_PAGE
+import { BookPage, PageLayout, TextFormatting, ImageSettings, DEFAULT_PAGE } from '@/types/book'; 
 import { toast } from 'sonner';
-import { useAIImageGeneration } from './useAIImageGeneration';
+import { supabase } from '@/integrations/supabase/client';
 
 export function usePageContentApplier(
-  currentPageData: BookPage | null, 
-  updatePage: (page: BookPage) => Promise<void>, 
+  currentPageData: BookPage | null,
+  updatePage: (page: BookPage) => Promise<void>,
   setCurrentPageData: (page: BookPage | null) => void,
-  onAddPage?: () => Promise<string | undefined>
+  onAddPage?: () => Promise<string | undefined> // Update expected return type
 ) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [processingStory, setProcessingStory] = useState(false);
-  const { generateImage } = useAIImageGeneration();
 
-  // Handler for generating an image for the current page
+  // Handle image generation
   const handleGenerateImage = async () => {
-    if (!currentPageData) {
-      toast.error('No page selected');
-      return;
-    }
-
-    if (!currentPageData.text?.trim()) {
-      toast.error('Page has no text to generate an image from');
-      return;
-    }
-
+    if (!currentPageData) return;
     setIsGenerating(true);
+
     try {
-      // Get the current style or use a default
-      const imageStyle = currentPageData.textFormatting?.imageStyle || 'REALISTIC';
-      
-      toast.info(`Generating ${imageStyle.toLowerCase()} style image...`);
-      
-      const imageData = await generateImage(currentPageData.text, imageStyle);
-      
-      if (!imageData) {
-        toast.error('Failed to generate image');
+      const style = currentPageData.textFormatting?.imageStyle || 'REALISTIC';
+      // Use the direct Supabase function invocation to avoid CSP issues
+      const { data, error } = await supabase.functions.invoke('generate-image', {
+        body: { 
+          prompt: currentPageData.text, 
+          style 
+        },
+      });
+
+      if (error) {
+        toast.error('Failed to generate image', {
+          description: error.message || 'Unknown error'
+        });
         return;
       }
 
-      // Update the page with the new image
-      const updatedPage = { ...currentPageData, image: imageData };
-      
-      // Optimistic update
-      setCurrentPageData(updatedPage);
-      
-      // Persist change - note that this might convert the base64 image to a URL
-      // or might keep the base64 image if storage upload fails
-      try {
-        await updatePage(updatedPage);
-        toast.success(`${imageStyle} image generated and applied to the page`);
-      } catch (error) {
-        console.error('Failed to save page with new image:', error);
-        toast.warning('Image generated but there was an issue saving it to the database');
-        // The optimistic update ensures the image is still visible to the user
+      if (!data || !data.image) {
+        toast.error('No image data returned');
+        return;
       }
-      
+
+      const updatedPage = { 
+        ...currentPageData, 
+        image: `data:image/png;base64,${data.image}` 
+      };
+
+      // *** REMOVE THIS LINE ***
+      // setCurrentPageData(updatedPage); // <- Remove this direct local state update
+
+      // Rely solely on the context update function (which includes optimistic update)
+      console.log("usePageContentApplier: Calling context updatePage...");
+      await updatePage(updatedPage); // This handles optimistic UI and background save
+
+      toast.success('Image generated successfully!');
+
     } catch (error) {
-      console.error('Error generating image:', error);
-      toast.error('Failed to generate or apply image');
+      console.error('usePageContentApplier: Image generation error:', error);
+      toast.error('Failed to generate image', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // Handler for applying AI-generated text to the current page
-  const handleApplyAIText = async (text: string) => {
-    if (!currentPageData) {
-      toast.error('No page selected');
+  // Helper function to wait for a specific duration
+  const wait = useCallback((ms: number) => new Promise(resolve => setTimeout(resolve, ms)), []);
+
+  // Helper function to get book ID from a page ID
+  const getBookIdForPage = useCallback(async (pageId: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('book_pages')
+        .select('book_id')
+        .eq('id', pageId)
+        .single();
+      
+      if (error || !data) {
+        console.error('Error getting book ID from page:', error);
+        return null;
+      }
+      
+      return data.book_id;
+    } catch (err) {
+      console.error('Error in getBookIdForPage function:', err);
+      return null;
+    }
+  }, []);
+
+  // Handle AI text application with improved reliability
+  const handleApplyAIText = useCallback(async (text: string) => {
+    if (!currentPageData) return;
+    
+    // Define the page break marker
+    const pageBreakMarker = '---PAGE BREAK---';
+    
+    // Split the text by page break markers
+    const segments = text.split(pageBreakMarker)
+      .map(segment => segment.trim())
+      .filter(segment => segment.length > 0);
+    
+    if (segments.length === 0) {
+      toast.error('No valid content found in the generated text');
       return;
     }
 
+    console.log('Processing AI text with segments:', segments.length);
     setProcessingStory(true);
+    
     try {
-      const updatedPage = { ...currentPageData, text: text };
+      // Start progress toast with initial state that won't disappear
+      const toastId = toast.loading(`Processing pages: 0/${segments.length}`, {
+        duration: Infinity
+      });
       
-      // Optimistic update
-      setCurrentPageData(updatedPage);
+      // Get the book ID first - we'll need this for all operations
+      const bookId = await getBookIdForPage(currentPageData.id);
       
-      // Persist the change
-      await updatePage(updatedPage);
-      
-      toast.success('Text applied to page');
-    } catch (error) {
-      console.error('Error applying text to page:', error);
-      toast.error('Failed to apply text to page');
-    } finally {
-      setProcessingStory(false);
-    }
-  };
-
-  // Handler for applying AI-generated image to the current page
-  const handleApplyAIImage = async (imageData: string) => {
-    if (!currentPageData) {
-      if (onAddPage) {
-        // Create a new page with this image
-        setProcessingStory(true);
-        try {
-          const newPageId = await onAddPage();
-          if (!newPageId) {
-            toast.error('Failed to create new page');
-            return;
-          }
-          
-          // We don't have the new page data yet, so we just show a message
-          toast.success('Image added to new page');
-        } catch (error) {
-          console.error('Error adding page with image:', error);
-          toast.error('Failed to add page with image');
-        } finally {
-          setProcessingStory(false);
-        }
+      if (!bookId) {
+        toast.error('Could not determine which book to update', { id: toastId });
+        setProcessingStory(false);
         return;
       }
       
-      toast.error('No page selected to apply image to');
-      return;
-    }
+      // --- REMOVED Special handling for the first page ---
+      
+      // Update progress toast (start from 0)
+      toast.loading(`Processing pages: 0/${segments.length}`, { id: toastId });
+      
+      // Create new pages for ALL segments
+      if (segments.length > 0 && onAddPage) {
+        // Process ALL segments one by one, starting from index 0
+        for (let i = 0; i < segments.length; i++) { 
+          try {
+            // Create a new page and get its ID
+            const newPageId = await onAddPage(); 
+            
+            if (!newPageId) {
+              console.error(`Failed to create page for segment ${i+1}`);
+              toast.error(`Failed to create page ${i+1}`, { id: toastId });
+              // Optionally break or continue depending on desired behavior
+              continue; 
+            }
 
-    setProcessingStory(true);
-    try {
-      const updatedPage = { ...currentPageData, image: imageData };
-      
-      // Optimistic update
-      setCurrentPageData(updatedPage);
-      
-      // Persist the change
-      await updatePage(updatedPage);
-      
-      toast.success('Image applied to page');
+            // No longer need to fetch all pages or guess the ID
+            
+            // Update the newly created page directly using its ID
+            const { error } = await supabase
+              .from('book_pages')
+              .update({ 
+                text: segments[i],
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', newPageId);
+              
+            if (error) {
+              console.error(`Error updating page ${newPageId} text:`, error);
+              // Optionally notify user
+            } 
+            
+            // Construct the page object to update state *before* calling updatePage
+            // Calculate the expected page number (relative to the original page + loop index + 1)
+            const expectedPageNumber = currentPageData.pageNumber + i + 1; 
+            
+            const pageToUpdate: BookPage = {
+              ...DEFAULT_PAGE, // Start with defaults
+              id: newPageId,
+              pageNumber: expectedPageNumber,
+              text: segments[i], // Use the correct text segment
+              // Inherit layout/formatting from the first page? Or use defaults? Using defaults for now.
+              // layout: currentPageData.layout, 
+              // textFormatting: currentPageData.textFormatting,
+              // imageSettings: currentPageData.imageSettings,
+              // backgroundColor: currentPageData.backgroundColor
+            };
+
+            // Call updatePage prop to sync application state AND update DB
+            // updatePage service function handles the Supabase update internally
+            await updatePage(pageToUpdate); 
+
+            // Wait after state/DB update attempt before next iteration
+            await wait(500); 
+            
+            // Update progress toast
+            toast.loading(`Processing pages: ${i+1}/${segments.length}`, { id: toastId });
+          } catch (err) {
+            console.error(`Error processing page ${i+1}:`, err);
+          }
+        }
+        
+        toast.success(`Created ${segments.length} pages with content`, { id: toastId });
+      } else {
+        toast.success('Story applied to the current page', { id: toastId });
+      }
     } catch (error) {
-      console.error('Error applying image to page:', error);
-      toast.error('Failed to apply image to page');
+      console.error('Error applying AI text:', error);
+      toast.error('Failed to create all pages', {
+        description: 'Some pages may not have been created correctly'
+      });
     } finally {
       setProcessingStory(false);
     }
-  };
+  }, [currentPageData, updatePage, setCurrentPageData, getBookIdForPage, wait, onAddPage]);
+
+  // Handle AI image application
+  const handleApplyAIImage = useCallback(async (imageData: string) => {
+    if (!currentPageData) return;
+    const updatedPage = { ...currentPageData, image: imageData };
+    setCurrentPageData(updatedPage);
+    await updatePage(updatedPage);
+  }, [currentPageData, setCurrentPageData, updatePage]);
 
   return {
     isGenerating,

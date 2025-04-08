@@ -2,19 +2,7 @@
 import React from 'react';
 import { ZoomIn, ZoomOut, Move, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-export interface ZoomControlsProps {
-  scale: number;
-  fitMethod: 'contain' | 'cover';
-  isInteractionReady: boolean;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onToggleFitMethod: () => void;
-  onReset: () => void;
-  canZoomIn?: boolean;
-  canZoomOut?: boolean;
-  canReset?: boolean;
-}
+import { ZoomControlsProps } from './types';
 
 export const ZoomControls: React.FC<ZoomControlsProps> = ({
   scale,
@@ -23,10 +11,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
   onZoomIn,
   onZoomOut,
   onToggleFitMethod,
-  onReset,
-  canZoomIn = true,
-  canZoomOut = true,
-  canReset = false
+  onReset
 }) => {
   return (
     <div className="absolute bottom-4 right-4 flex space-x-2 z-10">
@@ -35,7 +20,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         variant="secondary" 
         className="rounded-full h-8 w-8 p-0 bg-white/80 backdrop-blur-sm"
         onClick={onZoomIn}
-        disabled={!canZoomIn || !isInteractionReady}
+        disabled={scale >= 4 || !isInteractionReady}
       >
         <ZoomIn className="h-4 w-4" />
         <span className="sr-only">Zoom In</span>
@@ -45,7 +30,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         variant="secondary" 
         className="rounded-full h-8 w-8 p-0 bg-white/80 backdrop-blur-sm"
         onClick={onZoomOut}
-        disabled={!canZoomOut || !isInteractionReady}
+        disabled={scale <= 0.5 || !isInteractionReady}
       >
         <ZoomOut className="h-4 w-4" />
         <span className="sr-only">Zoom Out</span>
@@ -68,7 +53,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         variant="secondary" 
         className="rounded-full h-8 w-8 p-0 bg-white/80 backdrop-blur-sm"
         onClick={onReset}
-        disabled={!canReset || !isInteractionReady}
+        disabled={!isInteractionReady}
       >
         <RefreshCw className="h-4 w-4" />
         <span className="sr-only">Reset View</span>

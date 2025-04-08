@@ -5,7 +5,7 @@ export interface ZoomableImageProps {
   src: string;
   alt: string;
   className?: string;
-  settings?: ImageSettings;
+  initialSettings?: ImageSettings;
   onSettingsChange?: (settings: ImageSettings) => void;
 }
 
@@ -17,17 +17,4 @@ export interface ZoomControlsProps {
   onZoomOut: () => void;
   onToggleFitMethod: () => void;
   onReset: () => void;
-  canZoomIn?: boolean;
-  canZoomOut?: boolean;
-  canReset?: boolean;
-}
-
-export interface Position {
-  x: number;
-  y: number;
-}
-
-export interface Dimensions {
-  width: number;
-  height: number;
 }

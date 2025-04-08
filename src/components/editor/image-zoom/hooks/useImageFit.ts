@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
@@ -39,7 +40,7 @@ export function useImageFit(
     isInteractionReady: boolean,
     setScale: (scale: number) => void,
     setPosition: (position: { x: number, y: number }) => void,
-    scale: number
+    scaleRef: React.MutableRefObject<number>
   ) => {
     if (!imageLoaded || containerDimensions.width <= 0 || containerDimensions.height <= 0 || imageDimensions.width <= 0) {
       return;

@@ -13,7 +13,7 @@ export const bookPageToDatabasePage = (bookPage: BookPage, bookId: string) => {
     book_id: bookId,
     page_number: bookPage.pageNumber,
     text: bookPage.text || '', // Always use the page's actual text value
-    image_url: bookPage.image, // Maps the 'image' property to the 'image_url' database field
+    image_url: bookPage.image,
     layout: bookPage.layout,
     background_color: bookPage.backgroundColor,
     font_family: bookPage.textFormatting?.fontFamily,
@@ -42,7 +42,7 @@ export const databasePageToBookPage = (dbPage: any): BookPage => {
     id: dbPage.id,
     pageNumber: dbPage.page_number,
     text: dbPage.text || '', // Use empty string if null, not default text
-    image: dbPage.image_url, // Maps the 'image_url' database field to the 'image' property
+    image: dbPage.image_url,
     layout: dbPage.layout,
     backgroundColor: dbPage.background_color,
     textFormatting: {

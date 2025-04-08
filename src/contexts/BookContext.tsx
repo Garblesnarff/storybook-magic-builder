@@ -1,10 +1,8 @@
 
-import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { Book, BookPage } from '../types/book';
 import { useBookManager } from '../hooks/useBookManager';
 import { BookTemplate } from '@/data/bookTemplates';
-import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface BookContextProps {
   books: Book[];
@@ -21,7 +19,6 @@ interface BookContextProps {
   duplicatePage: (id: string) => Promise<string | undefined>;
   loading: boolean;
   error: string | null;
-  retryLoading: () => void;
 }
 
 // Create the context with a default empty implementation to avoid undefined errors
@@ -39,13 +36,13 @@ const BookContext = createContext<BookContextProps>({
   reorderPage: async () => {},
   duplicatePage: async () => undefined,
   loading: false,
-  error: null,
-  retryLoading: () => {}
+  error: null
 });
 
 // Custom hook to use the book context
 export const useBook = () => {
   const context = useContext(BookContext);
+  // We still want to throw an error if useBook is used outside of a provider
   if (!context) {
     throw new Error('useBook must be used within a BookProvider');
   }
@@ -54,42 +51,10 @@ export const useBook = () => {
 
 // Provider component that wraps the parts of our app that need the context
 export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Create a local state for retry count
-  const [retryCount, setRetryCount] = useState(0);
-  
-  // Get authentication state
-  const { user, loading: authLoading } = useAuth();
-  
-  // Use bookManager hook to manage books
   const bookManager = useBookManager();
   
-  // Log for debugging
-  useEffect(() => {
-    console.log('BookProvider: Auth state -', {
-      authLoading,
-      hasUser: !!user,
-      booksLoading: bookManager.loading,
-      booksCount: bookManager.books.length
-    });
-  }, [authLoading, user, bookManager.loading, bookManager.books.length]);
-  
-  // Retry function that triggers a force refresh
-  const retryLoading = () => {
-    console.log('Retrying book loading...');
-    setRetryCount(prev => prev + 1);
-    if (bookManager.forceRefresh) {
-      bookManager.forceRefresh();
-    }
-  };
-  
-  // Combine the book manager with our retry function
-  const contextValue = {
-    ...bookManager,
-    retryLoading
-  };
-  
   return (
-    <BookContext.Provider value={contextValue}>
+    <BookContext.Provider value={bookManager}>
       {children}
     </BookContext.Provider>
   );

@@ -2,17 +2,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
-interface Position {
-  x: number;
-  y: number;
-}
-
 export function useImagePan(
   initialSettings?: ImageSettings
 ) {
-  const [position, setPosition] = useState<Position>(
-    initialSettings?.position || { x: 0, y: 0 }
-  );
+  const [position, setPosition] = useState(initialSettings?.position || { x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   
   // Refs for tracking state in callbacks

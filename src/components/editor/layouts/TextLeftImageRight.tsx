@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback, useMemo, memo } from 'react'; // <-- Add useMemo
 import { BookPage, ImageSettings } from '@/types/book';
 import { ZoomableImage } from '../image-zoom';
 import { ImagePlaceholder } from '../image-placeholder';
@@ -13,18 +13,37 @@ interface LayoutProps {
   onImageSettingsChange?: (settings: ImageSettings) => void;
 }
 
-export const TextLeftImageRight: React.FC<LayoutProps> = ({ 
+export const TextLeftImageRight: React.FC<LayoutProps> = memo(({ 
   page, 
   handleGenerateImage,
   isGenerating = false,
   previewText,
   onImageSettingsChange
 }) => {
+  // Memoized handler for image settings changes
+  const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
+    if (onImageSettingsChange) {
+      onImageSettingsChange(settings);
+    }
+  }, [onImageSettingsChange]);
+
+  // *** ADD THIS useMemo ***
+  const memoizedImageSettings = useMemo(() => {
+    // Explicitly cast the default object to satisfy the ImageSettings type
+    return page.imageSettings || { scale: 1, position: { x: 0, y: 0 }, fitMethod: 'contain' } as ImageSettings;
+  }, [
+    page.imageSettings?.scale,
+    page.imageSettings?.position?.x,
+    page.imageSettings?.position?.y,
+    page.imageSettings?.fitMethod
+  ]);
+  // ***********************
+
   return (
     <div className="flex h-full">
       <div className="w-1/2 p-8 overflow-auto">
         <BookTextRenderer 
-          text={page.text || ''}
+          text={page.text} 
           textFormatting={page.textFormatting}
           previewText={previewText}
         />
@@ -35,8 +54,9 @@ export const TextLeftImageRight: React.FC<LayoutProps> = ({
             <ZoomableImage 
               src={page.image} 
               alt="Page illustration"
-              settings={page.imageSettings}
-              onSettingsChange={onImageSettingsChange}
+              // *** USE THE MEMOIZED VALUE ***
+              initialSettings={memoizedImageSettings}
+              onSettingsChange={handleImageSettingsChange}
             />
           </div>
         ) : (
@@ -48,4 +68,6 @@ export const TextLeftImageRight: React.FC<LayoutProps> = ({
       </div>
     </div>
   );
-};
+});
+
+TextLeftImageRight.displayName = 'TextLeftImageRight';
