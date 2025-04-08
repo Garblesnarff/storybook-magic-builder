@@ -6,17 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Map of style IDs to detailed descriptions for prompts
-const STYLE_DESCRIPTIONS: Record<string, string> = {
-  'REALISTIC': 'realistic, detailed, photorealistic style',
-  'CARTOON': 'cartoon style, animated, colorful, kid-friendly',
-  'WATERCOLOR': 'watercolor painting style, soft brushstrokes, artistic',
-  'SKETCH': 'pencil sketch style, hand-drawn, detailed linework',
-  'ABSTRACT': 'abstract art style, non-representational, colorful shapes',
-  'FANTASY': 'fantasy illustration style, magical, whimsical',
-  'VINTAGE': 'vintage illustration style, retro, nostalgic'
-};
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -41,22 +30,19 @@ serve(async (req) => {
       )
     }
 
-    // Get the style description based on the style ID
-    const styleDescription = STYLE_DESCRIPTIONS[style] || STYLE_DESCRIPTIONS['REALISTIC'];
-    
     console.log(`Processing image generation request with prompt: "${prompt}"`)
-    console.log(`Using style: ${style || 'default'} (${styleDescription})`)
+    console.log(`Using style: ${style || 'default'}`)
 
     // Use the correct beta API endpoint for image generation
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent`
     
-    // Prepare the request with the enhanced style description
+    // Prepare the request for standard image generation
     const requestBody = {
       contents: [
         {
           parts: [
             {
-              text: `Create a ${styleDescription} children's book illustration of: ${prompt}`
+              text: `Create a ${style?.toLowerCase() || 'realistic'} style children's book illustration of: ${prompt}`
             }
           ]
         }
