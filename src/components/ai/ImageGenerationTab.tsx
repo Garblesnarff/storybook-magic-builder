@@ -33,6 +33,7 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
   onApply
 }) => {
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // On component mount, apply default image style from localStorage
   useEffect(() => {
@@ -66,7 +67,10 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
     setError(null);
     
     try {
+      console.log('Starting image generation with prompt:', prompt.substring(0, 50));
       await onGenerate();
+      // Reset retry count on successful generation
+      setRetryCount(0);
     } catch (err) {
       console.error('Image generation failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -75,6 +79,19 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
         description: errorMessage
       });
     }
+  };
+  
+  // Handle retry with backoff
+  const handleRetry = async () => {
+    setRetryCount(prev => prev + 1);
+    const backoffDelay = Math.min(2000 * Math.pow(1.5, retryCount), 10000); // exponential backoff, max 10s
+    
+    toast.info(`Retrying image generation in ${backoffDelay/1000} seconds...`);
+    
+    // Add small delay before retry to avoid rate limits
+    setTimeout(() => {
+      handleGenerate();
+    }, backoffDelay);
   };
   
   // Get the current style name for display
@@ -130,6 +147,22 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
             <div>
               <p className="font-medium">Image generation failed</p>
               <p className="mt-1">{error}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRetry} 
+                className="mt-2"
+                disabled={isGenerating}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    Retrying...
+                  </>
+                ) : (
+                  'Try Again'
+                )}
+              </Button>
             </div>
           </div>
         </div>

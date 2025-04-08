@@ -24,11 +24,47 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, style } = await req.json()
+    console.log("Image generation function called")
+    
+    // Parse request body
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid request format",
+          details: "Could not parse request body as JSON"
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
+    const { prompt, style } = requestData;
+    
+    // Validate required parameters
+    if (!prompt) {
+      console.error("Missing prompt in request");
+      return new Response(
+        JSON.stringify({ 
+          error: "Missing required parameter",
+          details: "Prompt is required" 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
 
-    const apiKey = Deno.env.get('GEMINI_API_KEY')
+    // Check for API key
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) {
-      console.error('GEMINI_API_KEY environment variable not set')
+      console.error('GEMINI_API_KEY environment variable not set');
       return new Response(
         JSON.stringify({ 
           error: 'Server configuration error',
@@ -38,17 +74,17 @@ serve(async (req) => {
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
-      )
+      );
     }
 
     // Get the style description based on the style ID
     const styleDescription = STYLE_DESCRIPTIONS[style] || STYLE_DESCRIPTIONS['REALISTIC'];
     
-    console.log(`Processing image generation request with prompt: "${prompt}"`)
+    console.log(`Processing image generation request with prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`)
     console.log(`Using style: ${style || 'default'} (${styleDescription})`)
 
     // Use the correct beta API endpoint for image generation
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent`
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent`;
     
     // Prepare the request with the enhanced style description
     const requestBody = {
@@ -64,9 +100,12 @@ serve(async (req) => {
       generationConfig: {
         responseModalities: ["Text", "Image"]
       }
-    }
+    };
     
-    console.log(`Sending image generation request to Gemini API endpoint: ${url}`)
+    console.log(`Sending image generation request to Gemini API endpoint: ${url}`);
+    
+    // Log the request body for debugging
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
     
     // Make the request to Gemini API with the key as a query parameter
     const response = await fetch(`${url}?key=${apiKey}`, {
@@ -75,83 +114,87 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
-    })
+    });
 
-    // Enhanced logging for debugging
-    console.log('Gemini API response status:', response.status)
-    console.log('Gemini API response status text:', response.statusText)
+    console.log('Gemini API response status:', response.status);
+    console.log('Gemini API response status text:', response.statusText);
     
-    const responseHeaders = Object.fromEntries([...response.headers])
-    console.log('Gemini API response headers:', JSON.stringify(responseHeaders, null, 2))
+    const responseHeaders = Object.fromEntries([...response.headers]);
+    console.log('Gemini API response headers:', JSON.stringify(responseHeaders, null, 2));
 
     // Handle API error responses
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Gemini API error response status:', response.status)
-      console.error('Gemini API error response text:', errorText)
+      const errorText = await response.text();
+      console.error('Gemini API error response status:', response.status);
+      console.error('Gemini API error response text:', errorText);
       
-      let errorData
+      let errorData;
       try {
-        errorData = JSON.parse(errorText)
-        console.error('Parsed Gemini API error:', JSON.stringify(errorData, null, 2))
+        errorData = JSON.parse(errorText);
+        console.error('Parsed Gemini API error:', JSON.stringify(errorData, null, 2));
       } catch (e) {
-        console.error('Failed to parse error response as JSON:', e)
-        errorData = { error: { message: errorText } }
+        console.error('Failed to parse error response as JSON:', e);
+        errorData = { error: { message: errorText } };
       }
       
-      // Detailed error message
+      // Extract error details
+      const errorCode = errorData.error?.code || response.status;
       const errorMessage = errorData.error?.message || 
                           errorData.error?.details || 
                           errorData.message || 
-                          'Failed to generate image with Gemini API'
+                          'Failed to generate image with Gemini API';
       
-      console.error(`Gemini API error: ${errorMessage}`)
+      console.error(`Gemini API error ${errorCode}: ${errorMessage}`);
       
+      // Return a structured error response
       return new Response(
         JSON.stringify({ 
           error: 'Failed to generate image', 
           details: errorMessage,
+          code: errorCode,
           rawResponse: errorData
         }),
         { 
           status: response.status, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
-      )
+      );
     }
 
     // Process the successful response
-    const data = await response.json()
-    console.log('Gemini API response received')
+    const data = await response.json();
+    console.log('Gemini API response received');
     
     // Log the response structure for debugging
+    console.log('Response structure:', JSON.stringify(Object.keys(data), null, 2));
+    
     if (data.candidates && data.candidates.length > 0) {
-      console.log('Found candidates in response')
-      console.log('Response structure:', JSON.stringify(Object.keys(data), null, 2))
-      console.log('Candidates structure:', JSON.stringify(Object.keys(data.candidates[0]), null, 2))
+      console.log('Found candidates in response');
       
       if (data.candidates[0].content) {
-        console.log('Content structure:', JSON.stringify(Object.keys(data.candidates[0].content), null, 2))
+        console.log('Content structure:', JSON.stringify(Object.keys(data.candidates[0].content), null, 2));
         
         if (data.candidates[0].content.parts) {
-          console.log('Parts count:', data.candidates[0].content.parts.length)
-          console.log('Parts structure:', data.candidates[0].content.parts.map(part => 
+          console.log('Parts count:', data.candidates[0].content.parts.length);
+          console.log('Parts types:', data.candidates[0].content.parts.map(part => 
             Object.keys(part).join(', ')
-          ))
+          ));
         }
       }
     } else {
-      console.log('No candidates found in response')
-      console.log('Full response:', JSON.stringify(data, null, 2))
+      console.log('No candidates found in response');
+      console.log('Full response:', JSON.stringify(data, null, 2));
     }
     
     // Extract the image data from the response
     if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-      const parts = data.candidates[0].content.parts
+      const parts = data.candidates[0].content.parts;
       
       for (const part of parts) {
         // Check for inline data which would contain the image
         if (part.inlineData) {
+          console.log('Image data found successfully');
+          
           // Return just the base64 data for compatibility with existing frontend
           return new Response(
             JSON.stringify({ 
@@ -160,13 +203,15 @@ serve(async (req) => {
             { 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
             }
-          )
+          );
         }
       }
     }
     
     // If no image was found in the response
-    console.log('No image found in Gemini response')
+    console.log('No image found in Gemini response');
+    console.log('Full response structure:', JSON.stringify(data, null, 2));
+    
     return new Response(
       JSON.stringify({ 
         error: 'No image data found in the API response',
@@ -176,12 +221,12 @@ serve(async (req) => {
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
-    )
+    );
   } catch (err) {
     // Handle any unexpected errors
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    console.error(`Unexpected error in generate-image function:`, errorMessage)
-    console.error('Error details:', err)
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error(`Unexpected error in generate-image function:`, errorMessage);
+    console.error('Error details:', err);
     
     return new Response(
       JSON.stringify({ 
@@ -193,6 +238,6 @@ serve(async (req) => {
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
-    )
+    );
   }
 })
