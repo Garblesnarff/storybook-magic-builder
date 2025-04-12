@@ -33,7 +33,7 @@ export function usePageContentApplier(
         
         // Create updated page object
         const updatedPage = {
-          ...currentPageData,
+          ...JSON.parse(JSON.stringify(currentPageData)),
           text: generatedText
         };
         
@@ -90,12 +90,17 @@ export function usePageContentApplier(
         // Update local state first for immediate feedback
         setCurrentPageData(updatedPage);
         
-        // Update in database with a slight delay to ensure UI updates first
-        setTimeout(async () => {
+        // Update in database without delay since we're now using consistent filenames
+        try {
           console.log('Saving page with new image to database:', updatedPage);
           await updatePage(updatedPage);
           console.log('Database update complete for image');
-        }, 100);
+        } catch (error) {
+          console.error('Error saving page with new image:', error);
+          toast.error('Failed to save page with new image');
+          // Restore previous state on error
+          setCurrentPageData(currentPageData);
+        }
         
         toast.success('Image applied to page');
       }
@@ -156,12 +161,17 @@ export function usePageContentApplier(
         // Update local state first for immediate feedback
         setCurrentPageData(updatedPage);
         
-        // Update in database with a slight delay to ensure UI updates first
-        setTimeout(async () => {
+        // Update in database without delay (we're using consistent filenames now)
+        try {
           console.log('Saving page with generated image to database:', updatedPage);
           await updatePage(updatedPage);
           console.log('Database update complete for generated image');
-        }, 100);
+        } catch (error) {
+          console.error('Error saving page with generated image:', error);
+          toast.error('Failed to save page with generated image');
+          // Restore previous state on error
+          setCurrentPageData(currentPageData);
+        }
         
         toast.success('Image generated and applied to page');
       }

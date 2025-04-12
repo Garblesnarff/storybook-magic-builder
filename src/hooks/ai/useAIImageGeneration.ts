@@ -19,7 +19,10 @@ export function useAIImageGeneration() {
 
     try {
       console.log(`Generating image with prompt: "${prompt.substring(0, 30)}..." and style: ${imageStyle}`);
-      console.log(`Book ID: ${bookId || 'not provided'}, Page ID: ${pageId || 'not provided'}`);
+      
+      if (bookId && pageId) {
+        console.log(`Image will be saved with consistent name for book: ${bookId}, page: ${pageId}`);
+      }
       
       const response = await supabase.functions.invoke('generate-image', {
         body: JSON.stringify({ 
@@ -66,11 +69,11 @@ export function useAIImageGeneration() {
       
       // If book ID and page ID are provided, upload to storage
       if (bookId && pageId) {
-        console.log('Uploading image to storage...');
+        console.log(`Uploading image with consistent filename for page ${pageId}`);
         const imageUrl = await uploadImage(imageData, bookId, pageId);
         
         if (imageUrl) {
-          console.log('Image uploaded successfully:', imageUrl);
+          console.log('Image uploaded successfully with consistent filename:', imageUrl);
           // Return the public URL instead of the base64 data
           toast.success('Image generated and uploaded successfully!');
           return imageUrl;

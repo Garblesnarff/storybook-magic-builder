@@ -30,8 +30,8 @@ export function useImageSettings(
       }
     }
 
-    // Create a local copy of the current page data to avoid reference issues
-    const pageDataCopy = {...currentPageData};
+    // Create a deep copy of the current page data to avoid reference issues
+    const pageDataCopy = JSON.parse(JSON.stringify(currentPageData));
 
     imageSettingsTimeoutRef.current = setTimeout(async () => {
       console.log(`useImageSettings: Debounced timeout fired. Calling updatePage for page ${pageDataCopy.id}`);

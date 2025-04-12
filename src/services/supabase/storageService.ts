@@ -1,7 +1,8 @@
+
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-// Upload an image to Supabase Storage
+// Upload an image to Supabase Storage with consistent naming to prevent duplicates
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
     // Extract the base64 data from the string
@@ -11,16 +12,16 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     // Convert base64 to a Blob
     const blob = await fetch(`data:image/png;base64,${base64Data}`).then(res => res.blob());
     
-    // Generate a unique file path
-    const filePath = `${bookId}/${pageId}_${Date.now()}.png`;
+    // Use consistent file naming pattern - pageId only without timestamp
+    const filePath = `${bookId}/${pageId}.png`;
     
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage with upsert to replace existing file
     const { data, error } = await supabase
       .storage
       .from('book_images')
       .upload(filePath, blob, {
         contentType: 'image/png',
-        upsert: true
+        upsert: true // This will replace any existing file with the same name
       });
     
     if (error) {
@@ -34,6 +35,7 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
       .from('book_images')
       .getPublicUrl(data.path);
     
+    console.log(`Image saved with consistent filename: ${filePath}`);
     return urlData.publicUrl;
   } catch (e) {
     console.error('Failed to upload image to storage', e);
@@ -52,33 +54,37 @@ export const deleteBookImages = async (bookId: string): Promise<void> => {
     if (!storageError && storageData && storageData.length > 0) {
       const filesToDelete = storageData.map(file => `${bookId}/${file.name}`);
       
-      await supabase
+      const { error: deleteError } = await supabase
         .storage
         .from('book_images')
         .remove(filesToDelete);
+        
+      if (deleteError) {
+        console.error('Error deleting book images:', deleteError);
+      } else {
+        console.log(`Successfully deleted ${filesToDelete.length} images for book ${bookId}`);
+      }
     }
   } catch (e) {
     console.error('Failed to delete book images from storage', e);
   }
 };
 
-// Delete page images from storage
+// Delete page image from storage
 export const deletePageImages = async (bookId: string, pageId: string): Promise<void> => {
   try {
-    const { data, error: listError } = await supabase
+    // Just remove the single consistent filename for this page
+    const filePath = `${bookId}/${pageId}.png`;
+    
+    const { error: deleteError } = await supabase
       .storage
       .from('book_images')
-      .list(bookId, {
-        search: pageId
-      });
-    
-    if (!listError && data && data.length > 0) {
-      const filesToDelete = data.map(file => `${bookId}/${file.name}`);
+      .remove([filePath]);
       
-      await supabase
-        .storage
-        .from('book_images')
-        .remove(filesToDelete);
+    if (deleteError) {
+      console.error(`Error deleting page image: ${filePath}`, deleteError);
+    } else {
+      console.log(`Successfully deleted image for page ${pageId}`);
     }
   } catch (storageError) {
     console.error('Error deleting page images:', storageError);
@@ -95,7 +101,7 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
       return null;
     }
 
-    // Generate a unique file path
+    // Generate a consistent file path for audio
     const filePath = `${bookId}/${pageId}_narration.mp3`;
     
     // Upload to Supabase Storage
@@ -131,23 +137,70 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
 // Delete narration audio for a page
 export const deletePageNarration = async (bookId: string, pageId: string): Promise<void> => {
   try {
-    const { data, error: listError } = await supabase
+    // Just delete the consistent filename
+    const filePath = `${bookId}/${pageId}_narration.mp3`;
+    
+    const { error: deleteError } = await supabase
       .storage
       .from('narrations')
-      .list(bookId, {
-        search: pageId
-      });
-    
-    if (!listError && data && data.length > 0) {
-      const filesToDelete = data.map(file => `${bookId}/${file.name}`);
+      .remove([filePath]);
       
-      await supabase
-        .storage
-        .from('narrations')
-        .remove(filesToDelete);
+    if (deleteError) {
+      console.error(`Error deleting page narration: ${filePath}`, deleteError);
+    } else {
+      console.log(`Successfully deleted narration for page ${pageId}`);
     }
   } catch (storageError) {
     console.error('Error deleting page narration:', storageError);
     // Continue even if deletion fails
+  }
+};
+
+// New function to clean up orphaned images
+export const cleanupOrphanedImages = async (bookId: string, validPageIds: string[]): Promise<void> => {
+  try {
+    // Get all images for this book
+    const { data: storageData, error: listError } = await supabase
+      .storage
+      .from('book_images')
+      .list(bookId);
+    
+    if (listError) {
+      console.error('Error listing book images:', listError);
+      return;
+    }
+    
+    if (!storageData || storageData.length === 0) {
+      return; // No images to clean up
+    }
+    
+    // Find images that don't belong to valid pages
+    const orphanedFiles = storageData.filter(file => {
+      // Extract pageId from filename
+      const filePageId = file.name.split('.')[0];
+      // Check if this is a legacy timestamped filename
+      if (filePageId.includes('_')) {
+        return true; // Consider old timestamped files as orphaned
+      }
+      // Check if file doesn't belong to any current valid page
+      return !validPageIds.includes(filePageId);
+    }).map(file => `${bookId}/${file.name}`);
+    
+    if (orphanedFiles.length > 0) {
+      console.log(`Found ${orphanedFiles.length} orphaned images to clean up for book ${bookId}`);
+      
+      const { error: deleteError } = await supabase
+        .storage
+        .from('book_images')
+        .remove(orphanedFiles);
+        
+      if (deleteError) {
+        console.error('Error deleting orphaned images:', deleteError);
+      } else {
+        console.log(`Successfully cleaned up ${orphanedFiles.length} orphaned images`);
+      }
+    }
+  } catch (e) {
+    console.error('Failed to clean up orphaned images:', e);
   }
 };

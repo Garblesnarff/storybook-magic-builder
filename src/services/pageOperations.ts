@@ -1,10 +1,11 @@
-
 import { Book, BookPage } from '../types/book';
 import { v4 as uuidv4 } from 'uuid';
-import { deleteBookImages } from './supabase/storageService';
-
-// Import the storage service functions
-import { uploadImage, deletePageImages } from './supabase/storageService';
+import { 
+  deleteBookImages, 
+  deletePageImages,
+  uploadImage,
+  cleanupOrphanedImages 
+} from './supabase/storageService';
 
 export const createBook = async (title: string, books: Book[]): Promise<Book[]> => {
   const newBookId = uuidv4();
@@ -15,7 +16,7 @@ export const createBook = async (title: string, books: Book[]): Promise<Book[]> 
     title: title,
     pages: [{
       id: newPageId,
-      bookId: newBookId, // Add bookId here
+      bookId: newBookId,
       pageNumber: 1,
       text: 'This is the first page of your new book! Click here to edit the text.',
       image: '',
@@ -55,7 +56,7 @@ export const createBookFromTemplate = async (template: any, books: Book[]): Prom
     pages: template.pages.map((page: any) => ({
       ...page,
       id: uuidv4(),
-      bookId: newBookId, // Add bookId here
+      bookId: newBookId,
     })),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -73,11 +74,13 @@ export const createBookFromTemplate = async (template: any, books: Book[]): Prom
 };
 
 export const updateBook = async (bookToUpdate: Book, books: Book[]): Promise<Book[]> => {
+  const validPageIds = bookToUpdate.pages.map(page => page.id);
+  await cleanupOrphanedImages(bookToUpdate.id, validPageIds);
+  
   return books.map(book => book.id === bookToUpdate.id ? bookToUpdate : book);
 };
 
 export const deleteBook = async (id: string, books: Book[]): Promise<Book[]> => {
-  // Before deleting the book, delete all associated images from storage
   try {
     await deleteBookImages(id);
   } catch (storageError) {
@@ -93,7 +96,7 @@ export const addPage = async (book: Book, allBooks: Book[]): Promise<[Book[], st
   
   const newPage: BookPage = {
     id: newPageId,
-    bookId: book.id, // Add bookId here
+    bookId: book.id,
     pageNumber: book.pages.length + 1,
     text: 'New page content. Click here to edit the text.',
     image: '',
@@ -120,34 +123,27 @@ export const addPage = async (book: Book, allBooks: Book[]): Promise<[Book[], st
   return [updatedBooks, newPage.id];
 };
 
-// Update the updatePage function to handle base64 images and upload them to storage
 export const updatePage = async (page: BookPage): Promise<void> => {
   try {
-    // Check if the page image is a base64 string that needs to be uploaded
     if (page.image && page.image.startsWith('data:image')) {
       console.log(`Uploading base64 image for page ${page.id} in book ${page.bookId}`);
       
-      // Upload the image to storage and get the public URL
       const imageUrl = await uploadImage(page.image, page.bookId, page.id);
       
       if (imageUrl) {
-        console.log(`Image uploaded successfully. Public URL: ${imageUrl}`);
-        // Update the page object with the new image URL
+        console.log(`Image uploaded successfully with consistent filename. Public URL: ${imageUrl}`);
         page.image = imageUrl;
       } else {
         console.error('Failed to upload image to storage');
-        // If upload fails, continue with the original base64 image
         console.log('Continuing with base64 image data');
       }
     }
     
-    // Update the page in the database
     const updatedPage = {
       ...page,
       updatedAt: new Date().toISOString(),
     };
 
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     console.log('Page updated successfully:', updatedPage);
   } catch (error) {
@@ -156,15 +152,13 @@ export const updatePage = async (page: BookPage): Promise<void> => {
   }
 };
 
-// Update the deletePage function to also delete associated images
 export const deletePage = async (pageId: string, book: Book, allBooks: Book[]): Promise<Book[]> => {
   try {
     console.log(`Deleting page ${pageId} from book ${book.id}`);
     
-    // Attempt to delete any stored images associated with this page
     try {
       await deletePageImages(book.id, pageId);
-      console.log(`Deleted storage images for page ${pageId}`);
+      console.log(`Deleted storage image for page ${pageId}`);
     } catch (storageError) {
       console.error('Error deleting page images:', storageError);
       // Continue with page deletion even if image deletion fails
@@ -175,6 +169,9 @@ export const deletePage = async (pageId: string, book: Book, allBooks: Book[]): 
       pages: book.pages.filter(page => page.id !== pageId),
       updatedAt: new Date().toISOString(),
     };
+
+    const validPageIds = updatedBook.pages.map(page => page.id);
+    await cleanupOrphanedImages(book.id, validPageIds);
 
     const updatedBooks = allBooks.map(b => b.id === book.id ? updatedBook : b);
     return updatedBooks;
@@ -219,7 +216,7 @@ export const duplicatePage = async (id: string, book: Book, allBooks: Book[]): P
   const newPage: BookPage = {
     ...pageToDuplicate,
     id: newPageId,
-    bookId: book.id, // Ensure bookId is set correctly
+    bookId: book.id,
   };
 
   const updatedBook: Book = {
