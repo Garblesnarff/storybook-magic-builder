@@ -1,7 +1,7 @@
-
 import { Book, BookPage } from '../../types/book';
 import { deletePageImages, uploadImage } from '../supabase/storage/imageStorage';
 import { deletePageNarration } from '../supabase/storage/audioStorage';
+import { toast } from 'sonner';
 
 /**
  * Updates a page in a book
@@ -9,12 +9,22 @@ import { deletePageNarration } from '../supabase/storage/audioStorage';
  * @returns Promise that resolves when the update is complete
  */
 export const updatePage = async (page: BookPage): Promise<void> => {
-  // If the image is a base64 string, upload it to storage
-  if (page.image && page.image.startsWith('data:image')) {
-    const imageUrl = await uploadImage(page.image, page.bookId, page.id);
-    if (imageUrl) {
-      page.image = imageUrl;
+  try {
+    // If the image is a base64 string, upload it to storage
+    if (page.image && page.image.startsWith('data:image')) {
+      console.log(`Uploading image for page ${page.id} in book ${page.bookId}`);
+      const imageUrl = await uploadImage(page.image, page.bookId, page.id);
+      if (imageUrl) {
+        console.log(`Image uploaded successfully: ${imageUrl}`);
+        page.image = imageUrl;
+      } else {
+        console.error('Failed to upload image, keeping original data');
+        // Keep using the base64 data for now so UI continues to work
+      }
     }
+  } catch (error) {
+    console.error('Error in updatePage while processing image:', error);
+    toast.error('Failed to upload image, but continuing with page update');
   }
 };
 
@@ -99,4 +109,3 @@ export const reorderPage = async (id: string, newPosition: number, book: Book, a
   const updatedBooks = allBooks.map(b => b.id === book.id ? updatedBook : b);
   return updatedBooks;
 };
-

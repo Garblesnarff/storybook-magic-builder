@@ -11,15 +11,28 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
+    // Check if the user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('Authentication required for uploading images');
+      toast.error('Please log in to upload images');
+      return null;
+    }
+
     // Extract the base64 data from the string
     const base64Data = image.split(',')[1];
-    if (!base64Data) return null;
+    if (!base64Data) {
+      console.error('Invalid image data format');
+      return null;
+    }
     
     // Convert base64 to a Blob
     const blob = await fetch(`data:image/png;base64,${base64Data}`).then(res => res.blob());
     
     // Use consistent file naming pattern - pageId only without timestamp
     const filePath = `${bookId}/${pageId}.png`;
+    
+    console.log(`Attempting to upload image to ${filePath}`);
     
     // Upload to Supabase Storage with upsert to replace existing file
     const { data, error } = await supabase
@@ -32,6 +45,9 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     
     if (error) {
       console.error('Error uploading image:', error);
+      toast.error('Failed to upload image', {
+        description: error.message
+      });
       return null;
     }
     
@@ -45,6 +61,9 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     return urlData.publicUrl;
   } catch (e) {
     console.error('Failed to upload image to storage', e);
+    toast.error('Failed to upload image', {
+      description: e instanceof Error ? e.message : 'Unknown error'
+    });
     return null;
   }
 };
@@ -55,6 +74,13 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
  */
 export const deleteBookImages = async (bookId: string): Promise<void> => {
   try {
+    // Check if the user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('Authentication required for deleting images');
+      return;
+    }
+    
     const { data: storageData, error: storageError } = await supabase
       .storage
       .from('book_images')
@@ -86,6 +112,13 @@ export const deleteBookImages = async (bookId: string): Promise<void> => {
  */
 export const deletePageImages = async (bookId: string, pageId: string): Promise<void> => {
   try {
+    // Check if the user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('Authentication required for deleting images');
+      return;
+    }
+    
     // Just remove the single consistent filename for this page
     const filePath = `${bookId}/${pageId}.png`;
     
@@ -112,6 +145,13 @@ export const deletePageImages = async (bookId: string, pageId: string): Promise<
  */
 export const cleanupOrphanedImages = async (bookId: string, validPageIds: string[]): Promise<void> => {
   try {
+    // Check if the user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('Authentication required for cleaning up images');
+      return;
+    }
+    
     // Get all images for this book
     const { data: storageData, error: listError } = await supabase
       .storage
