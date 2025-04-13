@@ -11,14 +11,6 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
-    // Check if the user is authenticated
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('Authentication required for uploading images');
-      toast.error('Please log in to upload images');
-      return null;
-    }
-
     // Extract the base64 data from the string
     const base64Data = image.split(',')[1];
     if (!base64Data) {
@@ -34,8 +26,8 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     
     console.log(`Attempting to upload image to ${filePath}`);
     
-    // Upload to Supabase Storage with upsert to replace existing file
-    const { data, error } = await supabase
+    // Try to upload using anon key first (public bucket with permissive policy)
+    let uploadResult = await supabase
       .storage
       .from('book_images')
       .upload(filePath, blob, {
@@ -43,21 +35,49 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
         upsert: true // This will replace any existing file with the same name
       });
     
-    if (error) {
-      console.error('Error uploading image:', error);
-      toast.error('Failed to upload image', {
-        description: error.message
+    // If upload failed, try different approach
+    if (uploadResult.error) {
+      console.error('First upload attempt failed:', uploadResult.error);
+      
+      // Generate a signed URL for uploading if direct upload fails
+      const { data: signedUrlData, error: signedUrlError } = await supabase
+        .storage
+        .from('book_images')
+        .createSignedUploadUrl(filePath);
+      
+      if (signedUrlError || !signedUrlData) {
+        console.error('Could not generate signed URL:', signedUrlError);
+        throw new Error('Could not generate signed URL for upload');
+      }
+      
+      // Use the signed URL to upload
+      const formData = new FormData();
+      formData.append('file', blob);
+      
+      const uploadResponse = await fetch(signedUrlData.signedUrl, {
+        method: 'PUT',
+        body: blob,
+        headers: {
+          'Content-Type': 'image/png'
+        }
       });
-      return null;
+      
+      if (!uploadResponse.ok) {
+        console.error('Signed URL upload failed:', await uploadResponse.text());
+        throw new Error('Upload failed even with signed URL');
+      }
+      
+      console.log('Uploaded file using signed URL successfully');
+    } else {
+      console.log('Uploaded file successfully on first attempt');
     }
     
     // Return the public URL for the image
     const { data: urlData } = supabase
       .storage
       .from('book_images')
-      .getPublicUrl(data.path);
+      .getPublicUrl(filePath);
     
-    console.log(`Image saved with consistent filename: ${filePath}`);
     return urlData.publicUrl;
   } catch (e) {
     console.error('Failed to upload image to storage', e);
@@ -74,13 +94,6 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
  */
 export const deleteBookImages = async (bookId: string): Promise<void> => {
   try {
-    // Check if the user is authenticated
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('Authentication required for deleting images');
-      return;
-    }
-    
     const { data: storageData, error: storageError } = await supabase
       .storage
       .from('book_images')
@@ -112,13 +125,6 @@ export const deleteBookImages = async (bookId: string): Promise<void> => {
  */
 export const deletePageImages = async (bookId: string, pageId: string): Promise<void> => {
   try {
-    // Check if the user is authenticated
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('Authentication required for deleting images');
-      return;
-    }
-    
     // Just remove the single consistent filename for this page
     const filePath = `${bookId}/${pageId}.png`;
     
@@ -145,13 +151,6 @@ export const deletePageImages = async (bookId: string, pageId: string): Promise<
  */
 export const cleanupOrphanedImages = async (bookId: string, validPageIds: string[]): Promise<void> => {
   try {
-    // Check if the user is authenticated
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('Authentication required for cleaning up images');
-      return;
-    }
-    
     // Get all images for this book
     const { data: storageData, error: listError } = await supabase
       .storage
