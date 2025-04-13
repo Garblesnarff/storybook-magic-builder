@@ -1,6 +1,7 @@
 
 import { Book, BookPage } from '../../types/book';
-import { deletePageImages, uploadImage } from '../supabase/storage';
+import { deletePageImages, uploadImage } from '../supabase/storage/imageStorage';
+import { deletePageNarration } from '../supabase/storage/audioStorage';
 
 /**
  * Updates a page in a book
@@ -32,9 +33,12 @@ export const deletePage = async (pageId: string, book: Book, allBooks: Book[]): 
     try {
       // Delete the page's image from storage
       await deletePageImages(book.id, pageId);
+      
+      // Delete the page's narration audio from storage
+      await deletePageNarration(book.id, pageId);
     } catch (storageError) {
-      console.error('Error deleting page images:', storageError);
-      // Continue with page deletion even if image deletion fails
+      console.error('Error deleting page assets:', storageError);
+      // Continue with page deletion even if asset deletion fails
     }
   }
 
@@ -95,3 +99,4 @@ export const reorderPage = async (id: string, newPosition: number, book: Book, a
   const updatedBooks = allBooks.map(b => b.id === book.id ? updatedBook : b);
   return updatedBooks;
 };
+

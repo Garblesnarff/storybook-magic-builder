@@ -1,10 +1,10 @@
-
 import { BookPage, DEFAULT_PAGE_TEXT } from '../../types/book';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { databasePageToBookPage, bookPageToDatabasePage } from './utils';
-import { uploadImage, deletePageImages } from './storage';
+import { uploadImage, deletePageImages } from './storage/imageStorage';
+import { deletePageNarration } from './storage/audioStorage';
 
 // Function to add a new page to a book in Supabase
 export const addPageToSupabase = async (bookId: string, pageNumber: number): Promise<BookPage | null> => {
@@ -97,8 +97,9 @@ export const deletePageFromSupabase = async (bookId: string, pageId: string): Pr
       return false;
     }
     
-    // Delete any associated image
+    // Delete any associated assets (image and narration)
     await deletePageImages(bookId, pageId);
+    await deletePageNarration(bookId, pageId);
     
     return true;
   } catch (e) {
