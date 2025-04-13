@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { databasePageToBookPage, bookPageToDatabasePage } from './utils';
-import { uploadImage, deletePageImages } from './storageService';
+import { uploadImage, deletePageImages } from './storage';
 
 // Function to add a new page to a book in Supabase
 export const addPageToSupabase = async (bookId: string, pageNumber: number): Promise<BookPage | null> => {

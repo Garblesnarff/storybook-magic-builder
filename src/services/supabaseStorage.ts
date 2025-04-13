@@ -7,7 +7,7 @@
 import { Book, BookPage } from '../types/book';
 import * as bookService from './supabase/bookService';
 import * as pageService from './supabase/pageService';
-import * as storageService from './supabase/storageService';
+import * as storageService from './supabase/storage';
 import {
   bookPageToDatabasePage,
   databasePageToBookPage
