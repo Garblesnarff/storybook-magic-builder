@@ -5,6 +5,25 @@ import { toast } from 'sonner';
 import { useAITextGeneration } from './useAITextGeneration';
 import { useAIImageGeneration } from './useAIImageGeneration';
 
+// Helper function to create a deep copy of page data
+const createPageCopy = (page: BookPage | null): BookPage | null => {
+  if (!page) return null;
+  return JSON.parse(JSON.stringify(page));
+};
+
+// Helper function to handle error toast and state restoration
+const handleUpdateError = (
+  error: unknown, 
+  message: string, 
+  originalPage: BookPage,
+  setCurrentPageData: (page: BookPage | null) => void
+) => {
+  console.error(`Error ${message}:`, error);
+  toast.error(`Failed to ${message}`);
+  // Restore previous state on error
+  setCurrentPageData(originalPage);
+};
+
 export function usePageContentApplier(
   currentPageData: BookPage | null, 
   updatePage: (page: BookPage) => Promise<void>, 
@@ -33,7 +52,7 @@ export function usePageContentApplier(
         
         // Create updated page object
         const updatedPage = {
-          ...JSON.parse(JSON.stringify(currentPageData)),
+          ...createPageCopy(currentPageData),
           text: generatedText
         };
         
@@ -53,56 +72,70 @@ export function usePageContentApplier(
     }
   };
 
-  // Handle applying AI-generated image to the current page
-  const handleApplyAIImage = async (prompt: string) => {
+  // Validate page data before operations
+  const validatePageData = (operation: string): boolean => {
     if (!currentPageData) {
       toast.error('No page is selected');
-      return;
+      return false;
     }
+    
+    if (!currentPageData.bookId) {
+      toast.error('Could not determine book ID');
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Get image style from page formatting
+  const getImageStyle = (): string => {
+    return currentPageData?.textFormatting?.imageStyle || 'REALISTIC';
+  };
+
+  // Update page with new image
+  const updatePageWithImage = async (imageUrl: string): Promise<void> => {
+    if (!currentPageData) return;
+    
+    // Create a deep copy of the current page data
+    const pageToUpdate = createPageCopy(currentPageData);
+    
+    // Create updated page object with the new image
+    const updatedPage = {
+      ...pageToUpdate,
+      image: imageUrl
+    };
+    
+    console.log('Updated page data before setting:', updatedPage);
+    
+    // Update local state first for immediate feedback
+    setCurrentPageData(updatedPage);
+    
+    // Update in database
+    try {
+      console.log('Saving page with new image to database:', updatedPage);
+      await updatePage(updatedPage);
+      console.log('Database update complete for image');
+      toast.success('Image applied to page');
+    } catch (error) {
+      handleUpdateError(error, 'save page with new image', currentPageData, setCurrentPageData);
+    }
+  };
+
+  // Handle applying AI-generated image to the current page
+  const handleApplyAIImage = async (prompt: string) => {
+    if (!validatePageData('apply image')) return;
     
     setProcessingStory(true);
     try {
-      if (!currentPageData.bookId) {
-        toast.error('Could not determine book ID');
-        return;
-      }
-      
       console.log(`Generating image for page ${currentPageData.id} in book ${currentPageData.bookId}`);
-      const imageStyle = currentPageData.textFormatting?.imageStyle || 'REALISTIC';
+      const imageStyle = getImageStyle();
       
       // Generate and upload the image, returning the storage URL
       const imageUrl = await generateImage(prompt, imageStyle, currentPageData.bookId, currentPageData.id);
       
       if (imageUrl) {
         console.log('Image URL from generation:', imageUrl);
-        
-        // Create a deep copy of the current page data to avoid reference issues
-        const pageToUpdate = JSON.parse(JSON.stringify(currentPageData));
-        
-        // Create updated page object with the new image
-        const updatedPage = {
-          ...pageToUpdate,
-          image: imageUrl
-        };
-        
-        console.log('Updated page data before setting:', updatedPage);
-        
-        // Update local state first for immediate feedback
-        setCurrentPageData(updatedPage);
-        
-        // Update in database without delay since we're now using consistent filenames
-        try {
-          console.log('Saving page with new image to database:', updatedPage);
-          await updatePage(updatedPage);
-          console.log('Database update complete for image');
-        } catch (error) {
-          console.error('Error saving page with new image:', error);
-          toast.error('Failed to save page with new image');
-          // Restore previous state on error
-          setCurrentPageData(currentPageData);
-        }
-        
-        toast.success('Image applied to page');
+        await updatePageWithImage(imageUrl);
       }
     } catch (error) {
       console.error('Error applying AI image:', error);
@@ -112,27 +145,24 @@ export function usePageContentApplier(
     }
   };
 
+  // Validate page text for image generation
+  const validatePageText = (): boolean => {
+    if (!currentPageData?.text || currentPageData.text.trim() === '') {
+      toast.error('Page has no text to generate an image from');
+      return false;
+    }
+    return true;
+  };
+
   // Generate image directly for the current page
   const handleGenerateImage = async () => {
-    if (!currentPageData) {
-      toast.error('No page is selected');
-      return;
-    }
-    
-    if (!currentPageData.text || currentPageData.text.trim() === '') {
-      toast.error('Page has no text to generate an image from');
-      return;
-    }
+    if (!validatePageData('generate image')) return;
+    if (!validatePageText()) return;
     
     setIsGenerating(true);
     
     try {
-      if (!currentPageData.bookId) {
-        toast.error('Could not determine book ID');
-        return;
-      }
-      
-      const imageStyle = currentPageData.textFormatting?.imageStyle || 'REALISTIC';
+      const imageStyle = getImageStyle();
       
       console.log(`Generating image directly for page ${currentPageData.id} with style ${imageStyle}`);
       
@@ -146,33 +176,7 @@ export function usePageContentApplier(
       
       if (imageUrl) {
         console.log('Generated image URL:', imageUrl);
-        
-        // Create a deep copy of the current page data to avoid reference issues
-        const pageToUpdate = JSON.parse(JSON.stringify(currentPageData));
-        
-        // Create updated page object with the new image
-        const updatedPage = {
-          ...pageToUpdate,
-          image: imageUrl
-        };
-        
-        console.log('Updating page data with new image:', updatedPage);
-        
-        // Update local state first for immediate feedback
-        setCurrentPageData(updatedPage);
-        
-        // Update in database without delay (we're using consistent filenames now)
-        try {
-          console.log('Saving page with generated image to database:', updatedPage);
-          await updatePage(updatedPage);
-          console.log('Database update complete for generated image');
-        } catch (error) {
-          console.error('Error saving page with generated image:', error);
-          toast.error('Failed to save page with generated image');
-          // Restore previous state on error
-          setCurrentPageData(currentPageData);
-        }
-        
+        await updatePageWithImage(imageUrl);
         toast.success('Image generated and applied to page');
       }
     } catch (error) {
