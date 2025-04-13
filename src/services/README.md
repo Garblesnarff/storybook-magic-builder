@@ -1,29 +1,48 @@
 
 # Services Directory
 
-This directory contains service modules that handle core business logic and data operations.
+This directory contains service functions that provide the core business logic for the application.
 
-### Files
+## Structure
 
-- **bookOperations.ts**: Core functions for creating, updating, and deleting books. Contains pure functions that don't depend on React state.
-- **bookStorage.ts**: Functions for saving and loading books from localStorage, with error handling and optimization for large books.
-- **pageOperations.ts**: Functions for managing book pages, including adding, updating, deleting, and reordering pages within books.
-- **pdfExport.ts**: Handles PDF generation and export of books using jsPDF, including layout processing and image handling.
+- **book/**: Contains operations related to book management
+  - `bookCreation.ts`: Functions for creating books
+  - `bookOperations.ts`: Functions for updating and deleting books
+  
+- **page/**: Contains operations related to page management
+  - `pageCreation.ts`: Functions for creating and duplicating pages
+  - `pageModification.ts`: Functions for updating, deleting, and reordering pages
+  
+- **supabase/**: Contains services for interacting with Supabase
+  - `storageService.ts`: Functions for managing file storage
+  - `bookService.ts`: Functions for interacting with book data in Supabase
+  - `pageService.ts`: Functions for interacting with page data in Supabase
+  - `utils.ts`: Utility functions for Supabase data conversion
 
-### Dependencies
+- **pageOperations.ts**: Re-exports functions from refactored modules to maintain backward compatibility
 
-- uuid: For generating unique IDs
-- jspdf: For PDF generation
-- Book and BookPage types from types/book.ts
+## Usage
 
-### Usage Notes
+Services can be imported from their specific modules or from the main re-export file:
 
-- These services are designed to be used by React hooks but contain pure logic that could be used elsewhere
-- All functions that modify books return new book arrays rather than mutating existing ones
-- Storage operations are handled asynchronously with setTimeout to avoid blocking the UI
+```typescript
+// Importing specific services directly
+import { addPage, duplicatePage } from './page/pageCreation';
+import { updatePage } from './page/pageModification';
 
-### Best Practices
+// Or using the compatibility layer
+import { addPage, updatePage, duplicatePage } from './pageOperations';
+```
 
-- Keep these functions pure and free from React dependencies
-- Ensure error handling for all external operations (localStorage, image processing)
-- Return new objects/arrays rather than mutating state
+## Dependencies
+
+These services rely on:
+- UUID generation for creating unique IDs
+- Supabase storage services for image management
+- The Book and BookPage data models from the types directory
+
+## Notes
+
+- All async functions return Promises and should be properly awaited
+- Image upload/deletion is handled through the Supabase storage service
+- Error handling is implemented in each function
