@@ -9,13 +9,11 @@ This directory contains modular services for interacting with Supabase.
 
 - **pageService.ts**: Manages page-related operations within books, including adding, updating, deleting, and reordering pages in Supabase. Contains functions such as `addPageToSupabase`, `updatePageInSupabase`, `deletePageFromSupabase`, and `reorderPagesInSupabase`.
 
-- **storageService.ts**: Handles image upload and storage operations in Supabase Storage. Contains functions like `uploadImage`, `deleteBookImages`, and `deletePageImages` for managing image assets related to books and pages.
-
 - **utils.ts**: Provides utility functions for data conversion between the application's data models and Supabase database schema. Contains functions like `bookPageToDatabasePage` and `databasePageToBookPage`.
 
 ### Subdirectories
 
-- None at this time.
+- **storage/**: Contains functions for managing Supabase Storage operations. See storage/README.md for details.
 
 ### Instructions
 
@@ -30,10 +28,3 @@ This directory contains modular services for interacting with Supabase.
 - sonner: For toast notifications
 - Book and BookPage types from src/types/book.ts
 - Supabase client from src/integrations/supabase/client.ts
-
-### Notes
-
-- These services replace the previous monolithic supabaseStorage.ts file
-- All services maintain backward compatibility with the original API signatures
-- When updating these services, ensure that error handling is consistently applied
-- Book images are stored in the 'book_images' bucket in Supabase Storage with a path pattern of `{bookId}/{pageId}_{timestamp}.png`

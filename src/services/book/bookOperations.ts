@@ -1,6 +1,6 @@
 
 import { Book } from '../../types/book';
-import { cleanupOrphanedImages, deleteBookImages } from '../supabase/storageService';
+import { cleanupOrphanedImages, deleteBookImages } from '../supabase/storage';
 
 /**
  * Updates a book in the collection of books

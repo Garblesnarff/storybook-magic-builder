@@ -2,7 +2,13 @@
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-// Upload an image to Supabase Storage with consistent naming to prevent duplicates
+/**
+ * Upload an image to Supabase Storage with consistent naming to prevent duplicates
+ * @param image Base64 image data
+ * @param bookId The book ID
+ * @param pageId The page ID
+ * @returns The public URL of the uploaded image or null if upload failed
+ */
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
     // Extract the base64 data from the string
@@ -43,7 +49,10 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
   }
 };
 
-// Delete images for a book from storage
+/**
+ * Delete images for a book from storage
+ * @param bookId The book ID
+ */
 export const deleteBookImages = async (bookId: string): Promise<void> => {
   try {
     const { data: storageData, error: storageError } = await supabase
@@ -70,7 +79,11 @@ export const deleteBookImages = async (bookId: string): Promise<void> => {
   }
 };
 
-// Delete page image from storage
+/**
+ * Delete page image from storage
+ * @param bookId The book ID
+ * @param pageId The page ID
+ */
 export const deletePageImages = async (bookId: string, pageId: string): Promise<void> => {
   try {
     // Just remove the single consistent filename for this page
@@ -92,71 +105,11 @@ export const deletePageImages = async (bookId: string, pageId: string): Promise<
   }
 };
 
-// Upload audio to Supabase Storage
-export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: string): Promise<string | null> => {
-  try {
-    // Validate inputs
-    if (!audioBlob || !bookId || !pageId) {
-      toast.error('Missing required information for audio upload');
-      return null;
-    }
-
-    // Generate a consistent file path for audio
-    const filePath = `${bookId}/${pageId}_narration.mp3`;
-    
-    // Upload to Supabase Storage
-    const { data, error } = await supabase
-      .storage
-      .from('narrations')
-      .upload(filePath, audioBlob, {
-        contentType: 'audio/mpeg',
-        upsert: true
-      });
-    
-    if (error) {
-      console.error('Error uploading audio:', error);
-      toast.error('Failed to upload narration audio');
-      return null;
-    }
-    
-    // Get the public URL for the uploaded audio
-    const { data: urlData } = supabase
-      .storage
-      .from('narrations')
-      .getPublicUrl(data.path);
-    
-    console.log("Audio uploaded, public URL:", urlData.publicUrl);
-    return urlData.publicUrl;
-  } catch (e) {
-    console.error('Failed to upload audio to storage', e);
-    toast.error('Failed to save narration audio');
-    return null;
-  }
-};
-
-// Delete narration audio for a page
-export const deletePageNarration = async (bookId: string, pageId: string): Promise<void> => {
-  try {
-    // Just delete the consistent filename
-    const filePath = `${bookId}/${pageId}_narration.mp3`;
-    
-    const { error: deleteError } = await supabase
-      .storage
-      .from('narrations')
-      .remove([filePath]);
-      
-    if (deleteError) {
-      console.error(`Error deleting page narration: ${filePath}`, deleteError);
-    } else {
-      console.log(`Successfully deleted narration for page ${pageId}`);
-    }
-  } catch (storageError) {
-    console.error('Error deleting page narration:', storageError);
-    // Continue even if deletion fails
-  }
-};
-
-// New function to clean up orphaned images
+/**
+ * Clean up orphaned images
+ * @param bookId The book ID
+ * @param validPageIds Array of valid page IDs
+ */
 export const cleanupOrphanedImages = async (bookId: string, validPageIds: string[]): Promise<void> => {
   try {
     // Get all images for this book

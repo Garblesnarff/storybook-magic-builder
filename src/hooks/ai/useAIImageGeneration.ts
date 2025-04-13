@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { uploadImage } from '@/services/supabase/storageService';
+import { uploadImage } from '@/services/supabase/storage';
 
 export function useAIImageGeneration() {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
