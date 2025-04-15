@@ -21,17 +21,23 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     console.log('Uploading to path:', filePath);
 
     // Upload with upsert enabled
-    const { error: uploadError } = await supabase
+    const { error: uploadError, data: uploadData } = await supabase
       .storage
       .from('book_images')
       .upload(filePath, blob, {
         contentType: 'image/png',
-        upsert: true
+        upsert: true,
+        cacheControl: '3600'
       });
 
     if (uploadError) {
       console.error('Storage upload error:', uploadError);
       throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+
+    // Verify upload was successful
+    if (!uploadData?.path) {
+      throw new Error('Upload completed but no path returned');
     }
 
     // Get public URL after successful upload
@@ -40,9 +46,17 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
       .from('book_images')
       .getPublicUrl(filePath);
 
-    console.log('Upload successful, public URL generated:', publicUrl);
-    return publicUrl;
+    // Verify the URL exists
+    if (!publicUrl) {
+      throw new Error('Failed to generate public URL');
+    }
 
+    console.log('Upload successful, public URL generated:', publicUrl);
+    
+    // Verify the image is accessible
+    await fetch(publicUrl, { method: 'HEAD' });
+    
+    return publicUrl;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('Image upload failed:', errorMessage);
