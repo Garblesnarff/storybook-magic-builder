@@ -1,6 +1,7 @@
 
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { verifyImageUrl } from '@/utils/imageVerification';
 
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
@@ -54,7 +55,7 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     console.log('Upload successful, public URL generated:', publicUrl);
     
     // Verify the image is accessible
-    await fetch(publicUrl, { method: 'HEAD' });
+    await verifyImageUrl(publicUrl);
     
     return publicUrl;
   } catch (error) {

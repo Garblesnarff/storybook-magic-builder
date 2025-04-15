@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { preloadImage } from '@/utils/imageVerification';
 
 export function useImageLoading(imageUrl: string | null) {
   const [isLoading, setIsLoading] = useState(true);
@@ -22,15 +22,7 @@ export function useImageLoading(imageUrl: string | null) {
       setError(null);
 
       try {
-        // Create a new image object
-        const img = new Image();
-        
-        // Create a promise that resolves when the image loads
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = imageUrl;
-        });
+        await preloadImage(imageUrl);
 
         if (isMounted) {
           setLoadedUrl(imageUrl);
