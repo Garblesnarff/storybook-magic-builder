@@ -9,14 +9,15 @@ export function useAIImageGeneration() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
   const generateImage = async (prompt: string, imageStyle: string = 'REALISTIC', bookId?: string, pageId?: string) => {
+    // Validate input
     if (!prompt.trim()) {
       toast.error('Please enter a prompt first');
       return null;
     }
 
-    // Check authentication first
+    // Verify authentication
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    if (!session?.user) {
       toast.error('Please sign in to generate images');
       return null;
     }
@@ -25,27 +26,34 @@ export function useAIImageGeneration() {
     setGeneratedImage(null);
 
     try {
-      // Generate the image
+      console.log('Generating image for prompt:', prompt.substring(0, 50));
+      
+      // Generate image
       const response = await supabase.functions.invoke('generate-image', {
         body: JSON.stringify({ prompt, style: imageStyle })
       });
 
       if (!response.data?.image) {
-        throw new Error('Failed to generate image');
+        throw new Error('No image data received from generation service');
       }
 
       const imageData = `data:image/png;base64,${response.data.image}`;
       setGeneratedImage(imageData);
       
-      // If book ID and page ID are provided, upload to storage
+      // Upload to storage if book and page IDs provided
       if (bookId && pageId) {
+        console.log('Uploading generated image to storage...');
         const imageUrl = await uploadImage(imageData, bookId, pageId);
+        
         if (!imageUrl) {
           throw new Error('Failed to save image to storage');
         }
+        
+        toast.success('Image generated and saved successfully');
         return imageUrl;
       }
 
+      toast.success('Image generated successfully');
       return imageData;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';

@@ -1,52 +1,52 @@
+
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
-    // Check if we have an authenticated session
+    // Verify authentication status
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    if (!session?.user) {
       toast.error('Please sign in to upload images');
       return null;
     }
 
-    // Extract the base64 data from the string
+    // Validate and extract base64 data
     const base64Data = image.split(',')[1];
     if (!base64Data) {
       throw new Error('Invalid image data format');
     }
     
-    // Convert base64 to a Blob
-    const blob = await fetch(`data:image/png;base64,${base64Data}`).then(res => res.blob());
-    
-    // Use consistent file naming pattern
+    // Convert to blob with proper MIME type
+    const blob = await fetch(image).then(res => res.blob());
     const filePath = `${bookId}/${pageId}.png`;
-    
-    // Upload the image
-    const { data, error: uploadError } = await supabase
+
+    // Upload with upsert enabled
+    const { error: uploadError } = await supabase
       .storage
       .from('book_images')
       .upload(filePath, blob, {
         contentType: 'image/png',
-        upsert: true
+        upsert: true,
+        cacheControl: '3600'
       });
 
     if (uploadError) {
-      throw uploadError;
+      console.error('Storage upload error:', uploadError);
+      throw new Error(`Failed to upload: ${uploadError.message}`);
     }
 
-    // Get the public URL
-    const { data: urlData } = supabase
+    // Get public URL after successful upload
+    const { data: { publicUrl } } = supabase
       .storage
       .from('book_images')
       .getPublicUrl(filePath);
 
-    return urlData.publicUrl;
+    return publicUrl;
   } catch (error) {
-    console.error('Failed to upload image:', error);
-    toast.error('Failed to upload image', {
-      description: error instanceof Error ? error.message : 'Unknown error occurred'
-    });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Image upload failed:', errorMessage);
+    toast.error('Failed to upload image', { description: errorMessage });
     return null;
   }
 };
