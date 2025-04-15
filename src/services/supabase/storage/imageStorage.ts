@@ -4,22 +4,21 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
-    // Verify authentication status
+    // Verify authentication status first
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
+      console.log('Upload attempted without authentication');
       toast.error('Please sign in to upload images');
       return null;
     }
 
-    // Validate and extract base64 data
-    const base64Data = image.split(',')[1];
-    if (!base64Data) {
-      throw new Error('Invalid image data format');
-    }
-    
+    console.log(`Starting image upload for book ${bookId}, page ${pageId}`);
+
     // Convert to blob with proper MIME type
     const blob = await fetch(image).then(res => res.blob());
     const filePath = `${bookId}/${pageId}.png`;
+
+    console.log('Uploading to path:', filePath);
 
     // Upload with upsert enabled
     const { error: uploadError } = await supabase
@@ -27,13 +26,12 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
       .from('book_images')
       .upload(filePath, blob, {
         contentType: 'image/png',
-        upsert: true,
-        cacheControl: '3600'
+        upsert: true
       });
 
     if (uploadError) {
       console.error('Storage upload error:', uploadError);
-      throw new Error(`Failed to upload: ${uploadError.message}`);
+      throw new Error(`Upload failed: ${uploadError.message}`);
     }
 
     // Get public URL after successful upload
@@ -42,7 +40,9 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
       .from('book_images')
       .getPublicUrl(filePath);
 
+    console.log('Upload successful, public URL generated:', publicUrl);
     return publicUrl;
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('Image upload failed:', errorMessage);

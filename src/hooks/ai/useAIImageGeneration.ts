@@ -15,7 +15,7 @@ export function useAIImageGeneration() {
       return null;
     }
 
-    // Verify authentication
+    // Verify authentication first
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
       toast.error('Please sign in to generate images');
@@ -26,7 +26,7 @@ export function useAIImageGeneration() {
     setGeneratedImage(null);
 
     try {
-      console.log('Generating image for prompt:', prompt.substring(0, 50));
+      console.log('Generating image with prompt:', prompt.substring(0, 50));
       
       // Generate image
       const response = await supabase.functions.invoke('generate-image', {
@@ -58,7 +58,7 @@ export function useAIImageGeneration() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Image generation failed:', errorMessage);
-      toast.error('Image generation failed', {
+      toast.error('Failed to generate image', {
         description: errorMessage
       });
       return null;
