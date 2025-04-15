@@ -14,6 +14,13 @@ export function useAIImageGeneration() {
       return null;
     }
 
+    // Check authentication first
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error('Please sign in to generate images');
+      return null;
+    }
+
     setIsGeneratingImage(true);
     setGeneratedImage(null);
 
@@ -27,17 +34,10 @@ export function useAIImageGeneration() {
         })
       });
 
-      // Check for errors in the response
       if (response.error || !response.data || !response.data.image) {
-        const errorDetails = response.error?.message || 'No image data returned';
-        console.error('Image generation failed:', errorDetails);
-        toast.error('Image generation failed', {
-          description: errorDetails
-        });
-        return null;
+        throw new Error(response.error?.message || 'No image data returned');
       }
 
-      // Format the base64 image data
       const imageData = `data:image/png;base64,${response.data.image}`;
       console.log('Image generated successfully');
       setGeneratedImage(imageData);
@@ -45,21 +45,21 @@ export function useAIImageGeneration() {
       // If book ID and page ID are provided, upload to storage
       if (bookId && pageId) {
         const imageUrl = await uploadImage(imageData, bookId, pageId);
-        
-        if (imageUrl) {
-          toast.success('Image generated and saved successfully!');
-          return imageUrl;
-        } else {
-          toast.error('Image generated but could not be saved');
-          return imageData;
+        if (!imageUrl) {
+          throw new Error('Failed to upload image to storage');
         }
+        toast.success('Image generated and saved successfully!');
+        return imageUrl;
       }
 
       toast.success('Image generated successfully!');
       return imageData;
     } catch (error) {
-      console.error('Image generation error:', error);
-      toast.error('Image generation failed');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Image generation error:', errorMessage);
+      toast.error('Image generation failed', {
+        description: errorMessage
+      });
       return null;
     } finally {
       setIsGeneratingImage(false);

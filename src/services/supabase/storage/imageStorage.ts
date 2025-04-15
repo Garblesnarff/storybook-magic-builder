@@ -1,15 +1,17 @@
+
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Upload an image to Supabase Storage with consistent naming to prevent duplicates
- * @param image Base64 image data
- * @param bookId The book ID
- * @param pageId The page ID
- * @returns The public URL of the uploaded image or null if upload failed
- */
 export const uploadImage = async (image: string, bookId: string, pageId: string): Promise<string | null> => {
   try {
+    // Check if we have an authenticated session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error('No authenticated session found');
+      toast.error('Authentication required to upload images');
+      return null;
+    }
+
     // Extract the base64 data from the string
     const base64Data = image.split(',')[1];
     if (!base64Data) {
@@ -25,8 +27,8 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     
     console.log(`Attempting to upload image to ${filePath}`);
     
-    // Attempt direct upload first
-    const { error: uploadError } = await supabase
+    // Attempt upload with upsert
+    const { data: uploadData, error: uploadError } = await supabase
       .storage
       .from('book_images')
       .upload(filePath, blob, {
@@ -47,8 +49,8 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     
     console.log('Upload successful, public URL:', urlData.publicUrl);
     return urlData.publicUrl;
-  } catch (e) {
-    console.error('Failed to upload image to storage:', e);
+  } catch (error) {
+    console.error('Failed to upload image to storage:', error);
     toast.error('Failed to upload image');
     return null;
   }
