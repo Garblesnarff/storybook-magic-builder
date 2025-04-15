@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useBook } from '@/contexts/BookContext';
 import { useBookLoading } from './page/useBookLoading';
@@ -42,32 +43,38 @@ export const usePageState = (bookId?: string) => {
       // Make a deep copy of the page to avoid reference issues
       const pageToUpdate = JSON.parse(JSON.stringify(page));
       
-      // If there's an image, verify it's accessible before proceeding
-      if (pageToUpdate.image) {
-        try {
-          await verifyImageUrl(pageToUpdate.image);
-        } catch (error) {
-          console.error('Image verification failed:', error);
-          toast.error('Failed to verify image URL');
-          completeSavingOperation();
-          return;
-        }
-      }
-      
-      // Update the local state immediately for responsive UI
+      // Immediately update the local state for responsive UI
       if (currentPageData && currentPageData.id === page.id) {
         console.log('Updating local state with new page data');
         setCurrentPageData(pageToUpdate);
       }
-      
-      // Persist to the database
-      await contextUpdatePage(pageToUpdate);
-      console.log(`Page ${page.id} successfully updated in database`);
-      
-    } catch (error) {
-      console.error('Error in updatePage:', error);
-      toast.error('Failed to update page');
-      throw error;
+
+      try {
+        // If there's an image, verify it's accessible before proceeding
+        if (pageToUpdate.image) {
+          // Skip verification for base64 images
+          if (!pageToUpdate.image.startsWith('data:image')) {
+            console.log(`Verifying image URL: ${pageToUpdate.image.substring(0, 40)}...`);
+            await verifyImageUrl(pageToUpdate.image);
+          }
+        }
+        
+        // Persist to the database
+        console.log('Calling contextUpdatePage to persist changes to database');
+        await contextUpdatePage(pageToUpdate);
+        console.log(`Page ${page.id} successfully updated in database`);
+      } catch (error) {
+        console.error('Error in updatePage:', error);
+        
+        // Handle image verification failure specifically
+        if (error instanceof Error && error.message.includes('verification failed')) {
+          toast.error('Image could not be verified. Please try again.');
+        } else {
+          toast.error('Failed to update page');
+        }
+        
+        throw error;
+      }
     } finally {
       completeSavingOperation();
     }

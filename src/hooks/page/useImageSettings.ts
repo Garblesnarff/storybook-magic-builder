@@ -10,10 +10,30 @@ export function useImageSettings(
   const { trackSavingOperation, completeSavingOperation } = useSavingState();
   const imageSettingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isImageSaveDebouncing = useRef(false);
+  const lastImageSettings = useRef<ImageSettings | null>(null);
+  
+  // Store initial settings when page changes
+  useEffect(() => {
+    if (currentPageData?.imageSettings) {
+      lastImageSettings.current = JSON.parse(JSON.stringify(currentPageData.imageSettings));
+    }
+  }, [currentPageData?.id]);
   
   // Handle image settings changes with debounce
   const handleImageSettingsChange = useCallback(async (settings: ImageSettings) => {
-    if (!currentPageData) return;
+    if (!currentPageData) return Promise.resolve();
+
+    // Skip update if settings haven't changed to prevent unnecessary saves
+    const currentSettingsStr = JSON.stringify(settings);
+    const lastSettingsStr = JSON.stringify(lastImageSettings.current);
+    
+    if (currentSettingsStr === lastSettingsStr) {
+      console.log("useImageSettings: Settings unchanged, skipping update");
+      return Promise.resolve();
+    }
+    
+    // Store the latest settings
+    lastImageSettings.current = JSON.parse(JSON.stringify(settings));
 
     console.log(`useImageSettings: handleImageSettingsChange called for page ${currentPageData.id}. Debouncing updatePage.`);
 
@@ -46,9 +66,10 @@ export function useImageSettings(
         return;
       }
       
+      // Make sure we don't lose other page data when updating
       const updatedPage = {
         ...pageDataCopy,
-        imageSettings: settings
+        imageSettings: lastImageSettings.current
       };
 
       try {
@@ -64,7 +85,7 @@ export function useImageSettings(
           isImageSaveDebouncing.current = false;
         }
       }
-    }, 300);
+    }, 400); // Slightly longer debounce to ensure user is done adjusting
     
     // Return a promise that resolves immediately to match the expected Promise<void> return type
     return Promise.resolve();

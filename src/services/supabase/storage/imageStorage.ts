@@ -15,6 +15,12 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
 
     console.log(`Starting image upload for book ${bookId}, page ${pageId}`);
 
+    // Skip conversion if already a URL
+    if (image.startsWith('http')) {
+      console.log('Image is already a URL, skipping upload');
+      return image;
+    }
+
     // Convert to blob with proper MIME type
     const blob = await fetch(image).then(res => res.blob());
     const filePath = `${bookId}/${pageId}.png`;
@@ -28,7 +34,7 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
       .upload(filePath, blob, {
         contentType: 'image/png',
         upsert: true,
-        cacheControl: '3600'
+        cacheControl: '0' // Disable caching to ensure fresh images
       });
 
     if (uploadError) {
@@ -54,10 +60,32 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
 
     console.log('Upload successful, public URL generated:', publicUrl);
     
-    // Verify the image is accessible
-    await verifyImageUrl(publicUrl);
+    // Add a timestamp parameter to force a fresh load and break cache
+    const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
     
-    return publicUrl;
+    // Verify the image is accessible
+    try {
+      await verifyImageUrl(cacheBustedUrl);
+      console.log('Image URL successfully verified');
+      return cacheBustedUrl;
+    } catch (verifyError) {
+      console.error('Image verification failed after upload:', verifyError);
+      toast.error('Image uploaded but verification failed. Trying again...');
+      
+      // Wait a moment and retry verification
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Second attempt to verify
+      try {
+        await verifyImageUrl(cacheBustedUrl);
+        console.log('Image URL verified on second attempt');
+        return cacheBustedUrl;
+      } catch (retryError) {
+        console.error('Second verification attempt failed:', retryError);
+        throw new Error('Image verification failed after multiple attempts');
+      }
+    }
+    
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('Image upload failed:', errorMessage);

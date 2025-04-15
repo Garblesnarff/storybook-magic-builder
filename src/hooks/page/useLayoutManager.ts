@@ -14,10 +14,20 @@ export function useLayoutManager(
   const handleLayoutChange = useCallback((layout: PageLayout) => {
     if (!currentPageData) return;
     
-    console.log(`useLayoutManager: handleLayoutChange called for page ${currentPageData.id}`);
+    // Don't update if the layout is the same to prevent unnecessary saves
+    if (currentPageData.layout === layout) {
+      console.log('Layout unchanged, skipping update');
+      return;
+    }
+    
+    console.log(`useLayoutManager: handleLayoutChange called for page ${currentPageData.id} to layout ${layout}`);
     trackSavingOperation();
     
-    updatePage({ ...currentPageData, layout })
+    // Make a deep copy to avoid reference issues and preserve all other settings
+    const updatedPage = JSON.parse(JSON.stringify(currentPageData));
+    updatedPage.layout = layout;
+    
+    updatePage(updatedPage)
       .then(() => {
         console.log(`useLayoutManager: updatePage successful for layout change on page ${currentPageData.id}`);
         toast.success(`Layout changed to ${layout}`);

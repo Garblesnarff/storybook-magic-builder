@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookPage, PageLayout, layoutNames } from '@/types/book';
 import { Label } from '@/components/ui/label';
 
@@ -12,6 +11,25 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
   currentPageData,
   handleLayoutChange
 }) => {
+  // Keep local state to prevent UI flickering
+  const [selectedLayout, setSelectedLayout] = useState<PageLayout>(
+    currentPageData.layout || 'text-left-image-right'
+  );
+  
+  // Update local state when page changes
+  useEffect(() => {
+    if (currentPageData.layout) {
+      setSelectedLayout(currentPageData.layout);
+    }
+  }, [currentPageData.id, currentPageData.layout]);
+  
+  const handleLayoutSelect = (layout: PageLayout) => {
+    // Update local state immediately
+    setSelectedLayout(layout);
+    // Then update in database
+    handleLayoutChange(layout);
+  };
+
   return (
     <div className="space-y-4">
       <Label htmlFor="layout">Page Layout</Label>
@@ -20,9 +38,9 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
           <div
             key={layout}
             className={`p-3 rounded-md border-2 cursor-pointer text-center text-sm ${
-              currentPageData.layout === layout ? 'border-primary bg-primary/5' : 'border-gray-200'
+              selectedLayout === layout ? 'border-primary bg-primary/5' : 'border-gray-200'
             }`}
-            onClick={() => handleLayoutChange(layout as PageLayout)}
+            onClick={() => handleLayoutSelect(layout as PageLayout)}
           >
             {name}
           </div>
