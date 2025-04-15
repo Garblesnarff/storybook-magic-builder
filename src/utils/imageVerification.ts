@@ -8,18 +8,17 @@ export const verifyImageUrl = async (url: string): Promise<boolean> => {
   try {
     const response = await fetch(url, { 
       method: 'HEAD',
-      // Add cache-busting parameter to prevent cached responses
-      cache: 'no-cache'
+      cache: 'no-store' // Prevent caching completely
     });
     
     if (!response.ok) {
       console.error(`Image verification failed with status: ${response.status} for URL: ${url}`);
-      throw new Error(`Image verification failed with status: ${response.status}`);
+      return false;
     }
     return true;
   } catch (error) {
     console.error('Image verification failed:', error);
-    throw error;
+    return false;
   }
 };
 
