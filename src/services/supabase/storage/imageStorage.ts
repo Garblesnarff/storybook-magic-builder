@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,69 +20,36 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     // Convert base64 to a Blob
     const blob = await fetch(`data:image/png;base64,${base64Data}`).then(res => res.blob());
     
-    // Use consistent file naming pattern - pageId only without timestamp
+    // Use consistent file naming pattern
     const filePath = `${bookId}/${pageId}.png`;
     
     console.log(`Attempting to upload image to ${filePath}`);
     
-    // Try to upload using anon key first (public bucket with permissive policy)
-    let uploadResult = await supabase
+    // Attempt direct upload first
+    const { error: uploadError } = await supabase
       .storage
       .from('book_images')
       .upload(filePath, blob, {
         contentType: 'image/png',
-        upsert: true // This will replace any existing file with the same name
+        upsert: true
       });
-    
-    // If upload failed, try different approach
-    if (uploadResult.error) {
-      console.error('First upload attempt failed:', uploadResult.error);
-      
-      // Generate a signed URL for uploading if direct upload fails
-      const { data: signedUrlData, error: signedUrlError } = await supabase
-        .storage
-        .from('book_images')
-        .createSignedUploadUrl(filePath);
-      
-      if (signedUrlError || !signedUrlData) {
-        console.error('Could not generate signed URL:', signedUrlError);
-        throw new Error('Could not generate signed URL for upload');
-      }
-      
-      // Use the signed URL to upload
-      const formData = new FormData();
-      formData.append('file', blob);
-      
-      const uploadResponse = await fetch(signedUrlData.signedUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: {
-          'Content-Type': 'image/png'
-        }
-      });
-      
-      if (!uploadResponse.ok) {
-        console.error('Signed URL upload failed:', await uploadResponse.text());
-        throw new Error('Upload failed even with signed URL');
-      }
-      
-      console.log('Uploaded file using signed URL successfully');
-    } else {
-      console.log('Uploaded file successfully on first attempt');
+
+    if (uploadError) {
+      console.error('Upload failed:', uploadError);
+      throw uploadError;
     }
-    
-    // Return the public URL for the image
+
+    // Get the public URL
     const { data: urlData } = supabase
       .storage
       .from('book_images')
       .getPublicUrl(filePath);
     
+    console.log('Upload successful, public URL:', urlData.publicUrl);
     return urlData.publicUrl;
   } catch (e) {
-    console.error('Failed to upload image to storage', e);
-    toast.error('Failed to upload image', {
-      description: e instanceof Error ? e.message : 'Unknown error'
-    });
+    console.error('Failed to upload image to storage:', e);
+    toast.error('Failed to upload image');
     return null;
   }
 };
