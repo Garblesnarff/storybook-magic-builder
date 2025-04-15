@@ -25,38 +25,31 @@ export function useAIImageGeneration() {
     setGeneratedImage(null);
 
     try {
-      console.log(`Generating image with prompt: "${prompt.substring(0, 30)}..." and style: ${imageStyle}`);
-      
+      // Generate the image
       const response = await supabase.functions.invoke('generate-image', {
-        body: JSON.stringify({ 
-          prompt, 
-          style: imageStyle
-        })
+        body: JSON.stringify({ prompt, style: imageStyle })
       });
 
-      if (response.error || !response.data || !response.data.image) {
-        throw new Error(response.error?.message || 'No image data returned');
+      if (!response.data?.image) {
+        throw new Error('Failed to generate image');
       }
 
       const imageData = `data:image/png;base64,${response.data.image}`;
-      console.log('Image generated successfully');
       setGeneratedImage(imageData);
       
       // If book ID and page ID are provided, upload to storage
       if (bookId && pageId) {
         const imageUrl = await uploadImage(imageData, bookId, pageId);
         if (!imageUrl) {
-          throw new Error('Failed to upload image to storage');
+          throw new Error('Failed to save image to storage');
         }
-        toast.success('Image generated and saved successfully!');
         return imageUrl;
       }
 
-      toast.success('Image generated successfully!');
       return imageData;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error('Image generation error:', errorMessage);
+      console.error('Image generation failed:', errorMessage);
       toast.error('Image generation failed', {
         description: errorMessage
       });

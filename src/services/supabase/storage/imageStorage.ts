@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -7,16 +6,14 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     // Check if we have an authenticated session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      console.error('No authenticated session found');
-      toast.error('Authentication required to upload images');
+      toast.error('Please sign in to upload images');
       return null;
     }
 
     // Extract the base64 data from the string
     const base64Data = image.split(',')[1];
     if (!base64Data) {
-      console.error('Invalid image data format');
-      return null;
+      throw new Error('Invalid image data format');
     }
     
     // Convert base64 to a Blob
@@ -25,10 +22,8 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
     // Use consistent file naming pattern
     const filePath = `${bookId}/${pageId}.png`;
     
-    console.log(`Attempting to upload image to ${filePath}`);
-    
-    // Attempt upload with upsert
-    const { data: uploadData, error: uploadError } = await supabase
+    // Upload the image
+    const { data, error: uploadError } = await supabase
       .storage
       .from('book_images')
       .upload(filePath, blob, {
@@ -37,7 +32,6 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
       });
 
     if (uploadError) {
-      console.error('Upload failed:', uploadError);
       throw uploadError;
     }
 
@@ -46,12 +40,13 @@ export const uploadImage = async (image: string, bookId: string, pageId: string)
       .storage
       .from('book_images')
       .getPublicUrl(filePath);
-    
-    console.log('Upload successful, public URL:', urlData.publicUrl);
+
     return urlData.publicUrl;
   } catch (error) {
-    console.error('Failed to upload image to storage:', error);
-    toast.error('Failed to upload image');
+    console.error('Failed to upload image:', error);
+    toast.error('Failed to upload image', {
+      description: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
     return null;
   }
 };
