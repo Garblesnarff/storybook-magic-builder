@@ -1,5 +1,5 @@
 
-export { uploadImage } from './core/uploadImage';
-export { deleteBookImages } from './core/bookImages';
-export { deletePageImages } from './core/pageImages';
-export { cleanupOrphanedImages } from './core/cleanup';
+export { uploadImage } from './uploadImage';
+export { deleteBookImages } from './bookImages';
+export { deletePageImages } from './pageImages';
+export { cleanupOrphanedImages } from './cleanup';
