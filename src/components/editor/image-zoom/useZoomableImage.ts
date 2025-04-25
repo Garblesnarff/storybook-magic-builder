@@ -30,6 +30,13 @@ export function useZoomableImage(
   const isPanningRef = useRef(isPanning);
   const startPanRef = useRef({ x: 0, y: 0 });
 
+  // Clear image loaded state when src changes
+  useEffect(() => {
+    console.log('Source changed, resetting image loaded state:', src);
+    setImageLoaded(false);
+    setIsInteractionReady(false);
+  }, [src]);
+
   // Update refs when state changes
   useEffect(() => {
     scaleRef.current = scale;
@@ -56,11 +63,20 @@ export function useZoomableImage(
   );
 
   // Handle image loading
-  const handleImageLoad = useCallback(() => {
-    if (imageRef.current) {
-      const { naturalWidth, naturalHeight } = imageRef.current;
-      setImageDimensions({ width: naturalWidth, height: naturalHeight });
-      setImageLoaded(true);
+  const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    console.log('Image loaded event triggered');
+    const img = e.target as HTMLImageElement;
+    const { naturalWidth, naturalHeight } = img;
+    console.log('Natural dimensions:', naturalWidth, naturalHeight);
+    
+    setImageDimensions({ width: naturalWidth, height: naturalHeight });
+    setImageLoaded(true);
+    
+    // Update container dimensions after image load
+    if (containerRef.current) {
+      const { clientWidth, clientHeight } = containerRef.current;
+      console.log('Container dimensions after load:', clientWidth, clientHeight);
+      setContainerDimensions({ width: clientWidth, height: clientHeight });
     }
   }, []);
 
@@ -68,6 +84,7 @@ export function useZoomableImage(
   const updateContainerDimensions = useCallback(() => {
     if (containerRef.current) {
       const { clientWidth, clientHeight } = containerRef.current;
+      console.log('Updating container dimensions:', clientWidth, clientHeight);
       setContainerDimensions({ width: clientWidth, height: clientHeight });
     }
   }, []);
@@ -85,6 +102,12 @@ export function useZoomableImage(
   // Fit image to container when dimensions are available
   useEffect(() => {
     if (imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0) {
+      console.log('Fitting image to container', {
+        imageLoaded,
+        containerDimensions,
+        imageDimensions
+      });
+      
       fitImageToContainer(
         imageLoaded,
         containerDimensions,
@@ -184,6 +207,7 @@ export function useZoomableImage(
     handleZoomIn,
     handleZoomOut,
     toggleFitMethod,
-    handleReset
+    handleReset,
+    handleImageLoad
   };
 }

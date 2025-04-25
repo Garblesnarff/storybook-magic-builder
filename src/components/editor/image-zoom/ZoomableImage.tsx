@@ -28,7 +28,8 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     handleZoomIn,
     handleZoomOut,
     toggleFitMethod,
-    handleReset
+    handleReset,
+    handleImageLoad
   } = useZoomableImage(src, initialSettings, onSettingsChange);
 
   // Handle mouse events in component to ensure we have access to current state
@@ -36,10 +37,14 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     handleMouseUp(e);
   }, [handleMouseUp]);
 
-  // Add cache busting to src URL
+  // Add cache busting to src URL and log the URL for debugging
   const cacheBustedSrc = src.includes('?') ? 
     `${src}&_t=${Date.now()}` : 
     `${src}?_t=${Date.now()}`;
+  
+  console.log('ZoomableImage rendering with src:', cacheBustedSrc);
+  console.log('Image loaded state:', imageLoaded);
+  console.log('Container dimensions:', containerRef.current?.clientWidth, containerRef.current?.clientHeight);
 
   return (
     <div 
@@ -54,6 +59,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
         <div className="absolute inset-0 flex items-center justify-center w-full h-full">
           <img
             ref={imageRef}
+            key={cacheBustedSrc} // Add key to force remount on src change
             src={cacheBustedSrc}
             alt={alt}
             className={cn(
@@ -68,6 +74,10 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
               transformOrigin: 'center',
               maxWidth: "none",
               maxHeight: "none",
+            }}
+            onLoad={handleImageLoad}
+            onError={(e) => {
+              console.error('Image load error:', e);
             }}
             draggable="false"
             onDragStart={(e) => e.preventDefault()}
