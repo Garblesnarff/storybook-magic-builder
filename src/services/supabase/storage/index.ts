@@ -1,7 +1,5 @@
 
-// Re-export all storage functions for backward compatibility
-
-// Image storage functions
+// Re-export image storage functions
 export { 
   uploadImage, 
   deleteBookImages, 
