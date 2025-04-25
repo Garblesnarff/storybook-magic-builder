@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 import { ZoomableImageProps } from './types';
 import { ZoomControls } from './ZoomControls';
 import { useZoomableImage } from './useZoomableImage';
+import { Loader2 } from 'lucide-react';
 
-// Using memo to prevent unnecessary re-renders
 export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({ 
   src, 
   alt,
@@ -45,11 +45,11 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
     >
-      {imageLoaded && (
+      {imageLoaded ? (
         <div className="absolute inset-0 flex items-center justify-center w-full h-full">
           <img
             ref={imageRef}
-            src={src}
+            src={`${src}?t=${Date.now()}`} // Add timestamp to force reload
             alt={alt}
             className={cn(
               "select-none will-change-transform",
@@ -61,13 +61,16 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
               transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
               transition: isPanning ? 'none' : 'transform 0.15s ease-out',
               transformOrigin: 'center',
-              maxWidth: "none", // Remove max-width constraint to allow proper scaling
-              maxHeight: "none", // Remove max-height constraint to allow proper scaling
+              maxWidth: "none",
+              maxHeight: "none",
             }}
             draggable="false"
-            onLoad={() => imageRef.current && imageRef.current.complete && imageRef.current.naturalWidth > 0 && imageRef.current.naturalHeight > 0 ? handleMouseDown : null}
             onDragStart={(e) => e.preventDefault()}
           />
+        </div>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
       )}
       

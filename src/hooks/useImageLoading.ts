@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { preloadImage } from '@/utils/imageVerification';
+import { verifyImageUrl, preloadImage } from '@/utils/imageVerification';
 
 export function useImageLoading(imageUrl: string | null | undefined) {
   const [isLoading, setIsLoading] = useState(true);
@@ -31,13 +31,15 @@ export function useImageLoading(imageUrl: string | null | undefined) {
       setError(null);
 
       try {
-        await preloadImage(imageUrl);
+        // Add cache-busting timestamp to URL
+        const cacheBustedUrl = `${imageUrl}?t=${Date.now()}`;
+        await preloadImage(cacheBustedUrl);
 
         if (isMounted) {
           console.log(`Image successfully loaded: ${imageUrl.substring(0, 40)}...`);
-          setLoadedUrl(imageUrl);
+          setLoadedUrl(imageUrl); // Store original URL
           setIsLoading(false);
-          setRetryCount(0); // Reset retry count on success
+          setRetryCount(0);
         }
       } catch (err) {
         console.error('Error loading image:', err);
@@ -52,7 +54,9 @@ export function useImageLoading(imageUrl: string | null | undefined) {
           
           setError('Failed to load image');
           setIsLoading(false);
-          toast.error('Error loading image');
+          toast.error('Error loading image', {
+            description: 'Please try refreshing the page'
+          });
         }
       }
     };
