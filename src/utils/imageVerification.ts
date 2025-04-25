@@ -8,7 +8,10 @@ export const verifyImageUrl = async (url: string): Promise<boolean> => {
   try {
     const response = await fetch(url, { 
       method: 'HEAD',
-      cache: 'no-store' // Prevent caching completely
+      cache: 'no-store', // Prevent caching completely
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
     });
     
     if (!response.ok) {

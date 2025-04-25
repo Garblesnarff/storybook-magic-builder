@@ -1,30 +1,35 @@
+
 import { Book, BookPage } from '../../types/book';
 import { deletePageImages, uploadImage } from '../supabase/storage/imageStorage';
 import { deletePageNarration } from '../supabase/storage/audioStorage';
+import { updatePageInSupabase } from '../supabase/pageService';
 import { toast } from 'sonner';
 
-/**
- * Updates a page in a book
- * @param page The page to update
- * @returns Promise that resolves when the update is complete
- */
 export const updatePage = async (page: BookPage): Promise<void> => {
   try {
-    // If the image is a base64 string, upload it to storage
+    // If the image is a base64 string, upload it to storage first
     if (page.image && page.image.startsWith('data:image')) {
-      console.log(`Uploading image for page ${page.id} in book ${page.bookId}`);
+      console.log(`Uploading image for page ${page.id}`);
       const imageUrl = await uploadImage(page.image, page.bookId, page.id);
       if (imageUrl) {
         console.log(`Image uploaded successfully: ${imageUrl}`);
         page.image = imageUrl;
       } else {
-        console.error('Failed to upload image, keeping original data');
-        // Keep using the base64 data for now so UI continues to work
+        throw new Error('Failed to upload image');
       }
     }
+
+    // Update the page in the database
+    const success = await updatePageInSupabase(page.bookId, page);
+    if (!success) {
+      throw new Error('Failed to update page in database');
+    }
+
+    console.log(`Page ${page.id} updated successfully`);
   } catch (error) {
-    console.error('Error in updatePage while processing image:', error);
-    toast.error('Failed to upload image, but continuing with page update');
+    console.error('Error in updatePage:', error);
+    toast.error('Failed to save page changes');
+    throw error;
   }
 };
 

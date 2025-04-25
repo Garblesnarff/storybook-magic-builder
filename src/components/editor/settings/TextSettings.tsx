@@ -28,46 +28,43 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
   isNarrating = false,
   handleGenerateNarration
 }) => {
-  // Local state for the text being edited
-  const [localText, setLocalText] = useState<string>(currentPageData.text || "");
-
-  // Update local state when the page data changes externally (e.g., switching pages)
+  const [localText, setLocalText] = useState(currentPageData.text || "");
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Update local state when the currentPageData changes
   useEffect(() => {
-    setLocalText(currentPageData.text || "");
+    if (currentPageData.text !== localText) {
+      setLocalText(currentPageData.text || "");
+    }
   }, [currentPageData.id, currentPageData.text]);
 
-  // Handle changes to the local text state
-  const onLocalTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setLocalText(e.target.value);
-  };
-
-  // Handle saving when the textarea loses focus (blur)
-  const handleBlur = useCallback(() => {
-    // Only save if the text has actually changed from the last saved version
-    if (localText !== (currentPageData.text || "")) {
-      console.log('Text changed, saving on blur:', localText.substring(0, 30) + "...");
+  // Debounced save handler
+  const saveChanges = useCallback(() => {
+    if (localText !== currentPageData.text) {
+      setIsSaving(true);
       handleTextChange(localText);
-    } else {
-      console.log('Text unchanged, skipping save on blur.');
+      setIsSaving(false);
     }
   }, [localText, currentPageData.text, handleTextChange]);
 
-  // Save any pending changes on unmount (e.g., when switching pages)
-  useEffect(() => {
-    // Store refs to ensure cleanup uses the latest values
-    const localTextRef = { current: localText };
-    const savedTextRef = { current: currentPageData.text || "" };
-    const handleTextChangeRef = { current: handleTextChange };
+  // Handle text input
+  const onTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setLocalText(e.target.value);
+  };
 
+  // Save on blur
+  const onBlur = () => {
+    saveChanges();
+  };
+
+  // Save changes before unmounting if needed
+  useEffect(() => {
     return () => {
-      if (localTextRef.current !== savedTextRef.current) {
-        console.log('Saving text on unmount:', localTextRef.current.substring(0, 30) + "...");
-        handleTextChangeRef.current(localTextRef.current);
+      if (localText !== currentPageData.text) {
+        handleTextChange(localText);
       }
     };
-    // Run this effect only when the component mounts and unmounts
-    // Re-running on prop changes would trigger saves incorrectly
-  }, []); // Empty dependency array ensures it runs only on mount/unmount
+  }, [localText, currentPageData.text, handleTextChange]);
 
   return (
     <div className="space-y-4">
@@ -77,13 +74,14 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
           id="pageText"
           placeholder="Enter your text here..."
           className="h-40"
-          value={localText} // Use local state for value
-          onChange={onLocalTextChange} // Update local state on change
-          onBlur={handleBlur} // Save changes on blur
+          value={localText}
+          onChange={onTextChange}
+          onBlur={onBlur}
         />
-        {/* Removed saving indicator as save is now less frequent */}
+        {isSaving && <p className="text-sm text-muted-foreground">Saving...</p>}
       </div>
 
+      {/* Font Selection */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="fontFamily">Font</Label>
@@ -132,7 +130,7 @@ export const TextSettings: React.FC<TextSettingsProps> = ({
           <Label>Narration</Label>
           <Button
             onClick={handleGenerateNarration}
-            disabled={isNarrating || !currentPageData.text?.trim()}
+            disabled={isNarrating || !localText?.trim()}
             className="w-full mt-2"
           >
             {isNarrating ? (
