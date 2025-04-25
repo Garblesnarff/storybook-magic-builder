@@ -11,6 +11,7 @@ export function usePageData(currentBook: Book | null, selectedPageId: string | u
   useEffect(() => {
     if (currentBook && selectedPageId) {
       const page = currentBook.pages.find(page => page.id === selectedPageId);
+      console.log('Current page found:', page?.id, 'with image:', page?.image?.substring(0, 50));
       setCurrentPageData(page || null);
     } else {
       setCurrentPageData(null);
@@ -21,15 +22,22 @@ export function usePageData(currentBook: Book | null, selectedPageId: string | u
   const updateCurrentPageData = useCallback(async (newPageData: BookPage) => {
     if (!currentBook) return;
 
+    console.log('Updating page data:', newPageData.id, 'with image:', newPageData.image?.substring(0, 50));
+
+    // Add timestamp to force re-render and cache busting
+    const timestamp = Date.now();
+    const updatedPageData = {
+      ...newPageData,
+      imageTimestamp: timestamp, // Add timestamp for tracking image changes
+      updatedAt: new Date().toISOString()
+    };
+
     // Update local state immediately for responsiveness
-    setCurrentPageData(newPageData);
+    setCurrentPageData(updatedPageData);
 
     // Update the book's pages with the new page data
     const updatedPages = currentBook.pages.map(page => 
-      page.id === newPageData.id ? {
-        ...newPageData,
-        updatedAt: new Date().toISOString() // Add timestamp to force re-render
-      } : page
+      page.id === updatedPageData.id ? updatedPageData : page
     );
 
     const updatedBook = {
@@ -38,6 +46,8 @@ export function usePageData(currentBook: Book | null, selectedPageId: string | u
       updatedAt: new Date().toISOString()
     };
 
+    console.log('Updating book with new page data');
+    
     // Update the book context to refresh all components
     await updateBook(updatedBook);
   }, [currentBook, updateBook]);

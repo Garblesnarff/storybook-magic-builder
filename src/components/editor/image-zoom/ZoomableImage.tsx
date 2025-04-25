@@ -36,6 +36,11 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     handleMouseUp(e);
   }, [handleMouseUp]);
 
+  // Add cache busting to src URL
+  const cacheBustedSrc = src.includes('?') ? 
+    `${src}&_t=${Date.now()}` : 
+    `${src}?_t=${Date.now()}`;
+
   return (
     <div 
       ref={containerRef}
@@ -49,7 +54,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
         <div className="absolute inset-0 flex items-center justify-center w-full h-full">
           <img
             ref={imageRef}
-            src={`${src}?t=${Date.now()}`} // Add timestamp to force reload
+            src={cacheBustedSrc}
             alt={alt}
             className={cn(
               "select-none will-change-transform",

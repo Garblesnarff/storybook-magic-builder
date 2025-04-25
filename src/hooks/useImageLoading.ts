@@ -19,6 +19,10 @@ export function useImageLoading(imageUrl: string | null | undefined) {
 
     let isMounted = true;
     
+    // Reset state for new image URLs
+    setIsLoading(true);
+    setError(null);
+    
     // Don't show loading state for base64 images
     if (imageUrl.startsWith('data:image')) {
       setLoadedUrl(imageUrl);
@@ -27,17 +31,16 @@ export function useImageLoading(imageUrl: string | null | undefined) {
     }
 
     const loadImage = async () => {
-      setIsLoading(true);
-      setError(null);
-
       try {
+        console.log(`Attempting to load image: ${imageUrl.substring(0, 40)}...`);
+        
         // Add cache-busting timestamp to URL
-        const cacheBustedUrl = `${imageUrl}?t=${Date.now()}`;
+        const cacheBustedUrl = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
         await preloadImage(cacheBustedUrl);
 
         if (isMounted) {
           console.log(`Image successfully loaded: ${imageUrl.substring(0, 40)}...`);
-          setLoadedUrl(imageUrl); // Store original URL
+          setLoadedUrl(cacheBustedUrl);
           setIsLoading(false);
           setRetryCount(0);
         }
