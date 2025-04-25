@@ -4,28 +4,50 @@ import { deletePageImages, uploadImage } from '../supabase/storage/imageStorage'
 import { deletePageNarration } from '../supabase/storage/audioStorage';
 import { updatePageInSupabase } from '../supabase/pageService';
 import { toast } from 'sonner';
+import { verifyImageUrl } from '@/utils/imageVerification';
 
 export const updatePage = async (page: BookPage): Promise<void> => {
   try {
+    let updatedImageUrl = page.image;
+
     // If the image is a base64 string, upload it to storage first
     if (page.image && page.image.startsWith('data:image')) {
       console.log(`Uploading image for page ${page.id}`);
       const imageUrl = await uploadImage(page.image, page.bookId, page.id);
       if (imageUrl) {
         console.log(`Image uploaded successfully: ${imageUrl}`);
-        page.image = imageUrl;
+        updatedImageUrl = imageUrl;
       } else {
         throw new Error('Failed to upload image');
       }
     }
 
+    // Verify the image URL is accessible before updating the database
+    if (updatedImageUrl) {
+      try {
+        await verifyImageUrl(updatedImageUrl);
+        console.log('Image URL verified as accessible:', updatedImageUrl);
+      } catch (verifyError) {
+        console.error('Image verification failed:', verifyError);
+        toast.error('Generated image is not accessible');
+        throw new Error('Image verification failed');
+      }
+    }
+
+    // Create a new page object with the verified image URL
+    const pageToUpdate = {
+      ...page,
+      image: updatedImageUrl,
+      updatedAt: new Date().toISOString()
+    };
+
     // Update the page in the database
-    const success = await updatePageInSupabase(page.bookId, page);
+    const success = await updatePageInSupabase(page.bookId, pageToUpdate);
     if (!success) {
       throw new Error('Failed to update page in database');
     }
 
-    console.log(`Page ${page.id} updated successfully`);
+    console.log(`Page ${page.id} updated successfully with image:`, updatedImageUrl);
   } catch (error) {
     console.error('Error in updatePage:', error);
     toast.error('Failed to save page changes');
