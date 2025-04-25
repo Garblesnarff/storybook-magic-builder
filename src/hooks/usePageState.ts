@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useBook } from '@/contexts/BookContext';
 import { useBookLoading } from './page/useBookLoading';
@@ -43,11 +42,8 @@ export const usePageState = (bookId?: string) => {
       // Make a deep copy of the page to avoid reference issues
       const pageToUpdate = JSON.parse(JSON.stringify(page));
       
-      // Immediately update the local state for responsive UI
-      if (currentPageData && currentPageData.id === page.id) {
-        console.log('Updating local state with new page data');
-        setCurrentPageData(pageToUpdate);
-      }
+      // Update local state immediately for responsive UI
+      await setCurrentPageData(pageToUpdate);
 
       try {
         // If there's an image, verify it's accessible before proceeding
@@ -78,7 +74,7 @@ export const usePageState = (bookId?: string) => {
     } finally {
       completeSavingOperation();
     }
-  }, [contextUpdatePage, trackSavingOperation, completeSavingOperation, currentPageData, setCurrentPageData]);
+  }, [contextUpdatePage, trackSavingOperation, completeSavingOperation, setCurrentPageData]);
 
   const {
     handleAddPage,

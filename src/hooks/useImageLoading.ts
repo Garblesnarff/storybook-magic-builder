@@ -40,23 +40,19 @@ export function useImageLoading(imageUrl: string | null | undefined) {
           setRetryCount(0); // Reset retry count on success
         }
       } catch (err) {
-        console.error('Error loading image:', err, 'URL:', imageUrl);
+        console.error('Error loading image:', err);
         
         if (isMounted) {
-          // If we haven't reached max retries, try again
           if (retryCount < MAX_RETRIES) {
             console.log(`Retrying image load (${retryCount + 1}/${MAX_RETRIES})`);
             setRetryCount(prev => prev + 1);
-            // Wait before retrying with exponential backoff
             setTimeout(loadImage, 1000 * Math.pow(2, retryCount));
             return;
           }
           
           setError('Failed to load image');
           setIsLoading(false);
-          toast.error('Error loading image', {
-            description: 'The image could not be loaded. Please try refreshing the page.'
-          });
+          toast.error('Error loading image');
         }
       }
     };
