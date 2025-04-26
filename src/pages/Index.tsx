@@ -21,7 +21,7 @@ const Index = () => {
     backgroundSize: 'cover',
     backgroundPosition: 'center'
   }}>
-      <div className="text-center max-w-3xl px-6 py-12 bg-white/10 rounded-xl text-white shadow-lg">
+      <div className="text-center max-w-3xl px-6 py-12 bg-transparent rounded-xl text-white shadow-lg">
         
         <p className="text-xl mb-8 drop-shadow-md text-yellow-100 md:text-2xl">
           Bring your child's next favorite story to life with AI-powered illustrations and storytelling.
