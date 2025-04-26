@@ -3,7 +3,7 @@ import React, { useCallback, memo } from 'react';
 import { cn } from '@/lib/utils';
 import { ZoomableImageProps } from './types';
 import { ZoomControls } from './ZoomControls';
-import { useZoomableImage } from './useZoomableImage';
+import { useZoomableImage } from './hooks/useZoomableImage';
 import { Loader2 } from 'lucide-react';
 
 export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({ 
