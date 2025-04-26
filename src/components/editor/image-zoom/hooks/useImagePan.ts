@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
@@ -23,9 +22,9 @@ export function useImagePan(
     isPanningRef.current = isPanning;
   }, [isPanning]);
 
-  // Handle mouse down for panning
-  const handleMouseDown = useCallback((e: React.MouseEvent, isInteractionReady: boolean, containerRef: React.RefObject<HTMLDivElement>) => {
-    if (!isInteractionReady) return;
+  // Handle mouse down for panning - Modified to accept only the event parameter
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // No need to check isInteractionReady here, it will be checked by the component
     
     // Set panning active
     setIsPanning(true);
@@ -37,16 +36,12 @@ export function useImagePan(
       y: e.clientY - positionRef.current.y 
     };
     
-    if (containerRef.current) {
-      containerRef.current.style.cursor = 'grabbing';
-    }
-    
     e.preventDefault();
   }, []);
 
-  // Handle mouse move for panning with throttling
-  const handleMouseMove = useCallback((e: React.MouseEvent, isInteractionReady: boolean) => {
-    if (!isPanningRef.current || !isInteractionReady) return;
+  // Handle mouse move for panning with throttling - Modified to accept only the event parameter
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isPanningRef.current) return;
     
     // Throttle updates for smoother panning
     const now = Date.now();
@@ -70,13 +65,9 @@ export function useImagePan(
     e.preventDefault();
   }, []);
 
-  // Handle mouse up to end panning
-  const handleMouseUp = useCallback((
-    e: React.MouseEvent, 
-    isInteractionReady: boolean, 
-    containerRef: React.RefObject<HTMLDivElement>
-  ) => {
-    if (!isPanningRef.current || !isInteractionReady) return;
+  // Handle mouse up to end panning - Modified to accept only the event parameter
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (!isPanningRef.current) return;
     
     // Calculate final position on mouse up
     const finalX = e.clientX - startPanRef.current.x;
@@ -91,10 +82,6 @@ export function useImagePan(
       
       setIsPanning(false);
       isPanningRef.current = false;
-      
-      if (containerRef.current) {
-        containerRef.current.style.cursor = 'grab';
-      }
     });
     
     e.preventDefault();

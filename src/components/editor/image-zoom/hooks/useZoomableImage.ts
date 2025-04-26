@@ -64,6 +64,17 @@ export function useZoomableImage(
     onSettingsChange
   );
 
+  // Helper method to update container dimensions when needed
+  const updateDimensions = () => {
+    if (containerRef.current) {
+      updateContainerDimensions(containerRef);
+    }
+    
+    if (imageRef.current && imageLoaded) {
+      updateImageDimensions(imageRef);
+    }
+  };
+
   // Reset image position and scale
   const handleReset = () => {
     if (!isInteractionReady) return;
@@ -97,6 +108,7 @@ export function useZoomableImage(
     handleZoomOut,
     toggleFitMethod,
     handleReset,
-    handleImageLoad
+    handleImageLoad,
+    updateDimensions
   };
 }

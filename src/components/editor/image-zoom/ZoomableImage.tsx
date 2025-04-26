@@ -1,5 +1,5 @@
 
-import React, { useCallback, memo } from 'react';
+import React, { useCallback, memo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { ZoomableImageProps } from './types';
 import { ZoomControls } from './ZoomControls';
@@ -23,19 +23,55 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     isInteractionReady,
     containerRef,
     imageRef,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
+    handleMouseDown: rawHandleMouseDown,
+    handleMouseMove: rawHandleMouseMove,
+    handleMouseUp: rawHandleMouseUp,
     handleZoomIn,
     handleZoomOut,
     toggleFitMethod,
     handleReset,
-    handleImageLoad
+    handleImageLoad,
+    updateDimensions
   } = useZoomableImage(src, initialSettings, onSettingsChange);
+
+  // Add wrapper handlers that check for isInteractionReady before executing
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!isInteractionReady) return;
+    rawHandleMouseDown(e);
+  }, [isInteractionReady, rawHandleMouseDown]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isInteractionReady) return;
+    rawHandleMouseMove(e);
+  }, [isInteractionReady, rawHandleMouseMove]);
+
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (!isInteractionReady) return;
+    rawHandleMouseUp(e);
+  }, [isInteractionReady, rawHandleMouseUp]);
 
   const handleMouseLeave = useCallback((e: React.MouseEvent) => {
     handleMouseUp(e);
   }, [handleMouseUp]);
+
+  // Update dimensions on mount and when the window is resized
+  useEffect(() => {
+    updateDimensions();
+    
+    const handleResize = () => {
+      updateDimensions();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Update dimensions when the image loads
+  useEffect(() => {
+    if (imageLoaded) {
+      updateDimensions();
+    }
+  }, [imageLoaded]);
 
   // Generate unique key for image to ensure proper remounting
   const imageKey = `${src}-${Date.now()}`;
