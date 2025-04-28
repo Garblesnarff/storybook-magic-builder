@@ -1,12 +1,13 @@
 
+// Fix loadBook function
 import { useState, useEffect, useCallback } from 'react';
 import { Book } from '../types/book';
 import { 
   createNewBook as createNewBookService, 
   updateBook as updateBookService, 
   deleteBook as deleteBookService,
-  loadBook as loadBookById,
-  createMockBooks as loadAllBooks
+  loadBook as loadBookService,
+  createMockBooks
 } from '../services/bookOperations';
 import { BookTemplate } from '@/data/bookTemplates';
 import { toast } from 'sonner';
@@ -25,7 +26,7 @@ export function useBookOperations() {
         setLoading(true);
         console.log('Loading books from Supabase...');
         // Pass the user ID to loadAllBooks
-        const fetchedBooks = await loadAllBooks(user?.id || '');
+        const fetchedBooks = await createMockBooks(user?.id || '');
         
         const userBooks = user ? fetchedBooks.filter(book => book.userId === user.id) : fetchedBooks;
         setBooks(userBooks);
@@ -95,8 +96,8 @@ export function useBookOperations() {
 
   const loadBook = useCallback(async (id: string): Promise<Book | null> => {
     try {
-      // Updated to use the renamed function
-      const book = await loadBookById(books, id);
+      // Use the correct function name from services/bookOperations.ts
+      const book = loadBookService(books, id);
       if (book) {
         setCurrentBook(book);
         return book;
@@ -128,10 +129,13 @@ export function useBookOperations() {
 
   const deleteBook = useCallback(async (id: string): Promise<void> => {
     try {
-      // Updated to match expected parameters
+      // Using the correct function signature
       const updatedBooks = await deleteBookService(books, id);
       
-      setBooks(updatedBooks);
+      // Make sure we're handling the result correctly
+      if (Array.isArray(updatedBooks)) {
+        setBooks(updatedBooks);
+      }
       
       if (currentBook?.id === id) { 
         // Set the first available book as current, or null if none left

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Layout } from '@/components/Layout';
 import { BookList } from '@/components/BookList';
@@ -6,7 +5,6 @@ import { useBook } from '@/contexts/BookContext';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
 const BooksPage: React.FC = () => {
@@ -19,7 +17,6 @@ const BooksPage: React.FC = () => {
     loading 
   } = useBook();
   
-  const { user } = useAuth();
   const navigate = useNavigate();
   
   const handleCreateBook = async () => {

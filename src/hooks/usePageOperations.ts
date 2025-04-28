@@ -23,16 +23,19 @@ export function usePageOperations(
       }
 
       const result = await bookService.addPage(currentBook, books);
+      
+      // Handle the result properly based on its type
       if (Array.isArray(result)) {
-        const [updatedBooks, newPageId] = result;
+        const [updatedBooks, newPageId] = result as [Book[], string];
         
-        const updatedCurrentBook = updatedBooks.find((book) => book.id === currentBook.id);
+        // Find the updated book in the returned array
+        const updatedBook = updatedBooks.find((b) => b.id === currentBook.id);
         
+        // Update state with the new data
         setBooks(updatedBooks);
-        if (updatedCurrentBook) setCurrentBook(updatedCurrentBook);
+        if (updatedBook) setCurrentBook(updatedBook);
         
         toast.success("Page added successfully");
-        
         return newPageId;
       }
       
@@ -205,16 +208,16 @@ export function usePageOperations(
         throw new Error("Page not found");
       }
 
-      // Fixed: Use the correct number of arguments for duplicatePage
+      // Use the bookService to duplicate the page
       const result = await bookService.duplicatePage(currentBook, books, pageId);
       
       if (Array.isArray(result)) {
-        const [updatedBooks, newPageId] = result;
+        const [updatedBooks, newPageId] = result as [Book[], string];
         
-        const updatedCurrentBook = updatedBooks.find((book) => book.id === currentBook.id);
+        const updatedBook = updatedBooks.find((b) => b.id === currentBook.id);
         
         setBooks(updatedBooks);
-        if (updatedCurrentBook) setCurrentBook(updatedCurrentBook);
+        if (updatedBook) setCurrentBook(updatedBook);
         
         toast.success("Page duplicated successfully");
         

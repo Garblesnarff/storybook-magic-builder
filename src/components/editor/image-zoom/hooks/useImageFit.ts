@@ -1,84 +1,76 @@
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { ImageSettings } from '@/types/book';
 
-interface Dimensions {
-  width: number;
-  height: number;
+interface UseImageFitProps {
+  containerWidth?: number;
+  containerHeight?: number;
+  imageWidth?: number;
+  imageHeight?: number;
+  fitMethod?: 'contain' | 'cover' | 'fill';
+  scale?: number;
+  position?: { x: number; y: number };
 }
 
-export function useImageFit(
-  initialSettings?: ImageSettings,
-  onSettingsChange?: (settings: ImageSettings) => void
-) {
-  // Update to only allow 'contain' or 'cover' for fitMethod
-  const [fitMethod, setFitMethod] = useState<'contain' | 'cover'>(
-    (initialSettings?.fitMethod === 'contain' || initialSettings?.fitMethod === 'cover') 
-      ? initialSettings.fitMethod 
-      : 'contain'
-  );
-  const fitMethodRef = useRef(fitMethod);
-  
-  // Update refs to keep them in sync with state
-  useEffect(() => {
-    fitMethodRef.current = fitMethod;
-  }, [fitMethod]);
+export function useImageFit({
+  containerWidth = 400,
+  containerHeight = 400,
+  imageWidth = 200,
+  imageHeight = 200,
+  fitMethod = 'contain',
+  scale = 1,
+  position = { x: 0, y: 0 }
+}: UseImageFitProps) {
+  const [imageStyle, setImageStyle] = useState<React.CSSProperties>({});
 
-  // Toggle fit method with animation frame for better performance
-  const toggleFitMethod = useCallback(() => {
-    requestAnimationFrame(() => {
-      const newMethod = fitMethodRef.current === 'contain' ? 'cover' : 'contain';
-      setFitMethod(newMethod);
-    });
-  }, []);
+  // Function to calculate the image style based on fit method and dimensions
+  const calculateImageStyle = useCallback(() => {
+    // Default position for the image
+    const defaultPosition = { x: 0, y: 0 };
 
-  // Auto-fit when dimensions are available - optimized version
-  const fitImageToContainer = useCallback((
-    imageLoaded: boolean,
-    containerDimensions: Dimensions,
-    imageDimensions: Dimensions,
-    isInteractionReady: boolean,
-    setScale: (scale: number) => void,
-    setPosition: (position: { x: number, y: number }) => void,
-    scaleRef: React.MutableRefObject<number>
-  ) => {
-    if (!imageLoaded || containerDimensions.width <= 0 || containerDimensions.height <= 0 || imageDimensions.width <= 0) {
-      return;
+    // Determine the scale factor based on fit method and container dimensions
+    let scaleFactorX = 1;
+    let scaleFactorY = 1;
+
+    if (fitMethod === 'contain') {
+      scaleFactorX = containerWidth / imageWidth;
+      scaleFactorY = containerHeight / imageHeight;
+      const scaleFactor = Math.min(scaleFactorX, scaleFactorY);
+      scaleFactorX = scaleFactorY = scaleFactor;
+    } else if (fitMethod === 'cover') {
+      scaleFactorX = containerWidth / imageWidth;
+      scaleFactorY = containerHeight / imageHeight;
+      const scaleFactor = Math.max(scaleFactorX, scaleFactorY);
+      scaleFactorX = scaleFactorY = scaleFactor;
+    } else if (fitMethod === 'fill') {
+      scaleFactorX = containerWidth / imageWidth;
+      scaleFactorY = containerHeight / imageHeight;
     }
-    
-    const widthRatio = containerDimensions.width / imageDimensions.width;
-    const heightRatio = containerDimensions.height / imageDimensions.height;
-    
-    // For contain: use the smaller ratio to ensure the whole image is visible
-    // For cover: use the larger ratio to fill the container
-    const newScale = fitMethodRef.current === 'contain' 
-      ? Math.min(widthRatio, heightRatio) 
-      : Math.max(widthRatio, heightRatio);
-    
-    // Use requestAnimationFrame for smoother transitions
-    requestAnimationFrame(() => {
-      setScale(newScale);
-      setPosition({ x: 0, y: 0 });
-      
-      // Save settings after fit
-      if (onSettingsChange && isInteractionReady) {
-        // Short delay to ensure state is updated before saving
-        setTimeout(() => {
-          onSettingsChange({
-            scale: newScale,
-            position: { x: 0, y: 0 },
-            fitMethod: fitMethodRef.current
-          });
-        }, 50);
-      }
+
+    // Apply the custom scale factor from the settings
+    const finalScaleX = scaleFactorX * scale;
+    const finalScaleY = scaleFactorY * scale;
+
+    // Calculate new dimensions
+    const newWidth = imageWidth * finalScaleX;
+    const newHeight = imageHeight * finalScaleY;
+
+    // Calculate position (center by default)
+    const posX = (containerWidth - newWidth) / 2 + (position?.x || defaultPosition.x);
+    const posY = (containerHeight - newHeight) / 2 + (position?.y || defaultPosition.y);
+
+    // Set the image style
+    setImageStyle({
+      width: `${newWidth}px`,
+      height: `${newHeight}px`,
+      transform: `translate(${posX}px, ${posY}px)`,
+      position: 'absolute',
+      objectFit: fitMethod,
     });
-  }, [onSettingsChange]);
+  }, [containerWidth, containerHeight, imageWidth, imageHeight, fitMethod, scale, position]);
 
   return {
-    fitMethod,
-    setFitMethod,
-    fitMethodRef,
-    toggleFitMethod,
-    fitImageToContainer
+    imageStyle,
+    calculateImageStyle
   };
 }

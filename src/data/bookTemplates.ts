@@ -15,15 +15,20 @@ export interface BookTemplate {
   orientation?: 'portrait' | 'landscape';
   pages: Partial<BookPage>[];
   createBook: () => Book;
+  // Add these properties used in TemplateSelectionDialog
+  name: string;
+  pageCount: number;
 }
 
 // Example book template
 export const defaultBookTemplate: BookTemplate = {
   id: 'default-template',
   title: 'Blank Book',
+  name: 'Blank Book', // Add name property
   description: 'Start with a blank book',
   author: '',
   coverImage: '',
+  pageCount: 1, // Add pageCount property
   dimensions: {
     width: 8.5,
     height: 11

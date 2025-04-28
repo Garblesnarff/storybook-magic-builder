@@ -53,6 +53,18 @@ export const useBook = () => {
 export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const bookManager = useBookManager();
   
+  // Create wrapper functions to ensure type compatibility
+  const updatePageWrapper = async (page: BookPage): Promise<void> => {
+    await bookManager.updatePage(page);
+  };
+  
+  // Ensure error is always string | null
+  const errorString = bookManager.error 
+    ? typeof bookManager.error === 'string' 
+      ? bookManager.error
+      : bookManager.error.message
+    : null;
+  
   // Ensure types are properly aligned with the expected interface
   const contextValue: BookContextProps = {
     books: bookManager.books,
@@ -68,12 +80,12 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (Array.isArray(result)) return undefined;
       return result;
     },
-    updatePage: bookManager.updatePage,
+    updatePage: updatePageWrapper,
     deletePage: bookManager.deletePage,
     reorderPage: bookManager.reorderPage,
     duplicatePage: bookManager.duplicatePage,
     loading: bookManager.loading,
-    error: bookManager.error
+    error: errorString
   };
   
   return (

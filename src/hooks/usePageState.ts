@@ -31,6 +31,7 @@ export const usePageState = (bookId?: string) => {
   
   const { isSaving, trackSavingOperation, completeSavingOperation } = useSavingState();
   
+  // Call useBookLoading with the correct arguments
   useBookLoading(bookId, loadBook);
   const { selectedPageId, setSelectedPageId, handlePageSelect } = usePageSelection(currentBook);
   const { currentPageData, setCurrentPageData } = usePageData(currentBook, selectedPageId);
