@@ -5,8 +5,8 @@ import {
   createNewBook as createNewBookService, 
   updateBook as updateBookService, 
   deleteBook as deleteBookService,
-  loadBookById,
-  loadBooks as loadAllBooks
+  loadBook as loadBookById,
+  createMockBooks as loadAllBooks
 } from '../services/bookOperations';
 import { BookTemplate } from '@/data/bookTemplates';
 import { toast } from 'sonner';
@@ -95,7 +95,8 @@ export function useBookOperations() {
 
   const loadBook = useCallback(async (id: string): Promise<Book | null> => {
     try {
-      const book = await loadBookById(id);
+      // Updated to use the renamed function
+      const book = await loadBookById(books, id);
       if (book) {
         setCurrentBook(book);
         return book;
@@ -106,7 +107,7 @@ export function useBookOperations() {
       toast.error('Failed to load book');
       return null;
     }
-  }, []);
+  }, [books]);
 
   const updateBookState = useCallback(async (updatedBook: Book): Promise<void> => {
     try {
@@ -127,9 +128,10 @@ export function useBookOperations() {
 
   const deleteBook = useCallback(async (id: string): Promise<void> => {
     try {
-      await deleteBookService(id);
+      // Updated to match expected parameters
+      const updatedBooks = await deleteBookService(books, id);
       
-      setBooks(prevBooks => prevBooks.filter(book => book.id !== id));
+      setBooks(updatedBooks);
       
       if (currentBook?.id === id) { 
         // Set the first available book as current, or null if none left

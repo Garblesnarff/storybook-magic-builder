@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Book, BookPage, PageLayout } from '@/types/book';
+import { Book, BookPage } from '@/types/book';
 import { toast } from 'sonner';
 import * as bookService from '../services/pageOperations';
 
@@ -22,16 +22,21 @@ export function usePageOperations(
         throw new Error("No book selected");
       }
 
-      const [updatedBooks, newPageId] = await bookService.addPage(currentBook, books);
+      const result = await bookService.addPage(currentBook, books);
+      if (Array.isArray(result)) {
+        const [updatedBooks, newPageId] = result;
+        
+        const updatedCurrentBook = updatedBooks.find((book) => book.id === currentBook.id);
+        
+        setBooks(updatedBooks);
+        if (updatedCurrentBook) setCurrentBook(updatedCurrentBook);
+        
+        toast.success("Page added successfully");
+        
+        return newPageId;
+      }
       
-      const updatedCurrentBook = updatedBooks.find((book: Book) => book.id === currentBook.id);
-      
-      setBooks(updatedBooks);
-      if (updatedCurrentBook) setCurrentBook(updatedCurrentBook);
-      
-      toast.success("Page added successfully");
-      
-      return newPageId;
+      return undefined;
     } catch (error) {
       console.error('Error adding page:', error);
       setPageError(error as Error);
@@ -200,17 +205,23 @@ export function usePageOperations(
         throw new Error("Page not found");
       }
 
-      // Call the service function to duplicate the page
-      const [updatedBooks, newPageId] = await bookService.duplicatePage(currentBook, books, pageId);
+      // Fixed: Use the correct number of arguments for duplicatePage
+      const result = await bookService.duplicatePage(currentBook, books, pageId);
       
-      const updatedCurrentBook = updatedBooks.find((book: Book) => book.id === currentBook.id);
+      if (Array.isArray(result)) {
+        const [updatedBooks, newPageId] = result;
+        
+        const updatedCurrentBook = updatedBooks.find((book) => book.id === currentBook.id);
+        
+        setBooks(updatedBooks);
+        if (updatedCurrentBook) setCurrentBook(updatedCurrentBook);
+        
+        toast.success("Page duplicated successfully");
+        
+        return newPageId;
+      }
       
-      setBooks(updatedBooks);
-      if (updatedCurrentBook) setCurrentBook(updatedCurrentBook);
-      
-      toast.success("Page duplicated successfully");
-      
-      return newPageId;
+      return undefined;
     } catch (error) {
       console.error('Error duplicating page:', error);
       setPageError(error as Error);

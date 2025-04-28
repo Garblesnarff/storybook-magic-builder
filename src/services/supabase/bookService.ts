@@ -1,5 +1,5 @@
 
-import { Book, PageLayout } from '@/types/book';
+import { Book } from '@/types/book';
 import { supabase } from '../../integrations/supabase/client';
 
 // Fetch all books for a user
@@ -8,35 +8,36 @@ export const fetchBooks = async (userId: string): Promise<Book[]> => {
     const { data: booksData, error } = await supabase
       .from('books')
       .select('*')
-      .eq('userId', userId);
+      .eq('user_id', userId);
       
     if (error) throw error;
     
     // Transform the database books into our Book type
-    const books: Book[] = await Promise.all(booksData.map(async (book) => {
+    const books: Book[] = await Promise.all(booksData.map(async (bookData: any) => {
       const { data: pagesData, error: pagesError } = await supabase
-        .from('pages')
+        .from('book_pages')
         .select('*')
-        .eq('bookId', book.id)
-        .order('pageNumber', { ascending: true });
+        .eq('book_id', bookData.id)
+        .order('page_number', { ascending: true });
       
       if (pagesError) throw pagesError;
       
+      // Convert DB format to application format
       return {
-        id: book.id,
-        title: book.title || 'Untitled Book',
-        author: book.author || '',
-        description: book.description || '',
-        userId: book.userId,
-        coverImage: book.coverImage || '',
+        id: bookData.id,
+        title: bookData.title || 'Untitled Book',
+        author: bookData.author || '',
+        description: bookData.description || '',
+        userId: bookData.user_id,
+        coverImage: bookData.cover_image_url || '',
         dimensions: {
-          width: book.width || 8.5,
-          height: book.height || 11
+          width: bookData.width || 8.5,
+          height: bookData.height || 11
         },
-        orientation: (book.orientation as "portrait" | "landscape") || 'portrait',
+        orientation: (bookData.orientation as "portrait" | "landscape") || 'portrait',
         pages: pagesData || [],
-        createdAt: book.createdAt || new Date().toISOString(),
-        updatedAt: book.updatedAt || new Date().toISOString()
+        createdAt: bookData.created_at || new Date().toISOString(),
+        updatedAt: bookData.updated_at || new Date().toISOString()
       };
     }));
     
@@ -59,13 +60,13 @@ export const createBook = async (book: Book): Promise<Book> => {
           title: book.title,
           author: book.author,
           description: book.description,
-          userId: book.userId,
-          coverImage: book.coverImage,
+          user_id: book.userId,
+          cover_image_url: book.coverImage,
           width: book.dimensions.width,
           height: book.dimensions.height,
-          orientation: book.orientation as "portrait" | "landscape",
-          createdAt: book.createdAt,
-          updatedAt: book.updatedAt
+          orientation: book.orientation,
+          created_at: book.createdAt,
+          updated_at: book.updatedAt
         }
       ]);
     
@@ -74,16 +75,18 @@ export const createBook = async (book: Book): Promise<Book> => {
     // Insert all pages
     if (book.pages.length > 0) {
       const { error: pagesError } = await supabase
-        .from('pages')
+        .from('book_pages')
         .insert(book.pages.map(page => ({
           id: page.id,
-          bookId: book.id,
-          pageNumber: page.pageNumber,
+          book_id: book.id,
+          page_number: page.pageNumber,
           text: page.text,
-          image: page.image,
+          image_url: page.image,
           layout: page.layout,
-          textFormatting: page.textFormatting,
-          imageSettings: page.imageSettings
+          font_family: page.textFormatting?.fontFamily,
+          font_size: page.textFormatting?.fontSize,
+          font_color: page.textFormatting?.fontColor,
+          image_settings: page.imageSettings
         })));
       
       if (pagesError) throw pagesError;
@@ -114,28 +117,50 @@ export const fetchBook = async (bookId: string): Promise<Book | null> => {
     }
     
     const { data: pagesData, error: pagesError } = await supabase
-      .from('pages')
+      .from('book_pages')
       .select('*')
-      .eq('bookId', bookId)
-      .order('pageNumber', { ascending: true });
+      .eq('book_id', bookId)
+      .order('page_number', { ascending: true });
     
     if (pagesError) throw pagesError;
+    
+    // Map database page to app BookPage format
+    const mappedPages = pagesData ? pagesData.map((dbPage: any) => ({
+      id: dbPage.id,
+      bookId: dbPage.book_id,
+      pageNumber: dbPage.page_number,
+      text: dbPage.text || '',
+      image: dbPage.image_url || '',
+      layout: dbPage.layout || 'text-left-image-right',
+      textFormatting: {
+        fontFamily: dbPage.font_family || 'Arial',
+        fontSize: dbPage.font_size || 16,
+        fontColor: dbPage.font_color || '#000000',
+        isBold: dbPage.is_bold || false,
+        isItalic: dbPage.is_italic || false
+      },
+      imageSettings: dbPage.image_settings || {
+        scale: 1,
+        position: { x: 0, y: 0 },
+        fitMethod: 'contain'
+      }
+    })) : [];
     
     return {
       id: bookData.id,
       title: bookData.title || 'Untitled Book',
       author: bookData.author || '',
       description: bookData.description || '',
-      userId: bookData.userId,
-      coverImage: bookData.coverImage || '',
+      userId: bookData.user_id,
+      coverImage: bookData.cover_image_url || '',
       dimensions: {
         width: bookData.width || 8.5,
         height: bookData.height || 11
       },
       orientation: (bookData.orientation as "portrait" | "landscape") || 'portrait',
-      pages: pagesData || [],
-      createdAt: bookData.createdAt || new Date().toISOString(),
-      updatedAt: bookData.updatedAt || new Date().toISOString()
+      pages: mappedPages,
+      createdAt: bookData.created_at || new Date().toISOString(),
+      updatedAt: bookData.updated_at || new Date().toISOString()
     };
   } catch (error) {
     console.error('Error fetching book:', error);
@@ -153,11 +178,11 @@ export const updateBook = async (book: Book): Promise<Book> => {
         title: book.title,
         author: book.author,
         description: book.description,
-        coverImage: book.coverImage,
+        cover_image_url: book.coverImage,
         width: book.dimensions.width,
         height: book.dimensions.height,
         orientation: book.orientation,
-        updatedAt: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', book.id);
     
@@ -175,9 +200,9 @@ export const deleteBook = async (bookId: string): Promise<void> => {
   try {
     // Delete the pages first (cascade delete doesn't always work reliably)
     const { error: pagesError } = await supabase
-      .from('pages')
+      .from('book_pages')
       .delete()
-      .eq('bookId', bookId);
+      .eq('book_id', bookId);
     
     if (pagesError) throw pagesError;
     

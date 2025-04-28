@@ -65,6 +65,12 @@ const EditorPage = () => {
     }
   };
 
+  // Create placeholder function for handleGenerateImage
+  const handleGenerateImage = async () => {
+    console.log('Generate image functionality will be implemented later');
+    return Promise.resolve();
+  };
+
   return (
     <Layout fullWidth className="bg-books-background bg-cover bg-center bg-no-repeat">
       {!id || (books.length > 0 && !books.some(book => book.id === id)) ? (
@@ -92,7 +98,7 @@ const EditorPage = () => {
           handleTextChange={handleTextChange}
           handleLayoutChange={handleLayoutChange}
           handleTextFormattingChange={handleTextFormattingChange}
-          handleGenerateImage={async () => {}}
+          handleGenerateImage={handleGenerateImage}
           handleImageSettingsChange={handleImageSettingsChange}
           handleGenerateNarration={handleGenerateNarration}
           updatePage={updatePage}

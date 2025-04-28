@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2 } from 'lucide-react';
-// Remove unused imports
+// Removed unused imports
 
 interface GenerateButtonProps {
   isGenerating: boolean;

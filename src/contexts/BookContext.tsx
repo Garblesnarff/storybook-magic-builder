@@ -53,8 +53,31 @@ export const useBook = () => {
 export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const bookManager = useBookManager();
   
+  // Ensure types are properly aligned with the expected interface
+  const contextValue: BookContextProps = {
+    books: bookManager.books,
+    currentBook: bookManager.currentBook,
+    createBook: bookManager.createBook,
+    createBookFromTemplate: bookManager.createBookFromTemplate,
+    updateBook: bookManager.updateBook,
+    deleteBook: bookManager.deleteBook,
+    loadBook: bookManager.loadBook,
+    addPage: async () => {
+      const result = await bookManager.addPage();
+      // Convert any Book[] result to undefined if needed
+      if (Array.isArray(result)) return undefined;
+      return result;
+    },
+    updatePage: bookManager.updatePage,
+    deletePage: bookManager.deletePage,
+    reorderPage: bookManager.reorderPage,
+    duplicatePage: bookManager.duplicatePage,
+    loading: bookManager.loading,
+    error: bookManager.error
+  };
+  
   return (
-    <BookContext.Provider value={bookManager}>
+    <BookContext.Provider value={contextValue}>
       {children}
     </BookContext.Provider>
   );
