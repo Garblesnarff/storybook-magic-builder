@@ -1,172 +1,58 @@
-
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ImageSettings } from '@/types/book';
+import { useContainerDimensions } from './hooks/useContainerDimensions';
+import { useImageLoader } from './hooks/useImageLoader';
+import { useImageZoom } from './hooks/useImageZoom';
+import { useImagePan } from './hooks/useImagePan';
+import { useImageFit } from './hooks/useImageFit';
+import { CSSProperties } from 'react';
 
-export function useZoomableImage(
-  src: string,
-  initialSettings?: ImageSettings,
-  onSettingsChange?: (settings: ImageSettings) => void
-) {
-  // State for image and container
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
-  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
-  const [isInteractionReady, setIsInteractionReady] = useState(false);
+export interface UseZoomableImageProps {
+  containerRef: React.RefObject<HTMLDivElement>;
+  imageUrl?: string;
+  settings?: ImageSettings;
+}
 
-  // Refs for DOM elements
-  const containerRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-
-  // State for zoom and position
-  const [scale, setScale] = useState(initialSettings?.scale || 1);
-  const [position, setPosition] = useState(initialSettings?.position || { x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Refs for tracking state in event handlers
-  const positionRef = useRef(position);
-  const isPanningRef = useRef(isPanning);
-  const startPanRef = useRef({ x: 0, y: 0 });
-
-  // Alias for expected properties that don't exist in our useImageFit implementation
-  const fitMethod = initialSettings?.fitMethod || 'contain';
+export function useZoomableImage({ containerRef, imageUrl, settings }: UseZoomableImageProps) {
+  const containerDimensionsHook = useContainerDimensions(containerRef);
+  const imageLoaderHook = useImageLoader(imageUrl);
   
-  // Reset states when src changes
+  // Update container dimensions when the component mounts or resizes
   useEffect(() => {
-    console.log('Image source changed:', src);
-    setImageLoaded(false);
-    setIsInteractionReady(false);
-    setIsLoading(true);
-  }, [src]);
-
-  // Handle image loading
-  const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.target as HTMLImageElement;
-    console.log('Image loaded successfully:', {
-      naturalWidth: img.naturalWidth,
-      naturalHeight: img.naturalHeight,
-      src: img.src
+    containerDimensionsHook.updateDimensions();
+    const resizeObserver = new ResizeObserver(() => {
+      containerDimensionsHook.updateDimensions();
     });
-
-    if (img.naturalWidth === 0 || img.naturalHeight === 0) {
-      console.error('Image loaded with invalid dimensions');
-      return;
-    }
-
-    setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-    setImageLoaded(true);
-    setIsLoading(false);
-
-    // Update container dimensions
+    
     if (containerRef.current) {
-      const { clientWidth, clientHeight } = containerRef.current;
-      setContainerDimensions({ width: clientWidth, height: clientHeight });
+      resizeObserver.observe(containerRef.current);
     }
-
-    // Enable interactions after a short delay
-    setTimeout(() => {
-      setIsInteractionReady(true);
-    }, 100);
-  }, []);
-
-  // Handle window resize
-  useEffect(() => {
-    function handleResize() {
+    
+    return () => {
       if (containerRef.current) {
-        const { clientWidth, clientHeight } = containerRef.current;
-        console.log('Container resized:', { width: clientWidth, height: clientHeight });
-        setContainerDimensions({ width: clientWidth, height: clientHeight });
+        resizeObserver.unobserve(containerRef.current);
       }
-    }
-
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial measurement
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Mouse event handlers
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (!isInteractionReady) return;
-    
-    setIsPanning(true);
-    isPanningRef.current = true;
-    
-    startPanRef.current = {
-      x: e.clientX - positionRef.current.x,
-      y: e.clientY - positionRef.current.y
     };
-    
-    e.preventDefault();
-  }, [isInteractionReady]);
+  }, [containerRef, containerDimensionsHook]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isPanningRef.current || !isInteractionReady) return;
-    
-    const newX = e.clientX - startPanRef.current.x;
-    const newY = e.clientY - startPanRef.current.y;
-    
-    setPosition({ x: newX, y: newY });
-    positionRef.current = { x: newX, y: newY };
-    
-    e.preventDefault();
-  }, [isInteractionReady]);
-
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    if (!isPanningRef.current) return;
-    
-    setIsPanning(false);
-    isPanningRef.current = false;
-    
-    e.preventDefault();
-  }, []);
-
-  // Zoom controls
-  const handleZoomIn = useCallback(() => {
-    if (!isInteractionReady) return;
-    
-    const newScale = Math.min(scale * 1.2, 4);
-    setScale(newScale);
-  }, [isInteractionReady, scale]);
-
-  const handleZoomOut = useCallback(() => {
-    if (!isInteractionReady) return;
-    
-    const newScale = Math.max(scale / 1.2, 0.5);
-    setScale(newScale);
-  }, [isInteractionReady, scale]);
-
-  // Reset to default view
-  const handleReset = useCallback(() => {
-    if (!isInteractionReady) return;
-    
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-    positionRef.current = { x: 0, y: 0 };
-  }, [isInteractionReady]);
-
-  const toggleFitMethod = useCallback(() => {
-    // This is a placeholder, as we're not implementing the full functionality here
-    console.log('Toggle fit method clicked');
-  }, []);
+  // Calculate image style based on settings
+  const imageStyle = useRef<CSSProperties>({}).current;
+  
+  // Update image style based on settings
+  useEffect(() => {
+    if (imageLoaderHook.isLoaded && containerDimensionsHook.dimensions.width > 0) {
+      // Basic image style
+      imageStyle.objectFit = "contain";
+      imageStyle.maxWidth = "100%";
+      imageStyle.maxHeight = "100%";
+    }
+  }, [imageLoaderHook.isLoaded, containerDimensionsHook.dimensions, imageStyle]);
 
   return {
-    scale,
-    position,
-    fitMethod,
-    isPanning,
-    imageLoaded,
-    isInteractionReady,
-    isLoading,
-    containerRef,
-    imageRef,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
-    handleZoomIn,
-    handleZoomOut,
-    toggleFitMethod,
-    handleReset,
-    handleImageLoad
+    isLoading: imageLoaderHook.isLoading,
+    isLoaded: imageLoaderHook.isLoaded,
+    error: imageLoaderHook.error,
+    imageStyle,
+    imageUrl,
   };
 }

@@ -1,110 +1,59 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ImageSettings } from '@/types/book';
-import { useImageLoader } from './useImageLoader';
 import { useContainerDimensions } from './useContainerDimensions';
+import { useImageLoader } from './useImageLoader';
 import { useImageZoom } from './useImageZoom';
 import { useImagePan } from './useImagePan';
 import { useImageFit } from './useImageFit';
-import { useSettingsSync } from './useSettingsSync';
+import { CSSProperties } from 'react';
 
-export function useZoomableImage(
-  src: string,
-  initialSettings?: ImageSettings,
-  onSettingsChange?: (settings: ImageSettings) => void
-) {
-  // Refs for DOM elements
-  const containerRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
+export interface UseZoomableImageProps {
+  containerRef: React.RefObject<HTMLDivElement>;
+  imageUrl?: string;
+  settings?: ImageSettings;
+}
 
-  // Custom hooks
-  const {
-    imageLoaded,
-    isLoading,
-    isInteractionReady,
-    handleImageLoad
-  } = useImageLoader(src);
-
-  const {
-    dimensions,
-    updateDimensions
-  } = useContainerDimensions(containerRef);
-
-  const {
-    scale,
-    setScale,
-    handleZoomIn,
-    handleZoomOut
-  } = useImageZoom(initialSettings);
-
-  const {
-    position,
-    isPanning,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp
-  } = useImagePan(initialSettings);
-
-  const {
-    fitMethod,
-    toggleFitMethod,
-    fitImageToContainer
-  } = useImageFit({
-    containerWidth: dimensions.width,
-    containerHeight: dimensions.height,
-    fitMethod: initialSettings?.fitMethod,
-    scale: initialSettings?.scale,
-    position: initialSettings?.position
-  });
-
-  const { saveSettings } = useSettingsSync(
-    scale,
-    position,
-    fitMethod,
-    imageLoaded,
-    isInteractionReady,
-    initialSettings,
-    onSettingsChange
-  );
-
-  // Update dimensions when the ref changes or the component mounts/unmounts
+export function useZoomableImage({ containerRef, imageUrl, settings }: UseZoomableImageProps) {
+  const containerDimensionsHook = useContainerDimensions(containerRef);
+  const imageLoaderHook = useImageLoader(imageUrl);
+  
+  // Update container dimensions when the component mounts or resizes
   useEffect(() => {
-    updateDimensions();
+    containerDimensionsHook.updateDimensions();
+    const resizeObserver = new ResizeObserver(() => {
+      containerDimensionsHook.updateDimensions();
+    });
     
-    // Add event listener for resize
-    window.addEventListener('resize', updateDimensions);
-    
-    // Cleanup listener on unmount
-    return () => {
-      window.removeEventListener('resize', updateDimensions);
-    };
-  }, [updateDimensions]);
-
-  // Use effect to trigger saveSettings when relevant states change
-  useEffect(() => {
-    if (isInteractionReady && imageLoaded && onSettingsChange) {
-      saveSettings();
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
     }
-  }, [scale, position, fitMethod, isInteractionReady, imageLoaded, saveSettings, onSettingsChange]);
+    
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+    };
+  }, [containerRef, containerDimensionsHook]);
+
+  // Calculate image style based on settings
+  const imageStyle = useRef<CSSProperties>({}).current;
+  
+  // Update image style based on settings
+  useEffect(() => {
+    if (imageLoaderHook.isLoaded && containerDimensionsHook.dimensions.width > 0) {
+      // Basic image style
+      imageStyle.objectFit = "contain";
+      imageStyle.maxWidth = "100%";
+      imageStyle.maxHeight = "100%";
+    }
+  }, [imageLoaderHook.isLoaded, containerDimensionsHook.dimensions, imageStyle]);
 
   return {
-    scale,
-    position,
-    fitMethod,
-    isPanning,
-    imageLoaded,
-    isLoading,
-    isInteractionReady,
-    containerRef,
-    imageRef,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
-    handleZoomIn,
-    handleZoomOut,
-    toggleFitMethod,
-    handleReset: () => fitImageToContainer(imageLoaded, dimensions, { width: 0, height: 0 }, isInteractionReady, setScale),
-    handleImageLoad,
-    updateDimensions
+    isLoading: imageLoaderHook.isLoading,
+    isLoaded: imageLoaderHook.isLoaded,
+    error: imageLoaderHook.error,
+    imageStyle,
+    imageUrl,
   };
 }

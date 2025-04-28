@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export function useContainerDimensions(ref: React.RefObject<HTMLDivElement>) {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -11,6 +11,26 @@ export function useContainerDimensions(ref: React.RefObject<HTMLDivElement>) {
       setDimensions({ width, height });
     }
   }, [ref]);
+  
+  // Initially update dimensions when component mounts
+  useEffect(() => {
+    updateDimensions();
+    
+    // Set up a resize observer to update dimensions when container resizes
+    const resizeObserver = new ResizeObserver(() => {
+      updateDimensions();
+    });
+    
+    if (ref.current) {
+      resizeObserver.observe(ref.current);
+    }
+    
+    return () => {
+      if (ref.current) {
+        resizeObserver.unobserve(ref.current);
+      }
+    };
+  }, [ref, updateDimensions]);
 
   return { 
     dimensions,

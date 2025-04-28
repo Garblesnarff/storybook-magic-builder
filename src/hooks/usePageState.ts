@@ -1,16 +1,16 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { BookPage, ImageSettings, PageLayout } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
 import { usePageOperations } from './usePageOperations';
 import { usePageSelection } from '@/hooks/page/usePageSelection';
-import { useTextEditor } from './hooks/page/useTextEditor';
-import { usePageData } from './hooks/page/usePageData';
-import { useSavingState } from './hooks/page/useSavingState';
-import { useLayoutManager } from './hooks/page/useLayoutManager';
-import { useImageSettings } from './hooks/page/useImageSettings';
-import { usePageActions } from './hooks/page/usePageActions';
-import { useBookTitle } from './hooks/page/useBookTitle';
+import { useTextEditor } from '@/hooks/page/useTextEditor';
+import { usePageData } from '@/hooks/page/usePageData';
+import { useSavingState } from '@/hooks/page/useSavingState';
+import { useLayoutManager } from '@/hooks/page/useLayoutManager';
+import { useImageSettings } from '@/hooks/page/useImageSettings';
+import { usePageActions } from '@/hooks/page/usePageActions';
+import { useBookTitle } from '@/hooks/page/useBookTitle';
 
 export function usePageState(bookId: string | undefined) {
   // Get book data from context
@@ -26,7 +26,7 @@ export function usePageState(bookId: string | undefined) {
   const { addPage, duplicatePage, deletePage, reorderPage } = usePageOperations();
   
   // Text editing
-  const { handleTextChange } = useTextEditor(updatePage);
+  const { handleTextChange } = useTextEditor(currentBook?.pages.find(page => page.id === selectedPageId) || null, updatePage);
   
   // Page layout management
   const { handleLayoutChange } = useLayoutManager(currentBook?.pages.find(page => page.id === selectedPageId) || null, updatePage);
