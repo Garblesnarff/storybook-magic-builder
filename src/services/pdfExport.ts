@@ -1,6 +1,6 @@
-
 import { jsPDF } from 'jspdf';
 import { Book, BookPage } from '@/types/book';
+import { toast } from "@/components/ui/use-toast";
 
 export const generatePdfFilename = (book: Book): string => {
   const sanitizedTitle = book.title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
@@ -8,36 +8,61 @@ export const generatePdfFilename = (book: Book): string => {
 };
 
 export const exportBookToPdf = async (book: Book): Promise<Blob> => {
-  // Create a new PDF document
-  const pdf = new jsPDF({
-    orientation: book.orientation,
-    unit: 'in',
-    format: [book.dimensions.width, book.dimensions.height]
-  });
+  try {
+    // Create a new PDF document
+    const pdf = new jsPDF({
+      orientation: book.orientation,
+      unit: 'in',
+      format: [book.dimensions.width, book.dimensions.height]
+    });
 
-  // Set default font
-  pdf.setFont('Helvetica');
+    // Set default font
+    pdf.setFont('Helvetica');
 
-  // Get page dimensions in points
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
+    // Get page dimensions in points
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
 
-  // Margins in inches
-  const margin = 0.5;
+    // Margins in inches
+    const margin = 0.5;
 
-  // Process each page
-  for (let i = 0; i < book.pages.length; i++) {
-    // Add a new page for all pages except the first one
-    if (i > 0) {
-      pdf.addPage();
+    const errors: string[] = [];
+
+    // Process each page
+    for (let i = 0; i < book.pages.length; i++) {
+      // Add a new page for all pages except the first one
+      if (i > 0) {
+        pdf.addPage();
+      }
+
+      const page = book.pages[i];
+      try {
+        await addPageToPdf(pdf, page, pageWidth, pageHeight, margin);
+      } catch (err) {
+        console.error(`Error exporting page ${i + 1}:`, err);
+        errors.push(`Page ${i + 1}`);
+      }
     }
 
-    const page = book.pages[i];
-    await addPageToPdf(pdf, page, pageWidth, pageHeight, margin);
-  }
+    if (errors.length > 0) {
+      toast({
+        title: 'PDF Export Completed with Errors',
+        description: `Some pages failed to export: ${errors.join(', ')}`,
+        variant: 'destructive',
+      });
+    }
 
-  // Return as blob
-  return pdf.output('blob');
+    // Return as blob
+    return pdf.output('blob');
+  } catch (err) {
+    console.error('Error exporting book to PDF:', err);
+    toast({
+      title: 'PDF Export Failed',
+      description: 'An error occurred while exporting the book to PDF. Please try again.',
+      variant: 'destructive',
+    });
+    throw err;
+  }
 };
 
 const addPageToPdf = async (
