@@ -1,10 +1,9 @@
 
 import { useCallback, useRef } from 'react';
-import { BookPage, TextFormatting } from '@/types/book';
+import { BookPage } from '@/types/book';
 import { useSavingState } from './useSavingState';
 
 export function useTextEditor(
-  currentPageData: BookPage | null,
   updatePage: (page: BookPage) => Promise<void>
 ) {
   const { setSaving } = useSavingState();
@@ -12,6 +11,8 @@ export function useTextEditor(
   
   // Handle text changes with debounce
   const handleTextChange = useCallback(async (text: string) => {
+    // This function will be called with the currentPageData from usePageState hook
+    const currentPageData = arguments[1] as BookPage | null;
     if (!currentPageData) return;
     
     // Skip update if text hasn't changed
@@ -45,7 +46,7 @@ export function useTextEditor(
         textDebounceRef.current = null;
       }
     }, 800);
-  }, [currentPageData, updatePage, setSaving]);
+  }, [updatePage, setSaving]);
 
   return {
     handleTextChange

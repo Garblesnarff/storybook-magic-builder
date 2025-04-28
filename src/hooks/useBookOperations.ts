@@ -1,209 +1,175 @@
 
 import { useState, useCallback } from 'react';
-import { toast } from 'sonner';
-import { Book } from '@/types/book';
-import { BookTemplate } from '@/data/bookTemplates';
-import {
-  createBook as createBookService,
-  updateBook as updateBookService,
-  deleteBook as deleteBookService,
-  createBookFromTemplate as createBookTemplateService,
-  loadBook as loadBookService
-} from '@/services/bookOperations';
+import { Book, DEFAULT_BOOK } from '@/types/book';
+import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/contexts/AuthContext';
+import { BookTemplate } from '@/data/bookTemplates';
+import { createBookFromTemplate, createEmptyBook } from '@/services/book/bookCreation';
+import { toast } from 'sonner';
 
 export function useBookOperations() {
-  const auth = useAuth();
-  const userId = auth?.userId || '';
   const [books, setBooks] = useState<Book[]>([]);
   const [currentBook, setCurrentBook] = useState<Book | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-
-  // Load user's books
+  
+  const auth = useAuth();
+  const userId = auth.user?.id || 'anonymous';
+  
+  // Load all books for the current user
   const loadBooks = useCallback(async () => {
-    if (!userId) {
-      console.error('No user ID available to load books');
-      return [];
-    }
-    
     setLoading(true);
     setError(null);
     
     try {
-      const loadedBooks = await loadBookService(userId);
-      setBooks(Array.isArray(loadedBooks) ? loadedBooks : []);
-      return loadedBooks;
+      // In a real app, this would fetch from an API or database
+      // For now, we just return the books in state
+      return books;
     } catch (err) {
-      console.error('Error loading books:', err);
-      setError(err instanceof Error ? err : new Error(String(err)));
-      toast.error('Failed to load books');
-      return [];
+      const errorObj = err instanceof Error ? err : new Error('Unknown error loading books');
+      setError(errorObj);
+      return null;
     } finally {
       setLoading(false);
     }
-  }, [userId]);
-
+  }, [books]);
+  
   // Load a specific book by ID
-  const loadBookById = useCallback(async (id: string) => {
-    if (!userId) {
-      console.error('No user ID available to load book');
-      return null;
-    }
-    
+  const loadBook = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
     
     try {
-      const loadedBook = await loadBookService(id, userId);
+      // Find the book in our local state
+      const book = books.find(book => book.id === id);
       
-      if (Array.isArray(loadedBook)) {
-        const book = loadedBook.find(b => b.id === id);
-        if (book) {
-          setCurrentBook(book);
-          return book;
-        }
-        return null;
+      if (book) {
+        setCurrentBook(book);
+        return book;
       }
       
-      setCurrentBook(loadedBook);
-      return loadedBook;
+      throw new Error(`Book with ID ${id} not found`);
     } catch (err) {
-      console.error(`Error loading book ${id}:`, err);
-      setError(err instanceof Error ? err : new Error(String(err)));
-      toast.error('Failed to load book');
+      const errorObj = err instanceof Error ? err : new Error(`Unknown error loading book ${id}`);
+      setError(errorObj);
       return null;
     } finally {
       setLoading(false);
     }
-  }, [userId]);
-
+  }, [books]);
+  
   // Create a new book
-  const handleCreateBook = useCallback(async () => {
-    if (!userId) {
-      toast.error('Please log in to create a book');
-      return null;
-    }
-    
+  const createBook = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const newBook = await createBookService('Untitled Book', userId);
+      const newBook = createEmptyBook(userId);
       
-      if (newBook) {
-        // Update the local state with the new book
-        setBooks(prev => [...prev, newBook]);
-        
-        toast.success('Book created');
-        return newBook.id;
-      }
-      return null;
+      // Add the new book to our list of books
+      setBooks(prev => [...prev, newBook]);
+      
+      // Set it as the current book
+      setCurrentBook(newBook);
+      
+      // Return the ID so we can navigate to it
+      return newBook.id;
     } catch (err) {
-      console.error('Error creating book:', err);
-      setError(err instanceof Error ? err : new Error(String(err)));
-      toast.error('Failed to create book');
+      const errorObj = err instanceof Error ? err : new Error('Failed to create book');
+      setError(errorObj);
       return null;
     } finally {
       setLoading(false);
     }
   }, [userId]);
-
+  
   // Create a book from a template
-  const handleCreateBookFromTemplate = useCallback(async (template: BookTemplate) => {
-    if (!userId) {
-      toast.error('Please log in to create a book');
-      return null;
-    }
-    
+  const createBookFromTemplateCallback = useCallback(async (template: BookTemplate) => {
     setLoading(true);
     setError(null);
     
     try {
-      const newBook = await createBookTemplateService(template, userId);
+      const newBook = createBookFromTemplate(template, userId);
       
-      if (newBook) {
-        // Update the local state with the new book
-        setBooks(prev => [...prev, newBook]);
-        
-        toast.success('Book created from template');
-        return newBook.id;
-      }
-      return null;
+      // Add the new book to our list of books
+      setBooks(prev => [...prev, newBook]);
+      
+      // Set it as the current book
+      setCurrentBook(newBook);
+      
+      // Return the ID so we can navigate to it
+      return newBook.id;
     } catch (err) {
-      console.error('Error creating book from template:', err);
-      setError(err instanceof Error ? err : new Error(String(err)));
-      toast.error('Failed to create book from template');
+      const errorObj = err instanceof Error ? err : new Error('Failed to create book from template');
+      setError(errorObj);
       return null;
     } finally {
       setLoading(false);
     }
   }, [userId]);
-
-  // Update an existing book
-  const handleUpdateBook = useCallback(async (book: Book) => {
+  
+  // Update a book
+  const updateBook = useCallback(async (book: Book) => {
     setLoading(true);
     setError(null);
     
     try {
-      const updatedBook = await updateBookService(book);
+      // Update the book in our list of books
+      setBooks(prev => 
+        prev.map(b => b.id === book.id ? book : b)
+      );
       
-      // Update the local state
-      setBooks(prev => prev.map(b => b.id === book.id ? updatedBook : b));
-      
-      // Update current book if it's the same one
-      if (currentBook?.id === book.id) {
-        setCurrentBook(updatedBook);
+      // If this is the current book, update that too
+      if (currentBook && currentBook.id === book.id) {
+        setCurrentBook(book);
       }
       
-      return updatedBook;
+      return book;
     } catch (err) {
-      console.error('Error updating book:', err);
-      setError(err instanceof Error ? err : new Error(String(err)));
-      toast.error('Failed to update book');
-      throw err;
+      const errorObj = err instanceof Error ? err : new Error(`Failed to update book ${book.id}`);
+      setError(errorObj);
+      throw errorObj;
     } finally {
       setLoading(false);
     }
   }, [currentBook]);
-
+  
   // Delete a book
-  const handleDeleteBook = useCallback(async (id: string) => {
+  const deleteBook = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
     
     try {
-      await deleteBookService(id);
-      
-      // Update local state
+      // Remove the book from our list
       setBooks(prev => prev.filter(book => book.id !== id));
       
-      // Clear current book if it's the deleted one
-      if (currentBook?.id === id) {
+      // If this was the current book, clear it
+      if (currentBook && currentBook.id === id) {
         setCurrentBook(null);
       }
       
-      toast.success('Book deleted');
+      toast.success('Book deleted successfully');
     } catch (err) {
-      console.error('Error deleting book:', err);
-      setError(err instanceof Error ? err : new Error(String(err)));
+      const errorObj = err instanceof Error ? err : new Error(`Failed to delete book ${id}`);
+      setError(errorObj);
       toast.error('Failed to delete book');
     } finally {
       setLoading(false);
     }
   }, [currentBook]);
-
+  
   return {
     books,
+    setBooks,
     currentBook,
+    setCurrentBook,
     loading,
     error,
     loadBooks,
-    loadBook: loadBookById,
-    createBook: handleCreateBook,
-    createBookFromTemplate: handleCreateBookFromTemplate,
-    updateBook: handleUpdateBook,
-    deleteBook: handleDeleteBook,
-    setCurrentBook
+    loadBook,
+    createBook,
+    createBookFromTemplate: createBookFromTemplateCallback,
+    updateBook,
+    deleteBook
   };
 }

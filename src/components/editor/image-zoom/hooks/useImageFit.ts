@@ -46,23 +46,6 @@ export function useImageFit(props: UseImageFitProps) {
     };
   }, [containerWidth, containerHeight, imageWidth, imageHeight]);
 
-  // Calculate the style for "cover" fit
-  const calculateCoverStyle = useCallback((): CSSProperties => {
-    return {
-      width: '100%',
-      height: '100%',
-      objectFit: 'cover',
-    };
-  }, []);
-
-  const calculateOriginalStyle = useCallback((): CSSProperties => {
-    return {
-      width: `${imageWidth}px`,
-      height: `${imageHeight}px`,
-      objectFit: 'none',
-    };
-  }, [imageWidth, imageHeight]);
-
   const imageStyle = calculateImageStyle();
 
   return {

@@ -26,13 +26,13 @@ export function usePageState(bookId: string | undefined) {
   const { addPage, duplicatePage, deletePage, reorderPage } = usePageOperations();
   
   // Text editing
-  const { handleTextChange } = useTextEditor(currentBook?.pages.find(page => page.id === selectedPageId) || null, updatePage);
+  const { handleTextChange } = useTextEditor(updatePage);
+  
+  // Current page data
+  const { currentPageData } = usePageData(currentBook, selectedPageId);
   
   // Page layout management
-  const { handleLayoutChange } = useLayoutManager(currentBook?.pages.find(page => page.id === selectedPageId) || null, updatePage);
-  
-  // Page data access
-  const { currentPageData } = usePageData(currentBook, selectedPageId);
+  const { handleLayoutChange } = useLayoutManager(currentPageData, updatePage);
   
   // Text formatting
   const handleTextFormattingChange = useCallback((key: string, value: any) => {

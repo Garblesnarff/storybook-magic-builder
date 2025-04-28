@@ -59,6 +59,7 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateBookWrapper = async (book: Book): Promise<void> => {
+    // Call the manager's updateBook function but discard the return value to match the expected void return type
     await bookManager.updateBook(book);
   };
   
