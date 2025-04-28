@@ -20,6 +20,13 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     // Generate a consistent file path for audio
     const filePath = `${bookId}/${pageId}_narration.mp3`;
     
+    console.log('Attempting to upload audio file:', {
+      bucket: 'narrations',
+      path: filePath,
+      size: audioBlob.size,
+      type: audioBlob.type
+    });
+
     // Upload to Supabase Storage
     const { data, error } = await supabase
       .storage
@@ -31,7 +38,7 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     
     if (error) {
       console.error('Error uploading audio:', error);
-      toast.error('Failed to upload narration audio');
+      toast.error(`Failed to upload narration: ${error.message}`);
       return null;
     }
     
@@ -41,10 +48,11 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
       .from('narrations')
       .getPublicUrl(data.path);
     
-    console.log("Audio uploaded, public URL:", urlData.publicUrl);
+    console.log("Audio uploaded successfully, public URL:", urlData.publicUrl);
+    toast.success('Narration saved successfully');
     return urlData.publicUrl;
   } catch (e) {
-    console.error('Failed to upload audio to storage', e);
+    console.error('Failed to upload audio to storage:', e);
     toast.error('Failed to save narration audio');
     return null;
   }
@@ -57,8 +65,8 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
  */
 export const deletePageNarration = async (bookId: string, pageId: string): Promise<void> => {
   try {
-    // Just delete the consistent filename
     const filePath = `${bookId}/${pageId}_narration.mp3`;
+    console.log('Attempting to delete audio file:', filePath);
     
     const { error: deleteError } = await supabase
       .storage
@@ -67,11 +75,13 @@ export const deletePageNarration = async (bookId: string, pageId: string): Promi
       
     if (deleteError) {
       console.error(`Error deleting page narration: ${filePath}`, deleteError);
+      toast.error('Failed to delete narration');
     } else {
       console.log(`Successfully deleted narration for page ${pageId}`);
+      toast.success('Narration deleted successfully');
     }
   } catch (storageError) {
     console.error('Error deleting page narration:', storageError);
-    // Continue even if deletion fails
+    toast.error('Failed to delete narration');
   }
 };
