@@ -32,7 +32,6 @@ export function useImageLoader(src: string | undefined) {
     isLoading,
     isInteractionReady,
     handleImageLoad,
-    isLoaded: imageLoaded, // Add alias for compatibility
     error
   };
 }

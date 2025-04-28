@@ -1,7 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { Book, DEFAULT_BOOK } from '@/types/book';
-import { v4 as uuidv4 } from 'uuid';
+import { Book } from '@/types/book';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookTemplate } from '@/data/bookTemplates';
 import { createBookFromTemplate, createEmptyBook } from '@/services/book/bookCreation';

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookList } from '@/components/BookList';
 import { Layout } from '@/components/Layout';
@@ -9,12 +9,11 @@ import { useBook } from '@/contexts/BookContext';
 import { BookTemplate } from '@/data/bookTemplates';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlusCircle, Loader2 } from 'lucide-react';
+import { Book } from '@/types/book';
 
 const BooksPage = () => {
   const navigate = useNavigate();
-  const { books, loading, createBook, createBookFromTemplate } = useBook();
-  const { session } = useAuth();
-  // Remove user variable since it's not used
+  const { books, loading, createBook, createBookFromTemplate, deleteBook, updateBook } = useBook();
   
   const [isCreating, setIsCreating] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
@@ -52,6 +51,14 @@ const BooksPage = () => {
       setIsCreating(false);
       setShowTemplateDialog(false);
     }
+  };
+
+  const handleDeleteBook = async (id: string) => {
+    await deleteBook(id);
+  };
+
+  const handleUpdateBook = async (book: Book) => {
+    await updateBook(book);
   };
 
   return (
@@ -93,7 +100,13 @@ const BooksPage = () => {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <BookList books={books} />
+          <BookList 
+            books={books} 
+            onCreateBook={handleCreateBook}
+            onCreateBookFromTemplate={handleSelectTemplate}
+            onDeleteBook={handleDeleteBook}
+            onUpdateBook={handleUpdateBook}
+          />
         )}
       </section>
       

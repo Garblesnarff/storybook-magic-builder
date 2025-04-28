@@ -140,7 +140,6 @@ export function useZoomableImage(imageUrl: string | undefined, initialSettings?:
     toggleFitMethod,
     handleReset,
     handleImageLoad,
-    updateDimensions,
-    imageUrl
+    updateDimensions
   };
 }

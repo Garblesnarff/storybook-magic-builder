@@ -16,7 +16,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
   // Use our custom hook for all the zoom functionality
   const {
     scale,
-    position,
+    position: imagePosition,
     fitMethod,
     isPanning,
     imageLoaded,

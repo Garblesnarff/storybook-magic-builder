@@ -9,7 +9,6 @@ import { useBook } from '@/contexts/BookContext';
 const EditorPage = () => {
   const { id } = useParams<{ id: string }>();
   const { books, currentBook } = useBook();
-  // Remove unused bookLoading variable
   
   const editorState = usePageState(id);
   

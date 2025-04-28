@@ -1,20 +1,20 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { Book } from '@/types/book';
 import { DEFAULT_BOOK, DEFAULT_PAGE } from '@/types/book';
 
 /**
- * Creates a new book with a default first page
- * @param title The title of the new book
- * @param books The current collection of books
- * @returns Updated array of books including the new book
+ * Creates a new empty book with a default first page
+ * @param userId The user ID for the book ownership
+ * @returns A new Book object
  */
-export const createBook = async (title: string, books: Book[]): Promise<Book[]> => {
+export const createEmptyBook = (userId: string): Book => {
   const newBookId = uuidv4();
   const newPageId = uuidv4();
   
-  const newBook: Book = {
+  return {
     id: newBookId,
-    title: title,
+    title: 'Untitled Book',
     pages: [{
       id: newPageId,
       bookId: newBookId,
@@ -42,22 +42,33 @@ export const createBook = async (title: string, books: Book[]): Promise<Book[]> 
       width: 8.5,
       height: 11
     },
-    userId: ''
+    userId: userId
   };
+};
 
+/**
+ * Creates a new book with a default first page
+ * @param title The title of the new book
+ * @param books The current collection of books
+ * @returns Updated array of books including the new book
+ */
+export const createBook = async (title: string, books: Book[]): Promise<Book[]> => {
+  const newBook = createEmptyBook('');
+  newBook.title = title;
+  
   return [...books, newBook];
 };
 
 /**
  * Creates a new book based on a template
  * @param template The template to use for the book
- * @param books The current collection of books
- * @returns Updated array of books including the new templated book
+ * @param userId The user ID for book ownership
+ * @returns A new Book object based on the template
  */
-export const createBookFromTemplate = async (template: any, books: Book[]): Promise<Book[]> => {
+export const createBookFromTemplate = (template: any, userId: string): Book => {
   const newBookId = uuidv4();
   
-  const newBook: Book = {
+  return {
     id: newBookId,
     title: template.title,
     pages: template.pages.map((page: any) => ({
@@ -74,8 +85,6 @@ export const createBookFromTemplate = async (template: any, books: Book[]): Prom
       width: 8.5,
       height: 11
     },
-    userId: ''
+    userId: userId
   };
-
-  return [...books, newBook];
 };

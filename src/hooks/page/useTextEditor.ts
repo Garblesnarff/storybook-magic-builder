@@ -1,18 +1,14 @@
 
 import { useCallback, useRef } from 'react';
 import { BookPage } from '@/types/book';
-import { useSavingState } from './useSavingState';
 
 export function useTextEditor(
   updatePage: (page: BookPage) => Promise<void>
 ) {
-  const { setSaving } = useSavingState();
   const textDebounceRef = useRef<NodeJS.Timeout | null>(null);
   
   // Handle text changes with debounce
-  const handleTextChange = useCallback(async (text: string) => {
-    // This function will be called with the currentPageData from usePageState hook
-    const currentPageData = arguments[1] as BookPage | null;
+  const handleTextChange = useCallback((text: string, currentPageData: BookPage | null) => {
     if (!currentPageData) return;
     
     // Skip update if text hasn't changed
@@ -27,9 +23,6 @@ export function useTextEditor(
       clearTimeout(textDebounceRef.current);
     }
     
-    // Start tracking the save operation
-    setSaving(true);
-    
     // Create a deep copy to avoid reference issues
     const updatedPage = JSON.parse(JSON.stringify(currentPageData));
     updatedPage.text = text;
@@ -42,11 +35,10 @@ export function useTextEditor(
       } catch (error) {
         console.error(`useTextEditor: updatePage failed for text change on page ${currentPageData.id}`, error);
       } finally {
-        setSaving(false);
         textDebounceRef.current = null;
       }
     }, 800);
-  }, [updatePage, setSaving]);
+  }, [updatePage]);
 
   return {
     handleTextChange
