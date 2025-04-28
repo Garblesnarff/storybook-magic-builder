@@ -49,7 +49,6 @@ export const createDefaultTextFormatting = (): TextFormatting => {
   return {
     fontFamily: 'Arial',
     fontSize: 16,
-    lineHeight: 1.5,
     isBold: false,
     isItalic: false,
     fontColor: '#000000',

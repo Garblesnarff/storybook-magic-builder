@@ -1,100 +1,62 @@
-import { Book, BookPage, BookTemplate, PageLayout, ImageSettings } from '@/types/book';
-import { v4 as uuidv4 } from 'uuid';
-import { toast } from 'sonner';
+import { Book, BookPage, PageLayout, ImageSettings } from '@/types/book';
 import { supabase } from '@/integrations/supabase/client';
 import { databasePageToBookPage } from './utils';
+// Remove BookTemplate import or define it if needed
 
-// Function to create a new book in Supabase
-export const createBookInSupabase = async (bookTemplate: BookTemplate, userId: string): Promise<Book | null> => {
+// Function to save a book to Supabase
+export const saveBookToSupabase = async (book: Book): Promise<boolean> => {
   try {
-    const bookId = uuidv4();
-    
-    // Insert the new book
-    const { error: insertError } = await supabase
+    const { data, error } = await supabase
       .from('books')
-      .insert({
-        id: bookId,
-        user_id: userId,
-        title: bookTemplate.title,
-        cover_image: bookTemplate.coverImage,
-        description: bookTemplate.description,
-        dimensions: JSON.stringify(bookTemplate.dimensions),
-        orientation: bookTemplate.orientation,
+      .upsert({
+        id: book.id,
+        title: book.title,
+        author: book.author,
+        description: book.description,
+        user_id: book.userId,
+        cover_image_url: book.coverImage,
+        width: book.width,
+        height: book.height,
+        orientation: book.orientation,
+        updated_at: new Date().toISOString(),
       });
     
-    if (insertError) {
-      console.error('Error creating book:', insertError);
-      toast.error('Failed to create new book.');
-      return null;
+    if (error) {
+      console.error('Error saving book:', error);
+      return false;
     }
     
-    // Create initial pages based on template
-    const initialPages = [];
-    for (let i = 0; i < bookTemplate.initialPageCount; i++) {
-      initialPages.push({
-        id: uuidv4(),
-        book_id: bookId,
-        page_number: i + 1,
-        text: '',
-        image: null,
-        layout: 'text-left-image-right',
-        background_color: null,
-        narration_url: null,
-        textFormatting: {
-          fontFamily: 'Arial',
-          fontSize: 16,
-          lineHeight: 1.5,
-          isBold: false,
-          isItalic: false,
-          fontColor: '#000000',
-          align: 'left',
-          imageStyle: 'REALISTIC',
-        },
-        imageSettings: {
-          scale: 1,
-          position: { x: 0, y: 0 },
-          fitMethod: 'contain'
-        }
-      });
+    // Save pages
+    for (const page of book.pages) {
+      await updatePageInSupabase(page, book.id);
     }
     
-    // Insert initial pages
-    const { error: pagesError } = await supabase
-      .from('book_pages')
-      .insert(initialPages);
-    
-    if (pagesError) {
-      console.error('Error creating initial pages:', pagesError);
-      toast.error('Failed to create initial pages.');
-      return null;
-    }
-    
-    // Fetch the newly created book
-    const book = await getBookFromSupabase(bookId);
-    return book;
-  } catch (e) {
-    console.error('Failed to create book in Supabase', e);
-    toast.error('Failed to create new book.');
-    return null;
+    return true;
+  } catch (error) {
+    console.error('Failed to save book to Supabase:', error);
+    return false;
   }
 };
 
-// Function to get a book from Supabase by ID
-export const getBookFromSupabase = async (bookId: string): Promise<Book | null> => {
+// Function to load a book from Supabase by ID
+export const loadBookFromSupabase = async (bookId: string): Promise<Book | null> => {
   try {
-    // Fetch the book
     const { data: bookData, error: bookError } = await supabase
       .from('books')
       .select('*')
       .eq('id', bookId)
       .single();
     
-    if (bookError || !bookData) {
-      console.error('Error fetching book:', bookError);
+    if (bookError) {
+      console.error('Error loading book:', bookError);
       return null;
     }
     
-    // Fetch the pages for the book
+    if (!bookData) {
+      console.log('Book not found');
+      return null;
+    }
+    
     const { data: pagesData, error: pagesError } = await supabase
       .from('book_pages')
       .select('*')
@@ -102,59 +64,112 @@ export const getBookFromSupabase = async (bookId: string): Promise<Book | null> 
       .order('page_number', { ascending: true });
     
     if (pagesError) {
-      console.error('Error fetching book pages:', pagesError);
+      console.error('Error loading pages:', pagesError);
       return null;
     }
     
-    // Convert database page format to BookPage format
     const pages: BookPage[] = pagesData.map(databasePageToBookPage);
     
-    // Construct the book object
+    // Convert null to empty string where needed
+    const coverImage = bookData.cover_image_url || ''; // Ensure coverImage is string, not null
+    
     const book: Book = {
       id: bookData.id,
-      userId: bookData.user_id,
       title: bookData.title,
-      coverImage: bookData.cover_image || undefined,
-      description: bookData.description || undefined,
-      dimensions: bookData.dimensions ? JSON.parse(bookData.dimensions) : undefined,
-      orientation: bookData.orientation,
+      author: bookData.author,
+      description: bookData.description || '',
+      userId: bookData.user_id || '',
+      coverImage: coverImage,
       pages: pages,
+      width: bookData.width,
+      height: bookData.height,
+      orientation: bookData.orientation,
     };
     
     return book;
-  } catch (e) {
-    console.error('Failed to get book from Supabase', e);
+  } catch (error) {
+    console.error('Failed to load book from Supabase:', error);
     return null;
   }
 };
 
-// Function to update a book's title in Supabase
-export const updateBookTitleInSupabase = async (bookId: string, newTitle: string): Promise<boolean> => {
+// Function to load all books for a user from Supabase
+export const loadBooksFromSupabase = async (userId: string): Promise<Book[]> => {
   try {
-    // Update the book's title
-    const { error: updateError } = await supabase
+    const { data, error } = await supabase
       .from('books')
-      .update({ title: newTitle })
-      .eq('id', bookId);
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
     
-    if (updateError) {
-      console.error('Error updating book title:', updateError);
-      toast.error('Failed to update book title.');
-      return false;
+    if (error) {
+      console.error('Error loading books:', error);
+      return [];
     }
     
-    return true;
-  } catch (e) {
-    console.error('Failed to update book title in Supabase', e);
-    toast.error('Failed to update book title.');
-    return false;
+    const books: Book[] = data.map(bookData => {
+      // Convert null to empty string where needed
+      const coverImage = bookData.cover_image_url || ''; // Ensure coverImage is string, not null
+      
+      return {
+        id: bookData.id,
+        title: bookData.title,
+        author: bookData.author,
+        description: bookData.description || '',
+        userId: bookData.user_id || '',
+        coverImage: coverImage,
+        pages: [], // Pages are loaded separately
+        width: bookData.width,
+        height: bookData.height,
+        orientation: bookData.orientation,
+      };
+    });
+    
+    return books;
+  } catch (error) {
+    console.error('Failed to load books from Supabase:', error);
+    return [];
+  }
+};
+
+// Function to create a new book in Supabase
+export const createBookInSupabase = async (book: Book): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('books')
+      .insert([
+        {
+          id: book.id,
+          title: book.title,
+          author: book.author,
+          description: book.description,
+          user_id: book.userId,
+          cover_image_url: book.coverImage,
+          width: book.width,
+          height: book.height,
+          orientation: book.orientation,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ])
+      .select('id')
+      .single();
+    
+    if (error) {
+      console.error('Error creating book:', error);
+      return null;
+    }
+    
+    return data.id;
+  } catch (error) {
+    console.error('Failed to create book in Supabase:', error);
+    return null;
   }
 };
 
 // Function to delete a book from Supabase
 export const deleteBookFromSupabase = async (bookId: string): Promise<boolean> => {
   try {
-    // Delete the book
     const { error } = await supabase
       .from('books')
       .delete()
@@ -162,14 +177,42 @@ export const deleteBookFromSupabase = async (bookId: string): Promise<boolean> =
     
     if (error) {
       console.error('Error deleting book:', error);
-      toast.error('Failed to delete book.');
       return false;
     }
     
     return true;
-  } catch (e) {
-    console.error('Failed to delete book from Supabase', e);
-    toast.error('Failed to delete book.');
+  } catch (error) {
+    console.error('Failed to delete book from Supabase:', error);
+    return false;
+  }
+};
+
+// Function to update a page in Supabase
+const updatePageInSupabase = async (page: BookPage, bookId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('book_pages')
+      .upsert({
+        id: page.id,
+        book_id: bookId,
+        page_number: page.pageNumber,
+        text: page.text,
+        image: page.image || null,
+        layout: page.layout,
+        background_color: page.backgroundColor || null,
+        narration_url: page.narrationUrl || null,
+        text_formatting: page.textFormatting ? JSON.stringify(page.textFormatting) : null,
+        image_settings: page.imageSettings ? JSON.stringify(page.imageSettings) : null,
+      });
+    
+    if (error) {
+      console.error('Error updating page:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to update page in Supabase:', error);
     return false;
   }
 };

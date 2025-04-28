@@ -1,184 +1,119 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { usePageState } from '@/hooks/usePageState';
-import { useAIOperations } from '@/hooks/useAIOperations';
-import { useNarration } from '@/hooks/ai/useNarration';
-import { Book, BookPage } from '@/types/book';
-import { exportBookToPdf, generatePdfFilename } from '@/services/pdfExport';
+import { useBook } from '@/contexts/BookContext';
+import { BookPage, ImageSettings } from '@/types/book';
 
-export function useEditorPage(bookId?: string) {
-  const [isExporting, setIsExporting] = useState(false);
+export function useEditorPage() {
+  // Get book data from context
+  const { currentBook, updatePage } = useBook();
   
-  const {
-    books,
-    currentBook,
-    selectedPageId,
-    currentPageData,
-    isSaving,
-    handlePageSelect,
-    handleAddPage,
-    handleDuplicatePage,
-    handleTextChange,
-    handleLayoutChange,
-    handleTextFormattingChange,
-    handleImageSettingsChange,
-    updatePage,
-    setCurrentPageData,
-    handleReorderPage,
-    handleDeletePage,
-    loading,
-    error,
-    updateBookTitle
-  } = usePageState(bookId);
+  // Get URL parameters
+  const { bookId } = useParams<{ bookId: string }>();
+  const navigate = useNavigate();
   
-  // Added narration functionality
-  const { isNarrating, generateNarration } = useNarration();
+  // State for the current page being edited
+  const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);
   
-  // Handler for generating narration
-  const handleGenerateNarration = async () => {
-    if (!currentPageData || !currentBook) {
-      toast.error("Cannot generate narration without a selected page and text.");
-      return;
-    }
-    if (!currentPageData.text?.trim()) {
-      toast.error("Page text is empty, cannot generate narration.");
-      return;
-    }
-
-    const audioUrl = await generateNarration(currentPageData.text, currentBook.id, currentPageData.id);
-
-    if (audioUrl) {
-      // Save the URL to the page data using the existing updatePage function
-      const updatedPage: BookPage = { ...currentPageData, narrationUrl: audioUrl };
-      setCurrentPageData(updatedPage); // Optimistic UI update
-      try {
-        await updatePage(updatedPage); // Persist change
-      } catch (e) {
-        console.error("Failed to save narration URL:", e);
-        toast.error("Failed to save narration link.");
-        // Revert optimistic update if needed
-        setCurrentPageData({ ...currentPageData, narrationUrl: undefined });
-      }
-    }
-  };
-  
-  // Modify handleAddPageAsync to correctly await and return the new page ID
-  const handleAddPageAsync = async (): Promise<string | undefined> => {
-    // handleAddPage now returns Promise<string | undefined>
-    const newPageId = await handleAddPage(); 
-    return newPageId; // Return the ID received from handleAddPage
-  };
-  
-  useEffect(() => {
-    if (currentBook) {
-      let dataElement = document.querySelector('[data-book-state]') as HTMLElement;
-      if (!dataElement) {
-        dataElement = document.createElement('div') as HTMLElement;
-        dataElement.setAttribute('data-book-state', '{}');
-        dataElement.style.display = 'none';
-        document.body.appendChild(dataElement);
-      }
-      
-      dataElement.setAttribute('data-book-state', JSON.stringify(currentBook));
-    }
-    
-    return () => {
-      const dataElement = document.querySelector('[data-book-state]') as HTMLElement;
-      if (dataElement) {
-        document.body.removeChild(dataElement);
-      }
-    };
-  }, [currentBook]);
-  
-  // Fixed type mismatch by using type assertion to satisfy the compiler
-  const {
-    isGenerating,
-    processingStory,
-    handleGenerateImage,
-    handleApplyAIText,
-    handleApplyAIImage
-  } = useAIOperations(
-    currentPageData, 
-    updatePage,
-    setCurrentPageData as (page: BookPage | null) => void,
-    handleAddPageAsync
-  );
-
-  const handleExportPDF = async () => {
-    if (!currentBook) {
-      toast.error('No book to export');
+  // Save current page data if it's changed
+  const handleSavePage = useCallback(async (newPageData: BookPage) => {
+    if (!newPageData) {
+      toast.error('No page to save');
       return;
     }
     
     try {
-      setIsExporting(true);
-      toast.info('Preparing PDF export...');
+      // Save the page data
+      await updatePage(newPageData);
+      toast.success('Page saved');
       
-      const pdfBlob = await exportBookToPdf(currentBook);
-      const filename = generatePdfFilename(currentBook);
-      
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      toast.success('PDF exported successfully');
+      // Update the local state after successful save
+      setCurrentPageData(newPageData);
     } catch (error) {
-      console.error('PDF export error:', error);
-      toast.error('Failed to export PDF. Please try again.');
-    } finally {
-      setIsExporting(false);
+      console.error('Error saving page:', error);
+      toast.error('Failed to save page');
     }
-  };
-
-  const handleTitleUpdate = async (newTitle: string): Promise<boolean> => {
-    if (currentBook && newTitle !== currentBook.title) {
-      try {
-        await updateBookTitle(newTitle);
-        toast.success('Book title updated');
-        return true;
-      } catch (error) {
-        console.error('Error updating book title', error);
-        toast.error('Failed to update book title');
-        return false;
+  }, [updatePage]);
+  
+  // Update the page text
+  const handleTextChange = useCallback(async (text: string) => {
+    if (!currentPageData) return;
+    
+    const updatedPage: BookPage = {
+      ...currentPageData,
+      text
+    };
+    
+    await handleSavePage(updatedPage);
+  }, [currentPageData, handleSavePage]);
+  
+  // Update the page layout
+  const handleLayoutChange = useCallback(async (layout: string) => {
+    if (!currentPageData) return;
+    
+    const updatedPage: BookPage = {
+      ...currentPageData,
+      layout: layout as any
+    };
+    
+    await handleSavePage(updatedPage);
+  }, [currentPageData, handleSavePage]);
+  
+  // Update text formatting
+  const handleTextFormattingChange = useCallback(async (textFormatting: any) => {
+    if (!currentPageData) return;
+    
+    const updatedPage: BookPage = {
+      ...currentPageData,
+      textFormatting: {
+        ...currentPageData.textFormatting,
+        ...textFormatting
+      }
+    };
+    
+    await handleSavePage(updatedPage);
+  }, [currentPageData, handleSavePage]);
+  
+  // Set the current page when the book loads or changes
+  useEffect(() => {
+    if (currentBook && currentBook.pages.length > 0) {
+      // Get the first page of the book if no current page is set
+      if (!currentPageData) {
+        setCurrentPageData(currentBook.pages[0]);
       }
     }
-    return false;
-  };
-
+  }, [currentBook, currentPageData]);
+  
+  // Handle image settings changes
+  const handleImageSettingsChange = useCallback(async (settings: ImageSettings) => {
+    if (!currentPageData) return;
+    
+    const updatedPage: BookPage = {
+      ...currentPageData,
+      imageSettings: settings
+    };
+    
+    await handleSavePage(updatedPage);
+  }, [currentPageData, handleSavePage]);
+  
+  // Tell the parent wrapper to update page data safely
+  const updateCurrentPageData = useCallback((page: BookPage | null) => {
+    if (page === null) {
+      setCurrentPageData(null);
+      return;
+    }
+    
+    setCurrentPageData(page);
+  }, []);
+  
   return {
-    books,
-    currentBook,
-    selectedPageId,
     currentPageData,
-    isSaving,
-    isExporting,
-    isGenerating,
-    processingStory,
-    isNarrating,
-    loading,
-    error,
-    handlePageSelect,
-    handleAddPage,
-    handleDuplicatePage,
+    setCurrentPageData: updateCurrentPageData,
+    handleSavePage,
     handleTextChange,
     handleLayoutChange,
     handleTextFormattingChange,
-    handleImageSettingsChange,
-    updatePage,
-    handleReorderPage,
-    handleDeletePage,
-    handleExportPDF,
-    handleApplyAIText,
-    handleApplyAIImage,
-    handleGenerateImage,
-    handleGenerateNarration,
-    handleTitleUpdate
+    handleImageSettingsChange
   };
 }

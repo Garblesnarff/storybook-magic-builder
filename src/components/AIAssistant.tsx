@@ -33,7 +33,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   onApplyText, 
   onApplyImage,
   initialPrompt = '',
-  currentBook,
   updatePage
 }) => {
   const [prompt, setPrompt] = useState(initialPrompt);
@@ -60,7 +59,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setGeneratedImage,
     generateText,
     generateImage
-  } = useAIOperations(null, handleUpdatePage, () => {});
+  } = useAIOperations(null, handleUpdatePage, () => {}, undefined);
 
   const handleGenerateText = async () => {
     await generateText(prompt, temperature, maxTokens);
@@ -126,4 +125,3 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     </Sheet>
   );
 };
-

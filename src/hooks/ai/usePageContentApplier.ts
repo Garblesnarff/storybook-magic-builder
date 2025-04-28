@@ -129,19 +129,21 @@ export function usePageContentApplier(
   // Handle applying AI-generated image to the current page
   const handleApplyAIImage = async (prompt: string) => {
     if (!validatePageData()) return;
-    if (!currentPageData) return; // Added explicit check after validatePageData for TS
     
     setProcessingStory(true);
     try {
-      console.log(`Generating image for page ${currentPageData.id} in book ${currentPageData.bookId}`);
-      const imageStyle = getImageStyle();
-      
-      // Generate and upload the image, returning the storage URL
-      const imageUrl = await generateImage(prompt, imageStyle, currentPageData.bookId, currentPageData.id);
-      
-      if (imageUrl) {
-        console.log('Image URL from generation:', imageUrl);
-        await updatePageWithImage(imageUrl);
+      // Safe to access currentPageData properties after validatePageData
+      if (currentPageData) {
+        console.log(`Generating image for page ${currentPageData.id} in book ${currentPageData.bookId}`);
+        const imageStyle = getImageStyle();
+        
+        // Generate and upload the image, returning the storage URL
+        const imageUrl = await generateImage(prompt, imageStyle, currentPageData.bookId, currentPageData.id);
+        
+        if (imageUrl) {
+          console.log('Image URL from generation:', imageUrl);
+          await updatePageWithImage(imageUrl);
+        }
       }
     } catch (error) {
       console.error('Error applying AI image:', error);
@@ -164,27 +166,29 @@ export function usePageContentApplier(
   const handleGenerateImage = async () => {
     if (!validatePageData()) return;
     if (!validatePageText()) return;
-    if (!currentPageData) return; // Added explicit check for TS
     
     setIsGenerating(true);
     
     try {
-      const imageStyle = getImageStyle();
-      
-      console.log(`Generating image directly for page ${currentPageData.id} with style ${imageStyle}`);
-      
-      // Generate and upload the image, returning the storage URL
-      const imageUrl = await generateImage(
-        currentPageData.text,
-        imageStyle,
-        currentPageData.bookId,
-        currentPageData.id
-      );
-      
-      if (imageUrl) {
-        console.log('Generated image URL:', imageUrl);
-        await updatePageWithImage(imageUrl);
-        toast.success('Image generated and applied to page');
+      // Safe to access currentPageData after validation checks
+      if (currentPageData) {
+        const imageStyle = getImageStyle();
+        
+        console.log(`Generating image directly for page ${currentPageData.id} with style ${imageStyle}`);
+        
+        // Generate and upload the image, returning the storage URL
+        const imageUrl = await generateImage(
+          currentPageData.text,
+          imageStyle,
+          currentPageData.bookId,
+          currentPageData.id
+        );
+        
+        if (imageUrl) {
+          console.log('Generated image URL:', imageUrl);
+          await updatePageWithImage(imageUrl);
+          toast.success('Image generated and applied to page');
+        }
       }
     } catch (error) {
       console.error('Error generating image:', error);

@@ -1,16 +1,10 @@
-
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Sparkles, Loader2, AlertCircle } from 'lucide-react';
-import { IMAGE_STYLES, getStyleDescriptionById } from '@/types/book';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { imageStyleOptions } from '@/data/aiStyles';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ImageGenerationTabProps {
@@ -40,7 +34,6 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const [imageLoadError, setImageLoadError] = useState(false);
 
-  // On component mount, apply default image style from localStorage
   useEffect(() => {
     try {
       const defaultStyle = localStorage.getItem('defaultImageStyle');
@@ -52,7 +45,6 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
     }
   }, [setImageStyle]);
 
-  // When user selects a style, save it as default
   const handleStyleChange = (value: string) => {
     try {
       setImageStyle(value);
@@ -62,14 +54,12 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
     }
   };
 
-  // Reset image load error when getting a new image
   useEffect(() => {
     if (generatedImage) {
       setImageLoadError(false);
     }
   }, [generatedImage]);
 
-  // Handle generate with additional error catching
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       toast.error('Please enter a prompt first');
@@ -87,7 +77,6 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
       
       await onGenerate();
       
-      // Reset retry count on successful generation
       setRetryCount(0);
     } catch (err) {
       console.error('Image generation failed:', err);
@@ -98,24 +87,21 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
       });
     }
   };
-  
-  // Handle retry with backoff
+
   const handleRetry = async () => {
     setRetryCount(prev => prev + 1);
-    const backoffDelay = Math.min(2000 * Math.pow(1.5, retryCount), 10000); // exponential backoff, max 10s
+    const backoffDelay = Math.min(2000 * Math.pow(1.5, retryCount), 10000);
     
     toast.info(`Retrying image generation in ${backoffDelay/1000} seconds...`);
     
-    // Add small delay before retry to avoid rate limits
     setTimeout(() => {
       handleGenerate();
     }, backoffDelay);
   };
-  
-  // Get the current style name for display
-  const currentStyleName = IMAGE_STYLES.find(style => style.id === imageStyle)?.name || 'Realistic';
-  const styleDescription = IMAGE_STYLES.find(style => style.id === imageStyle)?.description || '';
-  
+
+  const currentStyleName = imageStyleOptions.find(style => style.id === imageStyle)?.name || 'Realistic';
+  const styleDescription = imageStyleOptions.find(style => style.id === imageStyle)?.description || '';
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -128,7 +114,7 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
             <SelectValue placeholder="Style" />
           </SelectTrigger>
           <SelectContent>
-            {IMAGE_STYLES.map((style) => (
+            {imageStyleOptions.map((style) => (
               <SelectItem key={style.id} value={style.id}>
                 {style.name}
               </SelectItem>
@@ -139,7 +125,7 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
           {styleDescription}
         </p>
       </div>
-      
+
       <Button 
         onClick={handleGenerate} 
         className="w-full"
@@ -157,7 +143,7 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
           </>
         )}
       </Button>
-      
+
       {error && (
         <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-800 text-sm">
           <div className="flex items-start">
@@ -185,7 +171,7 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
           </div>
         </div>
       )}
-      
+
       {imageLoadError && !error && (
         <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800 text-sm">
           <div className="flex items-start">
@@ -197,7 +183,7 @@ export const ImageGenerationTab: React.FC<ImageGenerationTabProps> = ({
           </div>
         </div>
       )}
-      
+
       {generatedImage && !error && (
         <div className="space-y-4 mt-4">
           <div className="border rounded-md overflow-hidden">

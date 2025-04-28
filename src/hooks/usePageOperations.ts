@@ -4,7 +4,6 @@ import { useState, useCallback } from 'react';
 import { Book, BookPage } from '../types/book';
 import { toast } from 'sonner';
 import {
-  addPage as addPageService,
   updatePage as updatePageService,
   deletePage as deletePageService,
   reorderPage as reorderPageService,
@@ -12,7 +11,7 @@ import {
 } from '../services/pageOperations';
 // Import the function to fetch the book again
 import { loadBookById } from '../services/bookOperations';
-
+import { createNewPage } from '../services/page/pageCreation';
 
 export function usePageOperations(
   books: Book[],
@@ -29,13 +28,26 @@ export function usePageOperations(
     setPageLoading(true);
     setPageError(null);
     try {
-      const [updatedBooksResult, newPageId] = await addPageService(currentBook, books);
-      setBooks(updatedBooksResult);
-      const updatedBook = updatedBooksResult.find(book => book.id === currentBook.id);
-      if (updatedBook) {
-        setCurrentBook(updatedBook);
-      }
-      return newPageId;
+      // Create a new page
+      const newPageNumber = currentBook.pages.length + 1;
+      const newPage = createNewPage(currentBook.id, newPageNumber);
+      
+      // Update the book with the new page
+      const updatedBook = {
+        ...currentBook,
+        pages: [...currentBook.pages, newPage]
+      };
+      
+      // Update local state
+      const updatedBooks = books.map(book => 
+        book.id === updatedBook.id ? updatedBook : book
+      );
+      
+      setBooks(updatedBooks);
+      setCurrentBook(updatedBook);
+      
+      // Return the new page ID
+      return newPage.id;
     } catch (error) {
       console.error('Error adding page:', error);
       setPageError('Failed to add page');
@@ -126,18 +138,30 @@ export function usePageOperations(
     }
   }, [currentBook, books, setBooks, setCurrentBook]);
 
-  // (Assuming duplicatePageService returns [updatedBooks, newPageId])
+  // Fix the duplicatePage function to properly handle Book type
   const duplicatePage = useCallback(async (id: string): Promise<string | undefined> => {
     if (!currentBook) return undefined;
     setPageLoading(true);
     setPageError(null);
     try {
-      const [updatedBooksResult, newPageId] = await duplicatePageService(id, currentBook, books);
-      setBooks(updatedBooksResult);
-      const updatedBook = updatedBooksResult.find(book => book.id === currentBook.id);
+      // Find the page to duplicate
+      const pageToDuplicate = currentBook.pages.find(page => page.id === id);
+      if (!pageToDuplicate) {
+        throw new Error('Page not found');
+      }
+      
+      // Get all books from the existing state
+      const allBooks = [...books];
+      
+      // Call the duplicatePageService with proper arguments
+      const [updatedBooks, newPageId] = await duplicatePageService(id, currentBook, allBooks);
+      
+      setBooks(updatedBooks);
+      const updatedBook = updatedBooks.find(book => book.id === currentBook.id);
       if (updatedBook) {
         setCurrentBook(updatedBook);
       }
+      
       return newPageId;
     } catch (error) {
       console.error('Error duplicating page:', error);
@@ -148,7 +172,6 @@ export function usePageOperations(
       setPageLoading(false);
     }
   }, [currentBook, books, setBooks, setCurrentBook]);
-
 
   return {
     addPage,
