@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Book } from '../types/book';
 import { 
@@ -5,7 +6,7 @@ import {
   updateBook as updateBookService, 
   deleteBook as deleteBookService,
   loadBookById,
-  loadAllBooks
+  loadBooks as loadAllBooks
 } from '../services/bookOperations';
 import { BookTemplate } from '@/data/bookTemplates';
 import { toast } from 'sonner';
@@ -79,7 +80,7 @@ export function useBookOperations() {
       const newBook = template.createBook();
       const savedBook = await createNewBook(user.id);
       const mergedBook = { ...savedBook, ...newBook, id: savedBook.id, userId: user.id };
-      await updateBookService(mergedBook, books);
+      await updateBookService(mergedBook);
       
       setBooks(prevBooks => [...prevBooks, mergedBook]);
       setCurrentBook(mergedBook);
@@ -89,7 +90,7 @@ export function useBookOperations() {
       toast.error('Failed to create book from template');
       return null;
     }
-  }, [books, user]);
+  }, [user]);
 
   const loadBook = useCallback(async (id: string): Promise<Book | null> => {
     try {
@@ -108,8 +109,11 @@ export function useBookOperations() {
 
   const updateBookState = useCallback(async (updatedBook: Book): Promise<void> => {
     try {
-      const updatedBooksResult = await updateBookService(updatedBook, books); 
-      setBooks(updatedBooksResult);
+      await updateBookService(updatedBook);
+      
+      setBooks(prevBooks => 
+        prevBooks.map(book => book.id === updatedBook.id ? updatedBook : book)
+      );
       
       if (currentBook?.id === updatedBook.id) { 
         setCurrentBook({ ...updatedBook });
@@ -118,15 +122,18 @@ export function useBookOperations() {
       console.error('Error updating book:', error);
       toast.error('Failed to update book');
     }
-  }, [books, currentBook]);
+  }, [currentBook]);
 
   const deleteBook = useCallback(async (id: string): Promise<void> => {
     try {
-      const updatedBooksResult = await deleteBookService(id, books); 
-      setBooks(updatedBooksResult);
+      await deleteBookService(id);
+      
+      setBooks(prevBooks => prevBooks.filter(book => book.id !== id));
       
       if (currentBook?.id === id) { 
-        setCurrentBook(updatedBooksResult.length ? updatedBooksResult[0] : null);
+        // Set the first available book as current, or null if none left
+        const firstBook = books.find(book => book.id !== id);
+        setCurrentBook(firstBook || null);
       }
       
       toast.success('Book deleted successfully');
