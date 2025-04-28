@@ -1,73 +1,94 @@
-import { v4 as uuidv4 } from 'uuid';
-import { BookPage, PageLayout, TextFormatting, DEFAULT_PAGE_TEXT } from '@/types/book';
-import { toast } from 'sonner';
 
-/**
- * Create a new page object with a unique ID
- * 
- * @param bookId The book ID to which this page belongs
- * @param pageNumber The page number within the book
- * @returns A new BookPage object
- */
+import { v4 as uuidv4 } from 'uuid';
+import { BookPage } from '@/types/book';
+// Remove unused toast import
+
+// Function to create a new page
 export const createNewPage = (bookId: string, pageNumber: number): BookPage => {
   return {
-    id: uuidv4(), // Generate a unique ID for the page
+    id: uuidv4(),
     bookId,
     pageNumber,
-    text: DEFAULT_PAGE_TEXT,
-    layout: 'text-left-image-right', // Default layout
-    // Other properties are optional and will be undefined initially
+    text: 'This is a new page. Click to edit the text.',
+    image: '',
+    layout: 'text-left-image-right',
+    textFormatting: {
+      fontFamily: 'Arial',
+      fontSize: 16,
+      fontColor: '#000000'
+    },
+    imageSettings: {
+      scale: 1,
+      position: { x: 0, y: 0 },
+      fitMethod: 'contain'
+    }
   };
 };
 
-/**
- * Create a duplicate of an existing page with a new ID
- * 
- * @param page The page to duplicate
- * @param newPageNumber The page number for the duplicated page
- * @returns A duplicated page
- */
-export const duplicatePage = (page: BookPage, newPageNumber: number): BookPage => {
-  // Generate a new ID for the duplicated page
-  const newId = uuidv4();
-  
-  // Clone the page and update with new ID and page number
+// Function to duplicate a page
+export const duplicatePage = (originalPage: BookPage): BookPage => {
+  // Create a copy with a new ID
   return {
-    ...page,
-    id: newId,
-    pageNumber: newPageNumber,
-    image: page.image || undefined, // Ensure image is string | undefined, not null
+    ...originalPage,
+    id: uuidv4(),
+    text: `${originalPage.text} (Copy)`,
+    // Maintain the same layout and formatting
+    layout: originalPage.layout,
+    textFormatting: {
+      ...originalPage.textFormatting
+    },
+    imageSettings: originalPage.imageSettings ? {
+      ...originalPage.imageSettings
+    } : {
+      scale: 1,
+      position: { x: 0, y: 0 },
+      fitMethod: 'contain'
+    }
   };
 };
 
-/**
- * Create a default text formatting object
- * 
- * @returns Default text formatting settings
- */
-export const createDefaultTextFormatting = (): TextFormatting => {
+// Function to create a title page
+export const createTitlePage = (bookId: string, title: string, author: string): BookPage => {
   return {
-    fontFamily: 'Arial',
-    fontSize: 16,
-    isBold: false,
-    isItalic: false,
-    fontColor: '#000000',
-    align: 'left',
-    imageStyle: 'REALISTIC', // Default image style
+    id: uuidv4(),
+    bookId,
+    pageNumber: 1,
+    text: `# ${title}\n\nBy ${author}`,
+    image: '',
+    layout: 'full-page-text',
+    textFormatting: {
+      fontFamily: 'Georgia',
+      fontSize: 24,
+      fontColor: '#000000',
+      // Remove the align property as it's not in TextFormatting type
+      // align: 'center'
+    },
+    imageSettings: {
+      scale: 1,
+      position: { x: 0, y: 0 },
+      fitMethod: 'contain'
+    }
   };
 };
 
-/**
- * Determine if a layout contains an image
- * 
- * @param layout The page layout to check
- * @returns True if the layout includes an image component
- */
-export const layoutHasImage = (layout: PageLayout): boolean => {
-  // Only the full-page-text layout doesn't have an image
-  return layout !== 'full-page-text';
-};
-
-export const getPlaceholderText = (pageNumber: number): string => {
-  return `Page ${pageNumber} content. Click to edit.`;
+// Function to create an about page
+export const createAboutPage = (bookId: string, description: string): BookPage => {
+  return {
+    id: uuidv4(),
+    bookId,
+    pageNumber: 2,
+    text: `# About This Book\n\n${description}`,
+    image: '',
+    layout: 'full-page-text',
+    textFormatting: {
+      fontFamily: 'Georgia',
+      fontSize: 18,
+      fontColor: '#000000'
+    },
+    imageSettings: {
+      scale: 1,
+      position: { x: 0, y: 0 },
+      fitMethod: 'contain'
+    }
+  };
 };

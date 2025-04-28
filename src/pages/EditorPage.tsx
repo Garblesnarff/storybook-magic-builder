@@ -10,10 +10,12 @@ const EditorPage = () => {
   const { id } = useParams<{ id: string }>();
   const { books, currentBook, loading: bookLoading } = useBook();
   
+  const editorState = usePageState(id);
+  
+  // Extract properties needed for EditorMainContent
   const {
-    selectedPageId,
     currentPageData,
-    isSaving,
+    selectedPageId,
     handlePageSelect,
     handleAddPage,
     handleDuplicatePage,
@@ -24,8 +26,9 @@ const EditorPage = () => {
     updatePage,
     handleReorderPage,
     handleDeletePage,
-    updateBookTitle
-  } = usePageState(id);
+    updateBookTitle,
+    isSaving,
+  } = editorState;
   
   // These are placeholders for functions that will be implemented later
   const isExporting = false;

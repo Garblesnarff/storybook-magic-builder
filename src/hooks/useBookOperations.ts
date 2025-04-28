@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Book } from '../types/book';
 import { 
-  createNewBook, 
+  createNewBook as createNewBookService, 
   updateBook as updateBookService, 
   deleteBook as deleteBookService,
   loadBookById,
@@ -24,7 +24,8 @@ export function useBookOperations() {
       try {
         setLoading(true);
         console.log('Loading books from Supabase...');
-        const fetchedBooks = await loadAllBooks();
+        // Pass the user ID to loadAllBooks
+        const fetchedBooks = await loadAllBooks(user?.id || '');
         
         const userBooks = user ? fetchedBooks.filter(book => book.userId === user.id) : fetchedBooks;
         setBooks(userBooks);
@@ -59,7 +60,7 @@ export function useBookOperations() {
     }
     
     try {
-      const newBook = await createNewBook(user.id);
+      const newBook = await createNewBookService(user.id);
       setBooks(prevBooks => [...prevBooks, newBook]);
       setCurrentBook(newBook);
       return newBook.id;
@@ -78,7 +79,7 @@ export function useBookOperations() {
     
     try {
       const newBook = template.createBook();
-      const savedBook = await createNewBook(user.id);
+      const savedBook = await createNewBookService(user.id);
       const mergedBook = { ...savedBook, ...newBook, id: savedBook.id, userId: user.id };
       await updateBookService(mergedBook);
       

@@ -1,6 +1,5 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useBook } from '@/contexts/BookContext';
 import { BookPage, ImageSettings } from '@/types/book';
@@ -9,9 +8,9 @@ export function useEditorPage() {
   // Get book data from context
   const { currentBook, updatePage } = useBook();
   
-  // Get URL parameters
-  const { bookId } = useParams<{ bookId: string }>();
-  const navigate = useNavigate();
+  // Remove unused variables:
+  // const { bookId } = useParams<{ bookId: string }>();
+  // const navigate = useNavigate();
   
   // State for the current page being edited
   const [currentPageData, setCurrentPageData] = useState<BookPage | null>(null);

@@ -1,8 +1,9 @@
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { toast } from 'sonner'; // Import toast for error notifications
+// toast is not being used, so remove it
+// import { toast } from 'sonner'; 
 
 interface GenerateButtonProps {
   isGenerating: boolean;

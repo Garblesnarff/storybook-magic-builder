@@ -1,6 +1,5 @@
 
-import { Book } from '../types/book';
-import { BookTemplate } from '@/data/bookTemplates';
+// Remove unused imports
 import { useBookOperations } from './useBookOperations';
 import { usePageOperations } from './usePageOperations';
 

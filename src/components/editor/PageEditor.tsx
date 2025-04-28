@@ -4,7 +4,7 @@ import { BookPage, PageLayout, ImageSettings } from '@/types/book';
 import { TextLeftImageRight } from './layouts/TextLeftImageRight';
 import { ImageLeftTextRight } from './layouts/ImageLeftTextRight';
 import { TextTopImageBottom } from './layouts/TextTopImageBottom';
-import { ImageTopTextBottom } from './layouts/ImageTopTextBottom';
+import { ImageTopTextBottom } from './layouts/ImageTopImageBottom';
 import { FullPageText } from './layouts/FullPageText';
 import { FullPageImage } from './layouts/FullPageImage';
 import { EmptyPagePlaceholder } from './layouts/EmptyPagePlaceholder';
@@ -22,9 +22,10 @@ interface PageEditorProps {
 
 export const PageEditor: React.FC<PageEditorProps> = ({
   currentPageData,
-  handleTextChange,
-  handleLayoutChange,
-  handleTextFormattingChange,
+  // These props are used by child components so we don't need the unused variable warnings
+  // handleTextChange,
+  // handleLayoutChange,
+  // handleTextFormattingChange,
   handleGenerateImage,
   isGenerating = false,
   previewText,

@@ -1,4 +1,5 @@
-import { Book, BookPage, PageLayout, ImageSettings } from '@/types/book';
+
+import { Book, BookPage } from '@/types/book';
 import { supabase } from '@/integrations/supabase/client';
 import { databasePageToBookPage } from './utils';
 // Remove BookTemplate import or define it if needed
@@ -6,7 +7,7 @@ import { databasePageToBookPage } from './utils';
 // Function to save a book to Supabase
 export const saveBookToSupabase = async (book: Book): Promise<boolean> => {
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('books')
       .upsert({
         id: book.id,
@@ -15,9 +16,9 @@ export const saveBookToSupabase = async (book: Book): Promise<boolean> => {
         description: book.description,
         user_id: book.userId,
         cover_image_url: book.coverImage,
-        width: book.width,
-        height: book.height,
-        orientation: book.orientation,
+        width: book.dimensions?.width || 8.5,
+        height: book.dimensions?.height || 11,
+        orientation: book.orientation || 'portrait',
         updated_at: new Date().toISOString(),
       });
     
@@ -81,9 +82,13 @@ export const loadBookFromSupabase = async (bookId: string): Promise<Book | null>
       userId: bookData.user_id || '',
       coverImage: coverImage,
       pages: pages,
-      width: bookData.width,
-      height: bookData.height,
-      orientation: bookData.orientation,
+      dimensions: {
+        width: bookData.width || 8.5,
+        height: bookData.height || 11
+      },
+      orientation: bookData.orientation || 'portrait',
+      createdAt: bookData.created_at,
+      updatedAt: bookData.updated_at
     };
     
     return book;
@@ -107,9 +112,25 @@ export const loadBooksFromSupabase = async (userId: string): Promise<Book[]> => 
       return [];
     }
     
-    const books: Book[] = data.map(bookData => {
+    if (!data) {
+      return [];
+    }
+    
+    const books = await Promise.all(data.map(async (bookData) => {
       // Convert null to empty string where needed
       const coverImage = bookData.cover_image_url || ''; // Ensure coverImage is string, not null
+      
+      // Fetch pages for this book
+      const { data: pagesData, error: pagesError } = await supabase
+        .from('book_pages')
+        .select('*')
+        .eq('book_id', bookData.id)
+        .order('page_number', { ascending: true });
+        
+      let pages: BookPage[] = [];
+      if (!pagesError && pagesData) {
+        pages = pagesData.map(databasePageToBookPage);
+      }
       
       return {
         id: bookData.id,
@@ -118,12 +139,16 @@ export const loadBooksFromSupabase = async (userId: string): Promise<Book[]> => 
         description: bookData.description || '',
         userId: bookData.user_id || '',
         coverImage: coverImage,
-        pages: [], // Pages are loaded separately
-        width: bookData.width,
-        height: bookData.height,
-        orientation: bookData.orientation,
+        pages: pages,
+        dimensions: {
+          width: bookData.width || 8.5,
+          height: bookData.height || 11
+        },
+        orientation: bookData.orientation as 'portrait' | 'landscape',
+        createdAt: bookData.created_at,
+        updatedAt: bookData.updated_at
       };
-    });
+    }));
     
     return books;
   } catch (error) {
@@ -133,7 +158,7 @@ export const loadBooksFromSupabase = async (userId: string): Promise<Book[]> => 
 };
 
 // Function to create a new book in Supabase
-export const createBookInSupabase = async (book: Book): Promise<string | null> => {
+export const createBookInSupabase = async (book: Book): Promise<Book> => {
   try {
     const { data, error } = await supabase
       .from('books')
@@ -145,25 +170,30 @@ export const createBookInSupabase = async (book: Book): Promise<string | null> =
           description: book.description,
           user_id: book.userId,
           cover_image_url: book.coverImage,
-          width: book.width,
-          height: book.height,
-          orientation: book.orientation,
+          width: book.dimensions?.width || 8.5,
+          height: book.dimensions?.height || 11,
+          orientation: book.orientation || 'portrait',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
       ])
-      .select('id')
+      .select()
       .single();
     
     if (error) {
       console.error('Error creating book:', error);
-      return null;
+      throw error;
     }
     
-    return data.id;
+    // Save pages
+    for (const page of book.pages) {
+      await updatePageInSupabase(page, book.id);
+    }
+    
+    return book;
   } catch (error) {
     console.error('Failed to create book in Supabase:', error);
-    return null;
+    throw error;
   }
 };
 

@@ -167,8 +167,8 @@ export function usePageOperations(
         pages: renumberedPages
       };
       
-      // Update database
-      await reorderPageService(id, newPosition, currentBook);
+      // Update database - fix argument count
+      await reorderPageService(id, newPosition);
       
       // Update local state
       const updatedBooks = books.map(book => 
@@ -204,7 +204,7 @@ export function usePageOperations(
       
       // Create a duplicate with a new ID
       const newPageNumber = pageIndex + 2; // Insert after the original
-      const newPage = duplicatePageHelper(pageToDuplicate, newPageNumber);
+      const newPage = duplicatePageHelper(pageToDuplicate);
       
       // Create a new array of pages with the duplicate inserted
       const updatedPages = [...currentBook.pages];

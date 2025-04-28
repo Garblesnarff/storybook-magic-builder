@@ -1,7 +1,6 @@
 
 // src/services/bookOperations.ts
-
-import { Book, BookPage } from '@/types/book';
+import { Book } from '@/types/book';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import {
@@ -81,4 +80,46 @@ export const generateBookCover = async (book: Book): Promise<string | null> => {
     toast.error('Failed to generate book cover');
     return null;
   }
+};
+
+// Fix the type of the addPage function
+export const addPage = async (book: Book, allBooks: Book[]): Promise<[Book[], string]> => {
+  if (!book) {
+    throw new Error('No book selected');
+  }
+  
+  const newPageId = uuidv4();
+  
+  const newPage = {
+    id: newPageId,
+    bookId: book.id,
+    pageNumber: book.pages.length + 1,
+    text: 'New page content',
+    image: '',
+    layout: 'text-left-image-right',
+    textFormatting: {
+      fontFamily: 'Arial',
+      fontSize: 16,
+      fontColor: '#000000'
+    },
+    imageSettings: {
+      scale: 1,
+      position: { x: 0, y: 0 },
+      fitMethod: 'contain'
+    }
+  };
+  
+  // Update the book with the new page
+  const updatedBook = {
+    ...book,
+    pages: [...book.pages, newPage]
+  };
+  
+  // Update the books collection with the updated book
+  const updatedBooks = allBooks.map(b => 
+    b.id === book.id ? updatedBook : b
+  );
+  
+  // Return the updated books and new page ID
+  return [updatedBooks, newPageId];
 };

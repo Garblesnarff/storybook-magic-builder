@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+
+import { useCallback } from 'react';
 import { useBook } from '@/contexts/BookContext';
 import { useBookLoading } from './page/useBookLoading';
 import { usePageSelection } from './page/usePageSelection';
@@ -9,7 +10,7 @@ import { useLayoutManager } from './page/useLayoutManager';
 import { useTextEditor } from './page/useTextEditor';
 import { useImageSettings } from './page/useImageSettings';
 import { useBookTitle } from './page/useBookTitle';
-import { BookPage, ImageSettings } from '@/types/book';
+import { BookPage } from '@/types/book';
 import { toast } from 'sonner';
 import { verifyImageUrl } from '@/utils/imageVerification';
 
@@ -31,7 +32,7 @@ export const usePageState = (bookId?: string) => {
   const { isSaving, trackSavingOperation, completeSavingOperation } = useSavingState();
   
   useBookLoading(bookId, books, loadBook);
-  const { selectedPageId, setSelectedPageId, handlePageSelect } = usePageSelection(currentBook, books);
+  const { selectedPageId, setSelectedPageId, handlePageSelect } = usePageSelection(currentBook);
   const { currentPageData, setCurrentPageData } = usePageData(currentBook, selectedPageId);
   
   const updatePage = useCallback(async (page: BookPage): Promise<void> => {
