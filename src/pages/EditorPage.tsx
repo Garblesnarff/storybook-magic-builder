@@ -1,3 +1,4 @@
+
 import { Layout } from '@/components/Layout';
 import { Navigate, useParams } from 'react-router-dom';
 import { usePageState } from '@/hooks/usePageState';
@@ -7,7 +8,8 @@ import { useBook } from '@/contexts/BookContext';
 
 const EditorPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { books, currentBook, loading: bookLoading } = useBook();
+  const { books, currentBook } = useBook();
+  // Remove unused bookLoading variable
   
   const editorState = usePageState(id);
   

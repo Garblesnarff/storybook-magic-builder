@@ -1,5 +1,5 @@
 
-import { useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 import { useImageLoader } from './useImageLoader';
 import { useContainerDimensions } from './useContainerDimensions';
@@ -26,11 +26,13 @@ export function useZoomableImage(
   } = useImageLoader(src);
 
   const {
+    dimensions,
+    updateDimensions,
     containerDimensions,
     imageDimensions,
     updateContainerDimensions,
     updateImageDimensions
-  } = useContainerDimensions();
+  } = useContainerDimensions(containerRef);
 
   const {
     scale,
@@ -52,7 +54,13 @@ export function useZoomableImage(
     fitMethod,
     toggleFitMethod,
     fitImageToContainer
-  } = useImageFit(initialSettings, onSettingsChange);
+  } = useImageFit({
+    containerWidth: dimensions.width,
+    containerHeight: dimensions.height,
+    fitMethod: initialSettings?.fitMethod,
+    scale: initialSettings?.scale,
+    position: initialSettings?.position
+  });
 
   const { saveSettings } = useSettingsSync(
     scale,
@@ -65,14 +73,8 @@ export function useZoomableImage(
   );
 
   // Helper method to update container dimensions when needed
-  const updateDimensions = () => {
-    if (containerRef.current) {
-      updateContainerDimensions(containerRef);
-    }
-    
-    if (imageRef.current && imageLoaded) {
-      updateImageDimensions(imageRef);
-    }
+  const updateAllDimensions = () => {
+    updateDimensions();
   };
 
   // Reset image position and scale
@@ -82,14 +84,19 @@ export function useZoomableImage(
     setScale(1);
     fitImageToContainer(
       imageLoaded,
-      containerDimensions,
-      imageDimensions,
+      containerDimensions || { width: 0, height: 0 },
+      imageDimensions || { width: 0, height: 0 },
       isInteractionReady,
-      setScale,
-      () => {},
-      scaleRef
+      setScale
     );
   };
+
+  // Use effect to trigger saveSettings when relevant states change
+  useEffect(() => {
+    if (isInteractionReady && imageLoaded && onSettingsChange) {
+      saveSettings();
+    }
+  }, [scale, position, fitMethod, isInteractionReady, imageLoaded, saveSettings, onSettingsChange]);
 
   return {
     scale,
@@ -109,6 +116,6 @@ export function useZoomableImage(
     toggleFitMethod,
     handleReset,
     handleImageLoad,
-    updateDimensions
+    updateDimensions: updateAllDimensions
   };
 }

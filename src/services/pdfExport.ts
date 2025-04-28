@@ -413,3 +413,12 @@ const addImage = async (
     // Continue without the image if an error occurred in the outer try
   }
 };
+
+const renderHeader = (doc, book, pageNum, totalPages, width) => {
+  // Remove unused height variable from function parameters
+  const headerY = 15;
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text(book.title, 20, headerY);
+  doc.text(`Page ${pageNum} of ${totalPages}`, width - 40, headerY, { align: 'right' });
+};

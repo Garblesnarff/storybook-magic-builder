@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,16 +6,17 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { IMAGE_STYLES } from '@/types/book';
+import { useAuth } from '@/contexts/AuthContext';
 
 const SettingsPage = () => {
-  // Load settings from localStorage
+  const { user } = useAuth();
+
   const [defaultAuthor, setDefaultAuthor] = useState('Anonymous');
   const [defaultOrientation, setDefaultOrientation] = useState('portrait');
   const [defaultImageStyle, setDefaultImageStyle] = useState('CARTOON');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
 
-  // Load settings from localStorage on component mount
   useEffect(() => {
     const storedAuthor = localStorage.getItem('defaultAuthor');
     const storedOrientation = localStorage.getItem('defaultOrientation');
@@ -31,21 +31,18 @@ const SettingsPage = () => {
     if (storedEmail) setEmail(storedEmail);
   }, []);
 
-  // Save account settings
   const saveAccountSettings = () => {
     localStorage.setItem('userName', name);
     localStorage.setItem('userEmail', email);
     toast.success('Account settings saved!');
   };
 
-  // Save default book settings
   const saveDefaultBookSettings = () => {
     localStorage.setItem('defaultAuthor', defaultAuthor);
     localStorage.setItem('defaultOrientation', defaultOrientation);
     toast.success('Default book settings saved!');
   };
 
-  // Save image generation settings
   const saveImageSettings = () => {
     localStorage.setItem('defaultImageStyle', defaultImageStyle);
     toast.success('Image settings saved!');

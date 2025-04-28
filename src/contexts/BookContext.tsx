@@ -56,13 +56,16 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Create wrapper functions to ensure type compatibility
   const updatePageWrapper = async (page: BookPage): Promise<void> => {
     await bookManager.updatePage(page);
+    return;
   };
   
   // Ensure error is always string | null
   const errorString = bookManager.error 
     ? typeof bookManager.error === 'string' 
       ? bookManager.error
-      : bookManager.error.message
+      : bookManager.error instanceof Error 
+        ? bookManager.error.message 
+        : String(bookManager.error)
     : null;
   
   // Ensure types are properly aligned with the expected interface

@@ -1,112 +1,75 @@
 
-import { useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { BookPage, ImageSettings, PageLayout } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
-import { useBookLoading } from './page/useBookLoading';
-import { usePageSelection } from './page/usePageSelection';
-import { usePageData } from './page/usePageData';
-import { usePageOperationsHandlers } from './page/usePageOperationsHandlers';
-import { useSavingState } from './page/useSavingState';
-import { useLayoutManager } from './page/useLayoutManager';
-import { useTextEditor } from './page/useTextEditor';
-import { useImageSettings } from './page/useImageSettings';
-import { useBookTitle } from './page/useBookTitle';
-import { BookPage } from '@/types/book';
-import { toast } from 'sonner';
-import { verifyImageUrl } from '@/utils/imageVerification';
+import { usePageOperations } from './usePageOperations';
+import { usePageSelection } from './hooks/page/usePageSelection';
+import { useTextEditor } from './hooks/page/useTextEditor';
+import { usePageData } from './hooks/page/usePageData';
+import { useSavingState } from './hooks/page/useSavingState';
+import { useLayoutManager } from './hooks/page/useLayoutManager';
+import { useImageSettings } from './hooks/page/useImageSettings';
+import { usePageActions } from './hooks/page/usePageActions';
+import { useBookTitle } from './hooks/page/useBookTitle';
 
-export const usePageState = (bookId?: string) => {
-  const {
-    books,
-    currentBook,
-    loadBook,
-    updateBook,
-    addPage,
-    updatePage: contextUpdatePage,
-    deletePage,
-    duplicatePage,
-    reorderPage,
-    loading,
-    error
-  } = useBook();
+export function usePageState(bookId: string | undefined) {
+  // Get book data from context
+  const { currentBook, updateBook, updatePage, loadBook } = useBook();
   
-  const { isSaving, trackSavingOperation, completeSavingOperation } = useSavingState();
+  // Save state management
+  const { isSaving, setSaving } = useSavingState();
   
-  // Call useBookLoading with the correct arguments
-  useBookLoading(bookId, loadBook);
-  const { selectedPageId, setSelectedPageId, handlePageSelect } = usePageSelection(currentBook);
-  const { currentPageData, setCurrentPageData } = usePageData(currentBook, selectedPageId);
+  // Page selection
+  const { selectedPageId, handlePageSelect } = usePageSelection(bookId, currentBook);
   
-  const updatePage = useCallback(async (page: BookPage): Promise<void> => {
-    try {
-      console.log(`updatePage in usePageState called for page ${page.id}`);
-      trackSavingOperation();
-      
-      // Make a deep copy of the page to avoid reference issues
-      const pageToUpdate = JSON.parse(JSON.stringify(page));
-      
-      // Update local state immediately for responsive UI
-      await setCurrentPageData(pageToUpdate);
-
-      try {
-        // If there's an image, verify it's accessible before proceeding
-        if (pageToUpdate.image) {
-          // Skip verification for base64 images
-          if (!pageToUpdate.image.startsWith('data:image')) {
-            console.log(`Verifying image URL: ${pageToUpdate.image.substring(0, 40)}...`);
-            await verifyImageUrl(pageToUpdate.image);
-          }
-        }
-        
-        // Persist to the database
-        console.log('Calling contextUpdatePage to persist changes to database');
-        await contextUpdatePage(pageToUpdate);
-        console.log(`Page ${page.id} successfully updated in database`);
-      } catch (error) {
-        console.error('Error in updatePage:', error);
-        
-        // Handle image verification failure specifically
-        if (error instanceof Error && error.message.includes('verification failed')) {
-          toast.error('Image could not be verified. Please try again.');
-        } else {
-          toast.error('Failed to update page');
-        }
-        
-        throw error;
+  // Page operations from the book context
+  const { addPage, duplicatePage, deletePage, reorderPage } = usePageOperations();
+  
+  // Text editing
+  const { handleTextChange } = useTextEditor(updatePage, setSaving);
+  
+  // Page layout management
+  const { handleLayoutChange } = useLayoutManager(updatePage, setSaving);
+  
+  // Page data access
+  const { currentPageData } = usePageData(currentBook, selectedPageId);
+  
+  // Text formatting
+  const handleTextFormattingChange = useCallback((key: string, value: any) => {
+    if (!currentPageData) return;
+    
+    const updatedPage: BookPage = {
+      ...currentPageData,
+      textFormatting: {
+        ...currentPageData.textFormatting,
+        [key]: value
       }
-    } finally {
-      completeSavingOperation();
-    }
-  }, [contextUpdatePage, trackSavingOperation, completeSavingOperation, setCurrentPageData]);
-
-  const {
-    handleAddPage,
-    handleDuplicatePage,
-    handleDeletePage,
-    handleReorderPage
-  } = usePageOperationsHandlers(
-    currentBook, 
-    selectedPageId, 
-    addPage, 
-    duplicatePage, 
-    deletePage, 
-    reorderPage, 
-    setSelectedPageId
-  );
+    };
+    
+    setSaving(true);
+    updatePage(updatedPage).finally(() => setSaving(false));
+  }, [currentPageData, updatePage, setSaving]);
   
-  const { handleTextChange, handleTextFormattingChange } = useTextEditor(currentPageData, updatePage);
+  // Image settings
+  const { handleImageSettingsChange } = useImageSettings(updatePage, setSaving);
   
-  const { handleLayoutChange } = useLayoutManager(currentPageData, updatePage);
+  // Page actions
+  const { handleAddPage, handleDuplicatePage, handleDeletePage, handleReorderPage } = 
+    usePageActions(bookId, addPage, duplicatePage, deletePage, reorderPage, handlePageSelect);
   
-  const { handleImageSettingsChange } = useImageSettings(currentPageData, updatePage);
-  
+  // Book title updating
   const { updateBookTitle } = useBookTitle(currentBook, updateBook);
   
+  // Effect to load the book if not already loaded
+  useEffect(() => {
+    if (bookId && !currentBook) {
+      loadBook(bookId);
+    }
+  }, [bookId, currentBook, loadBook]);
+  
   return {
-    books,
-    currentBook,
-    selectedPageId,
     currentPageData,
-    isSaving,
+    selectedPageId,
     handlePageSelect,
     handleAddPage,
     handleDuplicatePage,
@@ -115,11 +78,9 @@ export const usePageState = (bookId?: string) => {
     handleTextFormattingChange,
     handleImageSettingsChange,
     updatePage,
-    setCurrentPageData,
     handleReorderPage,
     handleDeletePage,
-    loading,
-    error,
-    updateBookTitle
+    updateBookTitle,
+    isSaving,
   };
-};
+}

@@ -1,9 +1,7 @@
-
-import React from 'react';
+import { Link } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Sparkles, Download, Image } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 const HomePage = () => {
   return (

@@ -1,6 +1,6 @@
-
-import { Book, BookPage } from '../../types/book';
 import { v4 as uuidv4 } from 'uuid';
+import { Book } from '@/types/book';
+import { DEFAULT_BOOK, DEFAULT_PAGE } from '@/types/book';
 
 /**
  * Creates a new book with a default first page

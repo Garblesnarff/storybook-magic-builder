@@ -1,8 +1,8 @@
 
 import { useState, useCallback } from 'react';
-import { ImageSettings } from '@/types/book';
+import type { ImageSettings } from '@/types/book';
 
-interface UseImageFitProps {
+export interface UseImageFitProps {
   containerWidth?: number;
   containerHeight?: number;
   imageWidth?: number;
@@ -12,16 +12,24 @@ interface UseImageFitProps {
   position?: { x: number; y: number };
 }
 
-export function useImageFit({
-  containerWidth = 400,
-  containerHeight = 400,
-  imageWidth = 200,
-  imageHeight = 200,
-  fitMethod = 'contain',
-  scale = 1,
-  position = { x: 0, y: 0 }
-}: UseImageFitProps) {
+export function useImageFit(props: UseImageFitProps = {}) {
+  const {
+    containerWidth = 400,
+    containerHeight = 400,
+    imageWidth = 200,
+    imageHeight = 200,
+    fitMethod: initialFitMethod = 'contain',
+    scale = 1,
+    position = { x: 0, y: 0 }
+  } = props;
+
+  const [fitMethod, setFitMethod] = useState<'contain' | 'cover'>(initialFitMethod === 'fill' ? 'contain' : initialFitMethod as 'contain' | 'cover');
   const [imageStyle, setImageStyle] = useState<React.CSSProperties>({});
+
+  // Toggle between contain and cover fit methods
+  const toggleFitMethod = useCallback(() => {
+    setFitMethod(prev => prev === 'contain' ? 'cover' : 'contain');
+  }, []);
 
   // Function to calculate the image style based on fit method and dimensions
   const calculateImageStyle = useCallback(() => {
@@ -69,8 +77,38 @@ export function useImageFit({
     });
   }, [containerWidth, containerHeight, imageWidth, imageHeight, fitMethod, scale, position]);
 
+  // Function to fit image to container
+  const fitImageToContainer = useCallback((
+    imageLoaded: boolean,
+    containerDims: { width: number; height: number },
+    imageDims: { width: number; height: number },
+    isInteractionReady: boolean,
+    setScale: (scale: number) => void,
+    setPosition?: (position: { x: number; y: number }) => void,
+    scaleRef?: React.MutableRefObject<number>
+  ) => {
+    if (!imageLoaded || !isInteractionReady) return;
+    
+    // Calculate appropriate scale to fit image in container
+    const containerRatio = containerDims.width / containerDims.height;
+    const imageRatio = imageDims.width / imageDims.height;
+    
+    // Reset position if setPosition is provided
+    if (setPosition) {
+      setPosition({ x: 0, y: 0 });
+    }
+    
+    // Set scale back to 1
+    setScale(1);
+    if (scaleRef) scaleRef.current = 1;
+    
+  }, []);
+
   return {
     imageStyle,
-    calculateImageStyle
+    calculateImageStyle,
+    fitMethod,
+    toggleFitMethod,
+    fitImageToContainer
   };
 }

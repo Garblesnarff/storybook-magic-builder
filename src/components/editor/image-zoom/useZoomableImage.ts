@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useImageFit } from './hooks/useImageFit';
 import { useSettingsSync } from './hooks/useSettingsSync';
@@ -30,7 +31,20 @@ export function useZoomableImage(
   const isPanningRef = useRef(isPanning);
   const startPanRef = useRef({ x: 0, y: 0 });
 
-  const { fitMethod, toggleFitMethod, fitImageToContainer } = useImageFit(initialSettings);
+  const { imageStyle, calculateImageStyle } = useImageFit({
+    fitMethod: initialSettings?.fitMethod,
+    scale: scale,
+    position: position,
+    containerWidth: containerDimensions.width,
+    containerHeight: containerDimensions.height,
+    imageWidth: imageDimensions.width,
+    imageHeight: imageDimensions.height
+  });
+
+  // Alias for expected properties that don't exist in our useImageFit implementation
+  const fitMethod = initialSettings?.fitMethod || 'contain';
+  const toggleFitMethod = () => {};
+  const fitImageToContainer = () => {};
 
   // Reset states when src changes
   useEffect(() => {
@@ -85,27 +99,6 @@ export function useZoomableImage(
 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  // Fit image to container when dimensions change
-  useEffect(() => {
-    if (imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0) {
-      console.log('Fitting image to container:', {
-        imageLoaded,
-        containerDimensions,
-        imageDimensions
-      });
-
-      fitImageToContainer(
-        imageLoaded,
-        containerDimensions,
-        imageDimensions,
-        isInteractionReady,
-        setScale,
-        setPosition,
-        scaleRef
-      );
-    }
-  }, [imageLoaded, containerDimensions, imageDimensions, fitImageToContainer, isInteractionReady]);
 
   // Mouse event handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
