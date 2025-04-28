@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { imageStyleOptions } from '@/data/aiStyles';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ImageGenerationTabProps {
