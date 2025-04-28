@@ -19,6 +19,9 @@ export const loadBooks = loadBooksFromSupabase;
 export const createBook = createBookInSupabase;
 export const deleteBook = deleteBookFromSupabase;
 
+// Add the missing updateBook export
+export const updateBook = saveBookToSupabase; // This maps updateBook to saveBookToSupabase
+
 // Add the missing createNewBook function
 export const createNewBook = async (userId: string): Promise<Book> => {
   const newBookId = uuidv4();

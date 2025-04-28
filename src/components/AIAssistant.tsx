@@ -55,8 +55,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     isGeneratingImage,
     generatedText,
     generatedImage,
-    setGeneratedText,
-    setGeneratedImage,
     generateText,
     generateImage
   } = useAIOperations(null, handleUpdatePage, () => {}, undefined);

@@ -7,11 +7,10 @@ import {
   updatePage as updatePageService,
   deletePage as deletePageService,
   reorderPage as reorderPageService,
-  duplicatePage as duplicatePageService
 } from '../services/pageOperations';
 // Import the function to fetch the book again
 import { loadBookById } from '../services/bookOperations';
-import { createNewPage } from '../services/page/pageCreation';
+import { createNewPage, duplicatePage as duplicatePageHelper } from '../services/page/pageCreation';
 
 export function usePageOperations(
   books: Book[],
@@ -100,14 +99,37 @@ export function usePageOperations(
     setPageLoading(true);
     setPageError(null);
     try {
-      const updatedBooksResult = await deletePageService(id, currentBook, books);
-      setBooks(updatedBooksResult);
-      const updatedBook = updatedBooksResult.find(book => book.id === currentBook.id);
-      if (updatedBook) {
-        setCurrentBook(updatedBook);
-      } else if (currentBook.pages.length === 1) { // If last page was deleted
-        setCurrentBook(null); // Or handle as appropriate
+      const updatedBookPages = currentBook.pages.filter(page => page.id !== id);
+      
+      // If this was the last page, handle accordingly
+      if (updatedBookPages.length === 0) {
+        // You might want to create a new empty page or handle this case differently
+        const emptyPage = createNewPage(currentBook.id, 1);
+        updatedBookPages.push(emptyPage);
       }
+      
+      // Renumber pages
+      const renumberedPages = updatedBookPages.map((page, index) => ({
+        ...page,
+        pageNumber: index + 1
+      }));
+      
+      const updatedBook = {
+        ...currentBook,
+        pages: renumberedPages
+      };
+      
+      // Update service (this now handles both database and storage)
+      await deletePageService(id);
+      
+      // Update local state
+      const updatedBooks = books.map(book => 
+        book.id === currentBook.id ? updatedBook : book
+      );
+      
+      setBooks(updatedBooks);
+      setCurrentBook(updatedBook);
+      
       toast.success('Page deleted');
     } catch (error) {
       console.error('Error deleting page:', error);
@@ -123,12 +145,39 @@ export function usePageOperations(
     setPageLoading(true);
     setPageError(null);
     try {
-      const updatedBooksResult = await reorderPageService(id, newPosition, currentBook, books);
-      setBooks(updatedBooksResult);
-      const updatedBook = updatedBooksResult.find(book => book.id === currentBook.id);
-      if (updatedBook) {
-        setCurrentBook(updatedBook);
-      }
+      // Find the page to reorder
+      const pageIndex = currentBook.pages.findIndex(page => page.id === id);
+      if (pageIndex === -1) return;
+      
+      // Create a copy of the pages array
+      const pages = [...currentBook.pages];
+      const [removed] = pages.splice(pageIndex, 1);
+      
+      // Insert the page at the new position
+      pages.splice(newPosition, 0, removed);
+      
+      // Renumber pages
+      const renumberedPages = pages.map((page, index) => ({
+        ...page,
+        pageNumber: index + 1
+      }));
+      
+      const updatedBook = {
+        ...currentBook,
+        pages: renumberedPages
+      };
+      
+      // Update database
+      await reorderPageService(id, newPosition, currentBook);
+      
+      // Update local state
+      const updatedBooks = books.map(book => 
+        book.id === currentBook.id ? updatedBook : book
+      );
+      
+      setBooks(updatedBooks);
+      setCurrentBook(updatedBook);
+      
     } catch (error) {
       console.error('Error reordering page:', error);
       setPageError('Failed to reorder page');
@@ -138,7 +187,7 @@ export function usePageOperations(
     }
   }, [currentBook, books, setBooks, setCurrentBook]);
 
-  // Fix the duplicatePage function to properly handle Book type
+  // Fix the duplicatePage function
   const duplicatePage = useCallback(async (id: string): Promise<string | undefined> => {
     if (!currentBook) return undefined;
     setPageLoading(true);
@@ -150,19 +199,38 @@ export function usePageOperations(
         throw new Error('Page not found');
       }
       
-      // Get all books from the existing state
-      const allBooks = [...books];
+      // Get index of the page to duplicate
+      const pageIndex = currentBook.pages.findIndex(page => page.id === id);
       
-      // Call the duplicatePageService with proper arguments
-      const [updatedBooks, newPageId] = await duplicatePageService(id, currentBook, allBooks);
+      // Create a duplicate with a new ID
+      const newPageNumber = pageIndex + 2; // Insert after the original
+      const newPage = duplicatePageHelper(pageToDuplicate, newPageNumber);
+      
+      // Create a new array of pages with the duplicate inserted
+      const updatedPages = [...currentBook.pages];
+      updatedPages.splice(pageIndex + 1, 0, newPage);
+      
+      // Renumber all pages
+      const renumberedPages = updatedPages.map((page, index) => ({
+        ...page,
+        pageNumber: index + 1
+      }));
+      
+      // Create the updated book
+      const updatedBook = {
+        ...currentBook,
+        pages: renumberedPages
+      };
+      
+      // Update local state
+      const updatedBooks = books.map(book => 
+        book.id === updatedBook.id ? updatedBook : book
+      );
       
       setBooks(updatedBooks);
-      const updatedBook = updatedBooks.find(book => book.id === currentBook.id);
-      if (updatedBook) {
-        setCurrentBook(updatedBook);
-      }
+      setCurrentBook(updatedBook);
       
-      return newPageId;
+      return newPage.id;
     } catch (error) {
       console.error('Error duplicating page:', error);
       setPageError('Failed to duplicate page');
