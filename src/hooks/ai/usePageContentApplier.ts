@@ -28,6 +28,7 @@ export function usePageContentApplier(
   currentPageData: BookPage | null, 
   updatePage: (page: BookPage) => Promise<void>, 
   setCurrentPageData: (page: BookPage | null) => void,
+  // Explicitly mark as optional with ? so it's clearly undefined when not provided
   onAddPage?: () => Promise<string | undefined>
 ) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -50,9 +51,9 @@ export function usePageContentApplier(
       if (generatedText) {
         console.log('Applying generated text to page:', currentPageData.id);
         
-        // Create updated page object
-        const updatedPage = {
-          ...createPageCopy(currentPageData),
+        // Create updated page object - ensure it has all required properties
+        const updatedPage: BookPage = {
+          ...currentPageData,
           text: generatedText
         };
         
@@ -73,7 +74,7 @@ export function usePageContentApplier(
   };
 
   // Validate page data before operations
-  const validatePageData = (operation: string): boolean => {
+  const validatePageData = (): boolean => {
     if (!currentPageData) {
       toast.error('No page is selected');
       return false;
@@ -89,7 +90,10 @@ export function usePageContentApplier(
 
   // Get image style from page formatting
   const getImageStyle = (): string => {
-    return currentPageData?.textFormatting?.imageStyle || 'REALISTIC';
+    if (!currentPageData || !currentPageData.textFormatting?.imageStyle) {
+      return 'REALISTIC';
+    }
+    return currentPageData.textFormatting.imageStyle;
   };
 
   // Update page with new image
@@ -98,9 +102,10 @@ export function usePageContentApplier(
     
     // Create a deep copy of the current page data
     const pageToUpdate = createPageCopy(currentPageData);
+    if (!pageToUpdate) return;
     
     // Create updated page object with the new image
-    const updatedPage = {
+    const updatedPage: BookPage = {
       ...pageToUpdate,
       image: imageUrl
     };
@@ -123,7 +128,8 @@ export function usePageContentApplier(
 
   // Handle applying AI-generated image to the current page
   const handleApplyAIImage = async (prompt: string) => {
-    if (!validatePageData('apply image')) return;
+    if (!validatePageData()) return;
+    if (!currentPageData) return; // Added explicit check after validatePageData for TS
     
     setProcessingStory(true);
     try {
@@ -156,8 +162,9 @@ export function usePageContentApplier(
 
   // Generate image directly for the current page
   const handleGenerateImage = async () => {
-    if (!validatePageData('generate image')) return;
+    if (!validatePageData()) return;
     if (!validatePageText()) return;
+    if (!currentPageData) return; // Added explicit check for TS
     
     setIsGenerating(true);
     

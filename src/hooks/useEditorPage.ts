@@ -50,7 +50,7 @@ export function useEditorPage(bookId?: string) {
 
     if (audioUrl) {
       // Save the URL to the page data using the existing updatePage function
-      const updatedPage = { ...currentPageData, narrationUrl: audioUrl };
+      const updatedPage: BookPage = { ...currentPageData, narrationUrl: audioUrl };
       setCurrentPageData(updatedPage); // Optimistic UI update
       try {
         await updatePage(updatedPage); // Persist change
@@ -91,13 +91,19 @@ export function useEditorPage(bookId?: string) {
     };
   }, [currentBook]);
   
+  // Fixed type mismatch by using type assertion to satisfy the compiler
   const {
     isGenerating,
     processingStory,
     handleGenerateImage,
     handleApplyAIText,
     handleApplyAIImage
-  } = useAIOperations(currentPageData, updatePage, setCurrentPageData, handleAddPageAsync);
+  } = useAIOperations(
+    currentPageData, 
+    updatePage,
+    setCurrentPageData as (page: BookPage | null) => void,
+    handleAddPageAsync
+  );
 
   const handleExportPDF = async () => {
     if (!currentBook) {
