@@ -2,8 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2 } from 'lucide-react';
-// toast is not being used, so remove it
-// import { toast } from 'sonner'; 
+// Remove unused imports
 
 interface GenerateButtonProps {
   isGenerating: boolean;

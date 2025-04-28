@@ -1,125 +1,162 @@
 
-// src/services/bookOperations.ts
-import { Book } from '@/types/book';
 import { v4 as uuidv4 } from 'uuid';
-import { toast } from 'sonner';
-import {
-  saveBookToSupabase,
-  loadBookFromSupabase,
-  loadBooksFromSupabase,
-  createBookInSupabase,
-  deleteBookFromSupabase
-} from './supabase/bookService';
+import { Book, BookTemplate, TextFormatting, PageLayout } from '@/types/book';
 
-// Re-export functions from bookService
-export const saveBook = saveBookToSupabase;
-export const loadBookById = loadBookFromSupabase;
-export const loadBooks = loadBooksFromSupabase;
-export const createBook = createBookInSupabase;
-export const deleteBook = deleteBookFromSupabase;
-
-// Add the missing updateBook export
-export const updateBook = saveBookToSupabase; // This maps updateBook to saveBookToSupabase
-
-// Add the missing createNewBook function
-export const createNewBook = async (userId: string): Promise<Book> => {
-  const newBookId = uuidv4();
+// Create a new default book
+export const createNewBook = (userId: string, title = 'Untitled Book'): Book => {
   const newPageId = uuidv4();
+  const now = new Date().toISOString();
   
-  const newBook: Book = {
-    id: newBookId,
-    title: 'Untitled Book',
-    pages: [{
-      id: newPageId,
-      bookId: newBookId,
-      pageNumber: 1,
-      text: 'This is the first page of your new book! Click here to edit the text.',
-      image: '',
-      layout: 'text-left-image-right',
-      textFormatting: {
-        fontFamily: 'Arial',
-        fontSize: 16,
-        fontColor: '#000000'
-      },
-      imageSettings: {
-        scale: 1,
-        position: { x: 0, y: 0 },
-        fitMethod: 'contain'
-      }
-    }],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    author: 'Anonymous',
+  return {
+    id: uuidv4(),
+    title,
+    author: '',
     description: '',
-    orientation: 'portrait',
+    userId,
+    coverImage: '',
     dimensions: {
       width: 8.5,
       height: 11
     },
-    userId
+    orientation: 'portrait',
+    pages: [
+      {
+        id: newPageId,
+        bookId: '',
+        pageNumber: 1,
+        text: 'Once upon a time...',
+        image: '',
+        layout: 'text-left-image-right',
+        textFormatting: {
+          fontFamily: 'Arial',
+          fontSize: 16,
+          fontColor: '#000000'
+        },
+        imageSettings: {
+          scale: 1,
+          position: { x: 0, y: 0 },
+          fitMethod: 'contain'
+        }
+      }
+    ],
+    createdAt: now,
+    updatedAt: now
   };
-
-  try {
-    // Save the new book to Supabase
-    return await createBookInSupabase(newBook);
-  } catch (error) {
-    console.error('Error creating new book:', error);
-    toast.error('Failed to create new book');
-    throw error;
-  }
 };
 
-// Functions related to book operations can be added here
-export const generateBookCover = async (book: Book): Promise<string | null> => {
-  try {
-    // This is a placeholder for actual cover generation logic
-    toast.success('Book cover generated');
-    return 'https://example.com/cover.jpg';
-  } catch (error) {
-    console.error('Error generating book cover:', error);
-    toast.error('Failed to generate book cover');
-    return null;
-  }
-};
-
-// Fix the type of the addPage function
-export const addPage = async (book: Book, allBooks: Book[]): Promise<[Book[], string]> => {
-  if (!book) {
-    throw new Error('No book selected');
-  }
+// Function to create a book from a template
+export const createBookFromTemplate = (userId: string, template: BookTemplate): Book => {
+  const bookId = uuidv4();
+  const now = new Date().toISOString();
   
-  const newPageId = uuidv4();
+  // Create pages from the template
+  const pages = template.pages.map((templatePage, index) => {
+    return {
+      id: uuidv4(),
+      bookId,
+      pageNumber: index + 1,
+      text: templatePage.text || '',
+      image: templatePage.image || '',
+      layout: templatePage.layout || 'text-left-image-right',
+      textFormatting: templatePage.textFormatting || {
+        fontFamily: 'Arial',
+        fontSize: 16,
+        fontColor: '#000000'
+      },
+      imageSettings: templatePage.imageSettings || {
+        scale: 1,
+        position: { x: 0, y: 0 },
+        fitMethod: 'contain'
+      }
+    };
+  });
   
-  const newPage = {
-    id: newPageId,
-    bookId: book.id,
-    pageNumber: book.pages.length + 1,
-    text: 'New page content',
-    image: '',
-    layout: 'text-left-image-right',
-    textFormatting: {
-      fontFamily: 'Arial',
-      fontSize: 16,
-      fontColor: '#000000'
+  return {
+    id: bookId,
+    title: template.title || 'Untitled Book',
+    author: template.author || '',
+    description: template.description || '',
+    userId,
+    coverImage: template.coverImage || '',
+    dimensions: template.dimensions || {
+      width: 8.5,
+      height: 11
     },
-    imageSettings: {
-      scale: 1,
-      position: { x: 0, y: 0 },
-      fitMethod: 'contain'
-    }
+    orientation: template.orientation || 'portrait',
+    pages,
+    createdAt: now,
+    updatedAt: now
   };
-  
-  // Update the book with the new page
-  const updatedBook = {
+};
+
+// Update an existing book
+export const updateBook = (book: Book, updates: Partial<Book>): Book => {
+  return {
     ...book,
-    pages: [...book.pages, newPage]
+    ...updates,
+    updatedAt: new Date().toISOString()
   };
+};
+
+// Delete a book (just returns filtered books array - actual deletion would happen in persistence layer)
+export const deleteBook = (books: Book[], bookId: string): Book[] => {
+  return books.filter(book => book.id !== bookId);
+};
+
+// Load a specific book
+export const loadBook = (books: Book[], bookId: string): Book | null => {
+  const book = books.find(book => book.id === bookId);
+  return book || null;
+};
+
+// Create mock books for testing
+export const createMockBooks = (userId: string): Book[] => {
+  const now = new Date().toISOString();
   
-  // Update the books collection with the updated book
-  const updatedBooks = allBooks.map(b => 
-    b.id === book.id ? updatedBook : b
-  );
+  const books: Book[] = [];
   
-  // Return the updated books and new page ID
-  return [updatedBooks, newPageId];
+  for (let i = 1; i <= 3; i++) {
+    const bookId = uuidv4();
+    const pages = [];
+    
+    for (let j = 1; j <= 3; j++) {
+      pages.push({
+        id: uuidv4(),
+        bookId,
+        pageNumber: j,
+        text: `This is page ${j} of book ${i}.`,
+        image: '',
+        layout: 'text-left-image-right' as PageLayout,
+        textFormatting: {
+          fontFamily: 'Arial',
+          fontSize: 16,
+          fontColor: '#000000'
+        },
+        imageSettings: {
+          scale: 1,
+          position: { x: 0, y: 0 },
+          fitMethod: 'contain'
+        }
+      });
+    }
+    
+    books.push({
+      id: bookId,
+      title: `Book ${i}`,
+      author: `Author ${i}`,
+      description: `Description for book ${i}`,
+      userId,
+      coverImage: '',
+      dimensions: {
+        width: 8.5,
+        height: 11
+      },
+      orientation: 'portrait',
+      pages,
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+  
+  return books;
 };
