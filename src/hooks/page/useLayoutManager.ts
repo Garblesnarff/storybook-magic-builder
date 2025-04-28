@@ -1,15 +1,12 @@
 
 import { useCallback } from 'react';
 import { BookPage, PageLayout } from '@/types/book';
-import { useSavingState } from './useSavingState';
 import { toast } from 'sonner';
 
 export function useLayoutManager(
   currentPageData: BookPage | null,
   updatePage: (page: BookPage) => Promise<void>
 ) {
-  const { trackSavingOperation, completeSavingOperation } = useSavingState();
-  
   // Handle layout changes
   const handleLayoutChange = useCallback((layout: PageLayout) => {
     if (!currentPageData) return;
@@ -21,7 +18,6 @@ export function useLayoutManager(
     }
     
     console.log(`useLayoutManager: handleLayoutChange called for page ${currentPageData.id} to layout ${layout}`);
-    trackSavingOperation();
     
     // Make a deep copy to avoid reference issues and preserve all other settings
     const updatedPage = JSON.parse(JSON.stringify(currentPageData));
@@ -35,9 +31,8 @@ export function useLayoutManager(
       .catch(error => {
         console.error(`useLayoutManager: updatePage failed for layout change on page ${currentPageData.id}`, error);
         toast.error('Failed to update layout');
-      })
-      .finally(completeSavingOperation);
-  }, [currentPageData, updatePage, trackSavingOperation, completeSavingOperation]);
+      });
+  }, [currentPageData, updatePage]);
 
   return {
     handleLayoutChange

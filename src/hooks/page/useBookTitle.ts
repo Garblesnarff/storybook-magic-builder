@@ -1,6 +1,5 @@
 
 import { useCallback } from 'react';
-// Remove toast import since it's not used
 import { Book } from '@/types/book';
 
 export function useBookTitle(

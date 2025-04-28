@@ -12,7 +12,7 @@ export function usePageOperations() {
   const [error, setError] = useState<Error | null>(null);
 
   // Add a page to the current book
-  const addPage = useCallback(async (bookId: string) => {
+  const addPage = useCallback(async (bookId: string): Promise<string | undefined> => {
     setLoading(true);
     setError(null);
     
@@ -20,9 +20,15 @@ export function usePageOperations() {
       const result = await createPage(bookId);
       
       // Update local state with the new page
-      if (typeof result !== 'string') {
-        // If result is a Book array, find the matching book and update it
-        const updatedBook = result.find((book: Book) => book.id === bookId);
+      if (typeof result === 'string') {
+        return result;
+      }
+      
+      // If result is an array of books
+      if (Array.isArray(result)) {
+        // Find the updated book
+        const updatedBook = result.find(book => book.id === bookId);
+        
         if (updatedBook) {
           // Update books array
           setBooks(prev => prev.map(book => 
@@ -35,7 +41,8 @@ export function usePageOperations() {
           }
           
           // Return the ID of the new page
-          return updatedBook.pages[updatedBook.pages.length - 1].id;
+          const newPageId = updatedBook.pages[updatedBook.pages.length - 1].id;
+          return newPageId;
         }
       }
       
@@ -51,7 +58,7 @@ export function usePageOperations() {
   }, [currentBook]);
 
   // Update a page in the current book
-  const updateBookPage = useCallback(async (page: BookPage) => {
+  const updateBookPage = useCallback(async (page: BookPage): Promise<Book> => {
     setLoading(true);
     setError(null);
     

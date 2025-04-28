@@ -56,7 +56,10 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Create wrapper functions to ensure type compatibility
   const updatePageWrapper = async (page: BookPage): Promise<void> => {
     await bookManager.updatePage(page);
-    return;
+  };
+
+  const updateBookWrapper = async (book: Book): Promise<void> => {
+    await bookManager.updateBook(book);
   };
   
   // Ensure error is always string | null
@@ -74,14 +77,13 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     currentBook: bookManager.currentBook,
     createBook: bookManager.createBook,
     createBookFromTemplate: bookManager.createBookFromTemplate,
-    updateBook: bookManager.updateBook,
+    updateBook: updateBookWrapper,
     deleteBook: bookManager.deleteBook,
     loadBook: bookManager.loadBook,
     addPage: async () => {
-      const result = await bookManager.addPage();
-      // Convert any Book[] result to undefined if needed
-      if (Array.isArray(result)) return undefined;
-      return result;
+      if (!bookManager.currentBook?.id) return undefined;
+      const newPageId = await bookManager.addPage(bookManager.currentBook.id);
+      return newPageId;
     },
     updatePage: updatePageWrapper,
     deletePage: bookManager.deletePage,

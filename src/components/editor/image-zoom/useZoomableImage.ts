@@ -1,7 +1,5 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useImageFit } from './hooks/useImageFit';
-import { useSettingsSync } from './hooks/useSettingsSync';
 import { ImageSettings } from '@/types/book';
 
 export function useZoomableImage(
@@ -26,26 +24,13 @@ export function useZoomableImage(
   const [isLoading, setIsLoading] = useState(true);
 
   // Refs for tracking state in event handlers
-  const scaleRef = useRef(scale);
   const positionRef = useRef(position);
   const isPanningRef = useRef(isPanning);
   const startPanRef = useRef({ x: 0, y: 0 });
 
-  const { imageStyle, calculateImageStyle } = useImageFit({
-    fitMethod: initialSettings?.fitMethod,
-    scale: scale,
-    position: position,
-    containerWidth: containerDimensions.width,
-    containerHeight: containerDimensions.height,
-    imageWidth: imageDimensions.width,
-    imageHeight: imageDimensions.height
-  });
-
   // Alias for expected properties that don't exist in our useImageFit implementation
   const fitMethod = initialSettings?.fitMethod || 'contain';
-  const toggleFitMethod = () => {};
-  const fitImageToContainer = () => {};
-
+  
   // Reset states when src changes
   useEffect(() => {
     console.log('Image source changed:', src);
@@ -140,18 +125,16 @@ export function useZoomableImage(
   const handleZoomIn = useCallback(() => {
     if (!isInteractionReady) return;
     
-    const newScale = Math.min(scaleRef.current * 1.2, 4);
+    const newScale = Math.min(scale * 1.2, 4);
     setScale(newScale);
-    scaleRef.current = newScale;
-  }, [isInteractionReady]);
+  }, [isInteractionReady, scale]);
 
   const handleZoomOut = useCallback(() => {
     if (!isInteractionReady) return;
     
-    const newScale = Math.max(scaleRef.current / 1.2, 0.5);
+    const newScale = Math.max(scale / 1.2, 0.5);
     setScale(newScale);
-    scaleRef.current = newScale;
-  }, [isInteractionReady]);
+  }, [isInteractionReady, scale]);
 
   // Reset to default view
   const handleReset = useCallback(() => {
@@ -159,9 +142,13 @@ export function useZoomableImage(
     
     setScale(1);
     setPosition({ x: 0, y: 0 });
-    scaleRef.current = 1;
     positionRef.current = { x: 0, y: 0 };
   }, [isInteractionReady]);
+
+  const toggleFitMethod = useCallback(() => {
+    // This is a placeholder, as we're not implementing the full functionality here
+    console.log('Toggle fit method clicked');
+  }, []);
 
   return {
     scale,

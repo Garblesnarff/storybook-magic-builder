@@ -89,10 +89,6 @@ export function useImageFit(props: UseImageFitProps = {}) {
   ) => {
     if (!imageLoaded || !isInteractionReady) return;
     
-    // Calculate appropriate scale to fit image in container
-    const containerRatio = containerDims.width / containerDims.height;
-    const imageRatio = imageDims.width / imageDims.height;
-    
     // Reset position if setPosition is provided
     if (setPosition) {
       setPosition({ x: 0, y: 0 });

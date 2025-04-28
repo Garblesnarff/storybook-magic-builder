@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 import { useImageLoader } from './useImageLoader';
 import { useContainerDimensions } from './useContainerDimensions';
@@ -27,17 +27,12 @@ export function useZoomableImage(
 
   const {
     dimensions,
-    updateDimensions,
-    containerDimensions,
-    imageDimensions,
-    updateContainerDimensions,
-    updateImageDimensions
+    updateDimensions
   } = useContainerDimensions(containerRef);
 
   const {
     scale,
     setScale,
-    scaleRef,
     handleZoomIn,
     handleZoomOut
   } = useImageZoom(initialSettings);
@@ -72,24 +67,18 @@ export function useZoomableImage(
     onSettingsChange
   );
 
-  // Helper method to update container dimensions when needed
-  const updateAllDimensions = () => {
+  // Update dimensions when the ref changes or the component mounts/unmounts
+  useEffect(() => {
     updateDimensions();
-  };
-
-  // Reset image position and scale
-  const handleReset = () => {
-    if (!isInteractionReady) return;
     
-    setScale(1);
-    fitImageToContainer(
-      imageLoaded,
-      containerDimensions || { width: 0, height: 0 },
-      imageDimensions || { width: 0, height: 0 },
-      isInteractionReady,
-      setScale
-    );
-  };
+    // Add event listener for resize
+    window.addEventListener('resize', updateDimensions);
+    
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+    };
+  }, [updateDimensions]);
 
   // Use effect to trigger saveSettings when relevant states change
   useEffect(() => {
@@ -114,8 +103,8 @@ export function useZoomableImage(
     handleZoomIn,
     handleZoomOut,
     toggleFitMethod,
-    handleReset,
+    handleReset: () => fitImageToContainer(imageLoaded, dimensions, { width: 0, height: 0 }, isInteractionReady, setScale),
     handleImageLoad,
-    updateDimensions: updateAllDimensions
+    updateDimensions
   };
 }

@@ -4,16 +4,17 @@ import { toast } from 'sonner';
 import { Book } from '@/types/book';
 import { BookTemplate } from '@/data/bookTemplates';
 import {
-  createBook,
-  updateBook,
-  deleteBook,
-  createBookFromTemplate,
-  loadBook
+  createBook as createBookService,
+  updateBook as updateBookService,
+  deleteBook as deleteBookService,
+  createBookFromTemplate as createBookTemplateService,
+  loadBook as loadBookService
 } from '@/services/bookOperations';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function useBookOperations() {
-  const { userId } = useAuth();
+  const auth = useAuth();
+  const userId = auth?.userId || '';
   const [books, setBooks] = useState<Book[]>([]);
   const [currentBook, setCurrentBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -30,8 +31,8 @@ export function useBookOperations() {
     setError(null);
     
     try {
-      const loadedBooks = await loadBook(userId);
-      setBooks(loadedBooks);
+      const loadedBooks = await loadBookService(userId);
+      setBooks(Array.isArray(loadedBooks) ? loadedBooks : []);
       return loadedBooks;
     } catch (err) {
       console.error('Error loading books:', err);
@@ -54,9 +55,8 @@ export function useBookOperations() {
     setError(null);
     
     try {
-      const loadedBook = await loadBook(userId, id);
+      const loadedBook = await loadBookService(id, userId);
       
-      // If loadedBook is an array, find the book with the matching ID
       if (Array.isArray(loadedBook)) {
         const book = loadedBook.find(b => b.id === id);
         if (book) {
@@ -66,7 +66,6 @@ export function useBookOperations() {
         return null;
       }
       
-      // If loadedBook is a single book
       setCurrentBook(loadedBook);
       return loadedBook;
     } catch (err) {
@@ -90,13 +89,16 @@ export function useBookOperations() {
     setError(null);
     
     try {
-      const newBook = await createBook(userId);
+      const newBook = await createBookService('Untitled Book', userId);
       
-      // Update the local state with the new book
-      setBooks(prev => [...prev, newBook]);
-      
-      toast.success('Book created');
-      return newBook.id;
+      if (newBook) {
+        // Update the local state with the new book
+        setBooks(prev => [...prev, newBook]);
+        
+        toast.success('Book created');
+        return newBook.id;
+      }
+      return null;
     } catch (err) {
       console.error('Error creating book:', err);
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -118,13 +120,16 @@ export function useBookOperations() {
     setError(null);
     
     try {
-      const newBook = await createBookFromTemplate(userId, template);
+      const newBook = await createBookTemplateService(template, userId);
       
-      // Update the local state with the new book
-      setBooks(prev => [...prev, newBook]);
-      
-      toast.success('Book created from template');
-      return newBook.id;
+      if (newBook) {
+        // Update the local state with the new book
+        setBooks(prev => [...prev, newBook]);
+        
+        toast.success('Book created from template');
+        return newBook.id;
+      }
+      return null;
     } catch (err) {
       console.error('Error creating book from template:', err);
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -141,7 +146,7 @@ export function useBookOperations() {
     setError(null);
     
     try {
-      const updatedBook = await updateBook(book);
+      const updatedBook = await updateBookService(book);
       
       // Update the local state
       setBooks(prev => prev.map(b => b.id === book.id ? updatedBook : b));
@@ -151,13 +156,12 @@ export function useBookOperations() {
         setCurrentBook(updatedBook);
       }
       
-      toast.success('Book updated');
       return updatedBook;
     } catch (err) {
       console.error('Error updating book:', err);
       setError(err instanceof Error ? err : new Error(String(err)));
       toast.error('Failed to update book');
-      return book;
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -169,7 +173,7 @@ export function useBookOperations() {
     setError(null);
     
     try {
-      await deleteBook(id);
+      await deleteBookService(id);
       
       // Update local state
       setBooks(prev => prev.filter(book => book.id !== id));

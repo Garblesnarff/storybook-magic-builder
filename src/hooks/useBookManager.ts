@@ -1,5 +1,4 @@
 
-// Remove unused imports
 import { useBookOperations } from './useBookOperations';
 import { usePageOperations } from './usePageOperations';
 
@@ -14,7 +13,6 @@ export function useBookManager() {
     loadBook,
     loading: bookLoading,
     error: bookError,
-    setBooks,
     setCurrentBook
   } = useBookOperations();
 
@@ -24,9 +22,9 @@ export function useBookManager() {
     deletePage,
     reorderPage,
     duplicatePage,
-    pageLoading,
-    pageError
-  } = usePageOperations(books, currentBook, setBooks, setCurrentBook);
+    loading: pageLoading,
+    error: pageError
+  } = usePageOperations();
 
   // Combine loading and error states
   const loading = bookLoading || pageLoading;
@@ -46,6 +44,7 @@ export function useBookManager() {
     reorderPage,
     duplicatePage,
     loading,
-    error
+    error,
+    setCurrentBook
   };
 }

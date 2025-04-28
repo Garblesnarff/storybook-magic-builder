@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { BookPage, ImageSettings, PageLayout } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
 import { usePageOperations } from './usePageOperations';
-import { usePageSelection } from './hooks/page/usePageSelection';
+import { usePageSelection } from '@/hooks/page/usePageSelection';
 import { useTextEditor } from './hooks/page/useTextEditor';
 import { usePageData } from './hooks/page/usePageData';
 import { useSavingState } from './hooks/page/useSavingState';
@@ -20,16 +20,16 @@ export function usePageState(bookId: string | undefined) {
   const { isSaving, setSaving } = useSavingState();
   
   // Page selection
-  const { selectedPageId, handlePageSelect } = usePageSelection(bookId, currentBook);
+  const { selectedPageId, handlePageSelect } = usePageSelection(currentBook);
   
   // Page operations from the book context
   const { addPage, duplicatePage, deletePage, reorderPage } = usePageOperations();
   
   // Text editing
-  const { handleTextChange } = useTextEditor(updatePage, setSaving);
+  const { handleTextChange } = useTextEditor(updatePage);
   
   // Page layout management
-  const { handleLayoutChange } = useLayoutManager(updatePage, setSaving);
+  const { handleLayoutChange } = useLayoutManager(currentBook?.pages.find(page => page.id === selectedPageId) || null, updatePage);
   
   // Page data access
   const { currentPageData } = usePageData(currentBook, selectedPageId);
