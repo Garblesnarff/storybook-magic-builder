@@ -1,3 +1,4 @@
+
 import PDFKit from 'pdfkit';
 // Add a @ts-ignore to bypass the module error until we install the dependency
 // @ts-ignore
@@ -183,8 +184,8 @@ const renderPdf = async (book: Book) => {
   doc.info['Title'] = book.title;
   doc.info['Author'] = book.author;
   doc.info['Subject'] = book.description;
-  doc.info['CreationDate'] = new Date(book.createdAt);
-  doc.info['ModDate'] = new Date(book.updatedAt);
+  doc.info['CreationDate'] = new Date();
+  doc.info['ModDate'] = new Date();
   
   const pageWidth = inchesToPoints(book.dimensions.width);
   const pageHeight = inchesToPoints(book.dimensions.height);
@@ -194,6 +195,7 @@ const renderPdf = async (book: Book) => {
     const footerText = `Page ${pageNum} of ${totalPages}`;
     const footerOptions = {
       align: 'center' as 'center' | 'left' | 'right' | 'justify',
+      width: pageWidth
     };
     
     doc.fillColor('gray');
@@ -203,10 +205,7 @@ const renderPdf = async (book: Book) => {
       footerText,
       0,
       pageHeight - inchesToPoints(0.5),
-      {
-        ...footerOptions,
-        width: pageWidth,
-      }
+      footerOptions
     );
     doc.fillColor('black'); // Reset fill color to black
   };
@@ -267,8 +266,7 @@ const renderPdf = async (book: Book) => {
         doc.text('Image failed to load', imageX + 5, imageY + 5, {
           width: imageWidth - 10,
           height: imageHeight - 10,
-          align: 'center',
-          valign: 'center'
+          align: 'center'
         });
       }
     }

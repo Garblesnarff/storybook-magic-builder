@@ -8,9 +8,7 @@ import { useAIImageGeneration } from './ai/useAIImageGeneration';
 // Hook that wraps usePageContentApplier for cleaner usage
 export function useAIOperations(
   currentPageData: BookPage | null,
-  updatePage: (page: BookPage) => Promise<void>,
-  setCurrentPageData: (page: BookPage | null) => void,
-  onAddPage?: () => Promise<string | undefined>
+  updatePage: (page: BookPage) => Promise<void>
 ) {
   const [generatedText, setGeneratedText] = useState<string>('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);

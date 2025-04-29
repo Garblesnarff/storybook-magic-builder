@@ -8,16 +8,18 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
-const Calendar = React.forwardRef<
-  React.ElementRef<typeof DayPicker>,
-  React.ComponentPropsWithoutRef<typeof DayPicker>
->((props, ref) => {
+function Calendar({
+  className,
+  classNames,
+  showOutsideDays = true,
+  ...props
+}: CalendarProps) {
   return (
     <DayPicker
-      ref={ref}
+      showOutsideDays={showOutsideDays}
       className={cn(
         "p-3 pointer-events-auto",
-        props.className
+        className
       )}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
@@ -48,7 +50,7 @@ const Calendar = React.forwardRef<
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground bg-muted hover:bg-muted hover:text-muted-foreground focus:bg-muted focus:text-muted-foreground",
         day_hidden: "invisible",
-        ...props?.classNames,
+        ...classNames,
       }}
       components={{
         IconLeft: () => <ChevronLeft className="h-4 w-4" />,
@@ -57,7 +59,7 @@ const Calendar = React.forwardRef<
       {...props}
     />
   )
-})
+}
 Calendar.displayName = "Calendar"
 
 export { Calendar }
