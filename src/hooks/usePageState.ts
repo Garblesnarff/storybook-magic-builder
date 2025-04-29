@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback } from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
@@ -90,18 +89,32 @@ export function usePageState(bookId: string | undefined) {
     });
   }, [currentPageData, setSaving, updatePage]);
 
-  // Add function to handle narration generation - fix the bookId issue
+  // Add function to handle narration generation with improved bookId checking
   const handleGenerateNarration = useCallback(async () => {
     if (!currentPageData || !currentBook) {
       toast.error("Cannot generate narration: No page selected or book not loaded");
       return Promise.resolve();
     }
 
+    // Ensure we have both the page ID and book ID before proceeding
+    if (!currentPageData.id) {
+      toast.error("Cannot generate narration: Page ID is missing");
+      return Promise.resolve();
+    }
+
+    if (!bookId && !currentBook.id) {
+      toast.error("Cannot generate narration: Book ID is missing");
+      return Promise.resolve();
+    }
+
+    // Determine which bookId to use, prioritizing the current book ID if available
+    const effectiveBookId = currentBook.id || bookId;
+
     try {
       setSaving(true);
       const narrationUrl = await generateNarration(
         currentPageData.text,
-        currentBook.id, // Use currentBook.id instead of passing a potentially undefined bookId
+        effectiveBookId as string,  // We've already checked that at least one ID exists
         currentPageData.id
       );
 
@@ -110,7 +123,7 @@ export function usePageState(bookId: string | undefined) {
         const updatedPage = {
           ...currentPageData,
           narrationUrl,
-          bookId: currentBook.id // Explicitly set the bookId to ensure it's not undefined
+          bookId: effectiveBookId
         };
         await updatePage(updatedPage);
       }
@@ -122,7 +135,7 @@ export function usePageState(bookId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, [currentPageData, currentBook, generateNarration, updatePage, setSaving]);
+  }, [currentPageData, currentBook, bookId, generateNarration, updatePage, setSaving]);
   
   return {
     currentPageData,

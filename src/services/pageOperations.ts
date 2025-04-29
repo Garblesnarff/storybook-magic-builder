@@ -1,3 +1,4 @@
+
 import { Book, BookPage } from '@/types/book';
 import { supabase } from '@/integrations/supabase/client';
 import { databasePageToBookPage } from './supabase/utils';
@@ -11,11 +12,16 @@ export async function createPage(bookId: string): Promise<string | undefined> {
       .from('books')
       .select('*, book_pages(*)')
       .eq('id', bookId)
-      .single();
+      .maybeSingle();
     
-    if (bookError || !bookData) {
+    if (bookError) {
       console.error('Error fetching book:', bookError);
       throw new Error(`Failed to fetch book: ${bookError?.message || 'Unknown error'}`);
+    }
+    
+    if (!bookData) {
+      console.error(`Book with ID ${bookId} not found`);
+      throw new Error(`Book with ID ${bookId} not found`);
     }
     
     // Calculate the next page number
@@ -35,7 +41,7 @@ export async function createPage(bookId: string): Promise<string | undefined> {
   }
 }
 
-// Update the function to use the correct orientation type and handle bookId validation
+// Update the function to use maybeSingle instead of single and handle book-not-found cases
 export async function updatePage(page: BookPage): Promise<Book> {
   try {
     // Validate bookId before proceeding
@@ -43,10 +49,9 @@ export async function updatePage(page: BookPage): Promise<Book> {
       throw new Error('Book ID is missing from the page data');
     }
     
-    // First, let's convert any image settings to a format that can be stored in the database
-    // (We'll handle this conversion in the updatePageInSupabase function)
+    console.log(`Updating page ${page.id} for book ${page.bookId}`);
     
-    // Update the page in the database
+    // First update the page in the database
     const success = await updatePageInSupabase(page.bookId, page);
     if (!success) {
       throw new Error('Failed to update page in database');
@@ -57,11 +62,34 @@ export async function updatePage(page: BookPage): Promise<Book> {
       .from('books')
       .select('*, book_pages(*)')
       .eq('id', page.bookId)
-      .single();
+      .maybeSingle();
     
-    if (bookError || !book) {
+    if (bookError) {
       console.error('Error fetching updated book:', bookError);
       throw new Error(`Failed to fetch updated book: ${bookError?.message || 'Unknown error'}`);
+    }
+    
+    if (!book) {
+      console.warn(`Book with ID ${page.bookId} not found when updating page. Returning simplified book object.`);
+      
+      // Create a minimal book object with just the updated page
+      // This ensures we don't break downstream code that expects a Book object
+      return {
+        id: page.bookId,
+        title: 'Unknown Book',
+        author: 'Unknown Author',
+        description: '',
+        userId: '',
+        coverImage: '',
+        dimensions: {
+          width: 8.5,
+          height: 11
+        },
+        orientation: "portrait",
+        pages: [page],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
     }
     
     // Convert the database book to our Book type
