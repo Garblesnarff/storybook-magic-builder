@@ -1,19 +1,49 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Book } from '@/types/book';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookTemplate } from '@/data/bookTemplates';
 import { createBookFromTemplate, createEmptyBook } from '@/services/book/bookCreation';
 import { toast } from 'sonner';
+import { loadBooks as loadBooksFromStorage, saveBooks } from '@/services/bookStorage';
 
 export function useBookOperations() {
   const [books, setBooks] = useState<Book[]>([]);
   const [currentBook, setCurrentBook] = useState<Book | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   
   const auth = useAuth();
   const userId = auth.user?.id || 'anonymous';
+  
+  // Load books from localStorage on initialization
+  useEffect(() => {
+    const initializeBooks = async () => {
+      setLoading(true);
+      try {
+        const loadedBooks = loadBooksFromStorage();
+        console.log("Loaded books from localStorage:", loadedBooks.length);
+        setBooks(loadedBooks);
+      } catch (err) {
+        console.error("Error loading books:", err);
+        const errorObj = err instanceof Error ? err : new Error('Unknown error loading books');
+        setError(errorObj);
+        toast.error("There was an error loading your books");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    initializeBooks();
+  }, []);
+  
+  // Save books to localStorage whenever they change
+  useEffect(() => {
+    if (books.length > 0) {
+      console.log("Saving books to localStorage:", books.length);
+      saveBooks(books);
+    }
+  }, [books]);
   
   // Load all books for the current user
   const loadBooks = useCallback(async () => {
@@ -21,9 +51,10 @@ export function useBookOperations() {
     setError(null);
     
     try {
-      // In a real app, this would fetch from an API or database
-      // For now, we just return the books in state
-      return books;
+      // Load books from localStorage
+      const loadedBooks = loadBooksFromStorage();
+      setBooks(loadedBooks);
+      return loadedBooks;
     } catch (err) {
       const errorObj = err instanceof Error ? err : new Error('Unknown error loading books');
       setError(errorObj);
@@ -31,7 +62,7 @@ export function useBookOperations() {
     } finally {
       setLoading(false);
     }
-  }, [books]);
+  }, []);
   
   // Load a specific book by ID
   const loadBook = useCallback(async (id: string) => {
