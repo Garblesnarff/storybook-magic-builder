@@ -12,8 +12,19 @@ import { supabase } from '@/integrations/supabase/client';
 export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: string): Promise<string | null> => {
   try {
     // Validate inputs
-    if (!audioBlob || !bookId || !pageId) {
-      toast.error('Missing required information for audio upload');
+    if (!audioBlob) {
+      toast.error('Missing audio data for upload');
+      return null;
+    }
+    
+    if (!bookId) {
+      toast.error('Missing book ID for audio upload');
+      console.error('Cannot upload audio: bookId is undefined or empty');
+      return null;
+    }
+    
+    if (!pageId) {
+      toast.error('Missing page ID for audio upload');
       return null;
     }
 
@@ -24,7 +35,9 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
       bucket: 'narrations',
       path: filePath,
       size: audioBlob.size,
-      type: audioBlob.type
+      type: audioBlob.type,
+      bookId, // Log the bookId to help diagnose issues
+      pageId
     });
 
     // Upload to Supabase Storage
@@ -85,6 +98,11 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
  */
 export const deletePageNarration = async (bookId: string, pageId: string): Promise<void> => {
   try {
+    if (!bookId || !pageId) {
+      console.error('Cannot delete narration: missing bookId or pageId');
+      return;
+    }
+    
     const filePath = `${bookId}/${pageId}_narration.mp3`;
     console.log('Attempting to delete audio file:', filePath);
     

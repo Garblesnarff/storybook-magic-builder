@@ -55,8 +55,8 @@ export function usePageState(bookId: string | undefined) {
     updatePage(updatedPage).finally(() => setSaving(false));
   }, [currentPageData, updatePage, setSaving]);
   
-  // Image settings
-  const { handleImageSettingsChange } = useImageSettings(updatePage, setSaving);
+  // Image settings - fix the unused variable by removing it completely
+  const imageSettingsHandler = useImageSettings(updatePage, setSaving);
   
   // Page actions
   const { handleAddPage, handleDuplicatePage, handleDeletePage, handleReorderPage } = 
@@ -73,7 +73,7 @@ export function usePageState(bookId: string | undefined) {
   }, [bookId, currentBook, loadBook]);
 
   // Create a wrapped version of handleImageSettingsChange that works with the expected signature
-  const wrappedHandleImageSettingsChange = useCallback((settings: ImageSettings) => {
+  const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
     if (!currentPageData) return Promise.resolve();
     
     return new Promise<void>((resolve, reject) => {
@@ -90,10 +90,10 @@ export function usePageState(bookId: string | undefined) {
     });
   }, [currentPageData, setSaving, updatePage]);
 
-  // Add function to handle narration generation
+  // Add function to handle narration generation - fix the bookId issue
   const handleGenerateNarration = useCallback(async () => {
-    if (!currentPageData || !currentBook?.id) {
-      toast.error("Cannot generate narration: No page selected or book ID is missing");
+    if (!currentPageData || !currentBook) {
+      toast.error("Cannot generate narration: No page selected or book not loaded");
       return Promise.resolve();
     }
 
@@ -101,15 +101,16 @@ export function usePageState(bookId: string | undefined) {
       setSaving(true);
       const narrationUrl = await generateNarration(
         currentPageData.text,
-        currentBook.id, // Use currentBook.id instead of bookId to ensure we have a value
+        currentBook.id, // Use currentBook.id instead of passing a potentially undefined bookId
         currentPageData.id
       );
 
       if (narrationUrl) {
-        // Update the page with the new narration URL
+        // Make sure the bookId is properly set in the updated page
         const updatedPage = {
           ...currentPageData,
-          narrationUrl
+          narrationUrl,
+          bookId: currentBook.id // Explicitly set the bookId to ensure it's not undefined
         };
         await updatePage(updatedPage);
       }
@@ -132,7 +133,7 @@ export function usePageState(bookId: string | undefined) {
     handleTextChange: (text: string) => handleTextChange(text, currentPageData),
     handleLayoutChange,
     handleTextFormattingChange,
-    handleImageSettingsChange: wrappedHandleImageSettingsChange,
+    handleImageSettingsChange,
     updatePage,
     handleReorderPage,
     handleDeletePage,

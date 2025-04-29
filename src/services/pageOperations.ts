@@ -1,5 +1,5 @@
 
-import { Book, BookPage } from '@/types/book';
+import { Book, BookPage, PageLayout, TextFormatting } from '@/types/book';
 import { supabase } from '@/integrations/supabase/client';
 import { databasePageToBookPage } from './supabase/utils';
 import { addPageToSupabase, updatePageInSupabase, deletePageFromSupabase } from './supabase/pageService';
@@ -36,9 +36,14 @@ export async function createPage(bookId: string): Promise<string | undefined> {
   }
 }
 
-// Update the function to use the correct orientation type
+// Update the function to use the correct orientation type and handle bookId validation
 export async function updatePage(page: BookPage): Promise<Book> {
   try {
+    // Validate bookId before proceeding
+    if (!page.bookId) {
+      throw new Error('Book ID is missing from the page data');
+    }
+    
     // First, let's convert any image settings to a format that can be stored in the database
     // (We'll handle this conversion in the updatePageInSupabase function)
     
