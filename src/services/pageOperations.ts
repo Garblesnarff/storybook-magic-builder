@@ -1,5 +1,4 @@
-
-import { Book, BookPage, PageLayout, TextFormatting } from '@/types/book';
+import { Book, BookPage } from '@/types/book';
 import { supabase } from '@/integrations/supabase/client';
 import { databasePageToBookPage } from './supabase/utils';
 import { addPageToSupabase, updatePageInSupabase, deletePageFromSupabase } from './supabase/pageService';

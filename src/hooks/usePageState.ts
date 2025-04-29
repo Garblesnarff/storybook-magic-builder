@@ -55,8 +55,8 @@ export function usePageState(bookId: string | undefined) {
     updatePage(updatedPage).finally(() => setSaving(false));
   }, [currentPageData, updatePage, setSaving]);
   
-  // Image settings - fix the unused variable by removing it completely
-  const imageSettingsHandler = useImageSettings(updatePage, setSaving);
+  // Use useImageSettings without assigning the return value to a variable
+  useImageSettings(updatePage, setSaving);
   
   // Page actions
   const { handleAddPage, handleDuplicatePage, handleDeletePage, handleReorderPage } = 
