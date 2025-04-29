@@ -1,3 +1,4 @@
+
 import { useEffect, useCallback } from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
@@ -102,28 +103,22 @@ export function usePageState(bookId: string | undefined) {
       return Promise.resolve();
     }
 
-    if (!bookId && !currentBook.id) {
-      toast.error("Cannot generate narration: Book ID is missing");
-      return Promise.resolve();
-    }
-
-    // Determine which bookId to use, prioritizing the current book ID if available
-    const effectiveBookId = currentBook.id || bookId;
+    // Determine which bookId to use, ensure it's a string - using currentBook.id which we've verified exists
+    const effectiveBookId = currentBook.id;
 
     try {
       setSaving(true);
       const narrationUrl = await generateNarration(
         currentPageData.text,
-        effectiveBookId as string,  // We've already checked that at least one ID exists
+        effectiveBookId,  // We've already checked that currentBook exists
         currentPageData.id
       );
 
       if (narrationUrl) {
         // Make sure the bookId is properly set in the updated page
-        const updatedPage = {
+        const updatedPage: BookPage = {
           ...currentPageData,
           narrationUrl,
-          bookId: effectiveBookId
         };
         await updatePage(updatedPage);
       }
@@ -135,7 +130,7 @@ export function usePageState(bookId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, [currentPageData, currentBook, bookId, generateNarration, updatePage, setSaving]);
+  }, [currentPageData, currentBook, generateNarration, updatePage, setSaving]);
   
   return {
     currentPageData,
@@ -156,3 +151,4 @@ export function usePageState(bookId: string | undefined) {
     handleGenerateNarration
   };
 }
+
