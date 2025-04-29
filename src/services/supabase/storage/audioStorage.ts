@@ -39,6 +39,19 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     if (error) {
       console.error('Error uploading audio:', error);
       toast.error(`Failed to upload narration: ${error.message}`);
+      
+      // Additional logging for debugging RLS issues
+      if (error.message?.includes('new row violates row-level security')) {
+        console.error('Row Level Security violation. Make sure the narrations bucket has proper policies.');
+        toast.error('Storage permission denied. Please contact support.');
+      }
+      
+      return null;
+    }
+    
+    if (!data) {
+      console.error('No data returned from upload');
+      toast.error('Failed to upload narration: No data returned');
       return null;
     }
     
@@ -48,12 +61,19 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
       .from('narrations')
       .getPublicUrl(data.path);
     
+    if (!urlData?.publicUrl) {
+      console.error('Failed to get public URL');
+      toast.error('Failed to get access to the narration');
+      return null;
+    }
+    
     console.log("Audio uploaded successfully, public URL:", urlData.publicUrl);
     toast.success('Narration saved successfully');
     return urlData.publicUrl;
   } catch (e) {
-    console.error('Failed to upload audio to storage:', e);
-    toast.error('Failed to save narration audio');
+    const error = e as Error;
+    console.error('Failed to upload audio to storage:', error);
+    toast.error(`Failed to save narration audio: ${error.message || 'Unknown error'}`);
     return null;
   }
 };

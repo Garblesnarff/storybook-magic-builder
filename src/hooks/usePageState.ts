@@ -56,7 +56,7 @@ export function usePageState(bookId: string | undefined) {
   }, [currentPageData, updatePage, setSaving]);
   
   // Image settings
-  const { handleImageSettingsChange } = useImageSettings(updatePage, setSaving);
+  const { handleImageSettingsChange: imageSettingsHandler } = useImageSettings(updatePage, setSaving);
   
   // Page actions
   const { handleAddPage, handleDuplicatePage, handleDeletePage, handleReorderPage } = 
@@ -92,8 +92,8 @@ export function usePageState(bookId: string | undefined) {
 
   // Add function to handle narration generation
   const handleGenerateNarration = useCallback(async () => {
-    if (!currentPageData || !bookId) {
-      toast.error("Cannot generate narration: No page selected");
+    if (!currentPageData || !currentBook?.id) {
+      toast.error("Cannot generate narration: No page selected or book ID is missing");
       return Promise.resolve();
     }
 
@@ -101,7 +101,7 @@ export function usePageState(bookId: string | undefined) {
       setSaving(true);
       const narrationUrl = await generateNarration(
         currentPageData.text,
-        bookId,
+        currentBook.id, // Use currentBook.id instead of bookId to ensure we have a value
         currentPageData.id
       );
 
@@ -121,7 +121,7 @@ export function usePageState(bookId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, [currentPageData, bookId, generateNarration, updatePage, setSaving]);
+  }, [currentPageData, currentBook, generateNarration, updatePage, setSaving]);
   
   return {
     currentPageData,

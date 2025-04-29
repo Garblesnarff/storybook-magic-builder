@@ -38,7 +38,8 @@ export function databasePageToBookPage(dbPage: any): BookPage {
     layout: dbPage.layout as PageLayout || 'text-left-image-right',
     textFormatting,
     imageSettings,
-    backgroundColor: dbPage.background_color
+    backgroundColor: dbPage.background_color,
+    narrationUrl: dbPage.narration_url
   };
 }
 
@@ -57,6 +58,7 @@ export function bookPageToDatabasePage(page: BookPage, bookId: string): any {
     is_italic: page.textFormatting?.isItalic,
     image_settings: page.imageSettings,
     background_color: page.backgroundColor,
-    image_style: page.textFormatting?.imageStyle
+    image_style: page.textFormatting?.imageStyle,
+    narration_url: page.narrationUrl
   };
 }
