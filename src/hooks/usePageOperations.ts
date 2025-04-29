@@ -150,7 +150,7 @@ export function usePageOperations() {
     } finally {
       setLoading(false);
     }
-  }, [currentBook]);
+  }, [currentBook, updatePage]);
 
   // Duplicate a page in the current book
   const duplicatePage = useCallback(async (pageId: string) => {

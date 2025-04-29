@@ -1,3 +1,4 @@
+
 import { useEffect, useCallback } from 'react';
 import { BookPage, ImageSettings } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
@@ -10,6 +11,8 @@ import { useLayoutManager } from '@/hooks/page/useLayoutManager';
 import { useImageSettings } from '@/hooks/page/useImageSettings';
 import { usePageActions } from '@/hooks/page/usePageActions';
 import { useBookTitle } from '@/hooks/page/useBookTitle';
+import { useNarration } from '@/hooks/ai/useNarration';
+import { toast } from 'sonner';
 
 export function usePageState(bookId: string | undefined) {
   // Get book data from context
@@ -32,6 +35,9 @@ export function usePageState(bookId: string | undefined) {
   
   // Page layout management
   const { handleLayoutChange } = useLayoutManager(currentPageData, updatePage);
+
+  // Add narration functionality
+  const { generateNarration, isNarrating } = useNarration();
   
   // Text formatting
   const handleTextFormattingChange = useCallback((key: string, value: any) => {
@@ -82,7 +88,40 @@ export function usePageState(bookId: string | undefined) {
         .catch(reject)
         .finally(() => setSaving(false));
     });
-  }, [handleImageSettingsChange, currentPageData, setSaving, updatePage]);
+  }, [currentPageData, setSaving, updatePage]);
+
+  // Add function to handle narration generation
+  const handleGenerateNarration = useCallback(async () => {
+    if (!currentPageData || !bookId) {
+      toast.error("Cannot generate narration: No page selected");
+      return Promise.resolve();
+    }
+
+    try {
+      setSaving(true);
+      const narrationUrl = await generateNarration(
+        currentPageData.text,
+        bookId,
+        currentPageData.id
+      );
+
+      if (narrationUrl) {
+        // Update the page with the new narration URL
+        const updatedPage = {
+          ...currentPageData,
+          narrationUrl
+        };
+        await updatePage(updatedPage);
+      }
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error generating narration:", error);
+      toast.error("Failed to generate narration");
+      return Promise.resolve();
+    } finally {
+      setSaving(false);
+    }
+  }, [currentPageData, bookId, generateNarration, updatePage, setSaving]);
   
   return {
     currentPageData,
@@ -99,5 +138,7 @@ export function usePageState(bookId: string | undefined) {
     handleDeletePage,
     updateBookTitle,
     isSaving,
+    isNarrating,
+    handleGenerateNarration
   };
 }

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Book } from '@/types/book';
 // Remove unused imports
@@ -41,7 +40,8 @@ const databasePageToBookPage = (dbPage: any) => {
       fontColor: dbPage.font_color || '#000000'
     },
     imageSettings: dbPage.image_settings ? JSON.parse(dbPage.image_settings) : undefined,
-    backgroundColor: dbPage.background_color
+    backgroundColor: dbPage.background_color,
+    narrationUrl: dbPage.narration_url || undefined
   };
 };
 

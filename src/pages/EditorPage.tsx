@@ -27,13 +27,14 @@ const EditorPage = () => {
     handleDeletePage,
     updateBookTitle,
     isSaving,
+    isNarrating,
+    handleGenerateNarration
   } = editorState;
   
   // These are placeholders for functions that will be implemented later
   const isExporting = false;
   const isGenerating = false;
   const processingStory = false;
-  const isNarrating = false;
   
   const handleExportPDF = async () => {
     // Placeholder function
@@ -48,21 +49,6 @@ const EditorPage = () => {
   const handleApplyAIImage = (imageUrl: string) => {
     // Placeholder function
     console.log('Apply AI image functionality will be implemented later', imageUrl);
-  };
-  
-  const handleGenerateNarration = async () => {
-    // Placeholder function
-    console.log('Generate narration functionality will be implemented later');
-    return Promise.resolve();
-  };
-
-  // Create an adapter function to convert between the function signatures
-  const handleReorderAdapter = (sourceIndex: number, destinationIndex: number) => {
-    if (currentBook && currentBook.pages[sourceIndex]) {
-      const pageId = currentBook.pages[sourceIndex].id;
-      // Convert pageId to number if handleReorderPage expects a number for the first parameter
-      handleReorderPage(Number(pageId), destinationIndex);
-    }
   };
 
   // Create wrapper for handleTextChange to return a Promise
@@ -97,7 +83,7 @@ const EditorPage = () => {
           handleAddPage={handleAddPage}
           handleDuplicatePage={handleDuplicatePage}
           handleDeletePage={handleDeletePage}
-          handleReorderPage={handleReorderAdapter}
+          handleReorderPage={handleReorderPage}
           handleExportPDF={handleExportPDF}
           handleApplyAIText={handleApplyAIText}
           handleApplyAIImage={handleApplyAIImage}
