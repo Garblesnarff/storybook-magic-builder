@@ -61,7 +61,7 @@ const EditorPage = () => {
   const handleReorderAdapter = (sourceIndex: number, destinationIndex: number) => {
     if (currentBook && currentBook.pages[sourceIndex]) {
       const pageId = currentBook.pages[sourceIndex].id;
-      // Convert to number for the destination index
+      // Convert to the correct type - passing numbers not strings
       handleReorderPage(pageId, destinationIndex);
     }
   };

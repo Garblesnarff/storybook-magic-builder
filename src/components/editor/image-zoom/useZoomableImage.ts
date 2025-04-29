@@ -1,10 +1,14 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ImageSettings } from '@/types/book';
-import { useContainerDimensions } from './useContainerDimensions';
-import { useImageLoader } from './useImageLoader';
+import { useContainerDimensions } from './hooks/useContainerDimensions';
+import { useImageLoader } from './hooks/useImageLoader';
 
-export function useZoomableImage(imageUrl: string | undefined, initialSettings?: ImageSettings, onSettingsChange?: (settings: ImageSettings) => void) {
+export function useZoomableImage(
+  imageUrl: string | undefined, 
+  initialSettings?: ImageSettings, 
+  onSettingsChange?: (settings: ImageSettings) => void
+) {
   // Create refs
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
