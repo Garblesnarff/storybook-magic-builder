@@ -66,6 +66,12 @@ export function usePageState(bookId: string | undefined) {
       loadBook(bookId);
     }
   }, [bookId, currentBook, loadBook]);
+
+  // Create a wrapped version of handleImageSettingsChange that works with the expected signature
+  const wrappedHandleImageSettingsChange = useCallback((settings: ImageSettings) => {
+    if (!currentPageData) return Promise.resolve();
+    return handleImageSettingsChange(settings)(currentPageData);
+  }, [handleImageSettingsChange, currentPageData]);
   
   return {
     currentPageData,
@@ -76,7 +82,7 @@ export function usePageState(bookId: string | undefined) {
     handleTextChange: (text: string) => handleTextChange(text, currentPageData),
     handleLayoutChange,
     handleTextFormattingChange,
-    handleImageSettingsChange: (settings: ImageSettings) => handleImageSettingsChange(settings)(currentPageData),
+    handleImageSettingsChange: wrappedHandleImageSettingsChange,
     updatePage,
     handleReorderPage,
     handleDeletePage,

@@ -1,7 +1,6 @@
-
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { BookPage, PageLayout } from '@/types/book';
+import { BookPage } from '@/types/book';
 import { createPage, updatePage, deletePage } from '@/services/pageOperations';
 import { Book } from '@/types/book';
 

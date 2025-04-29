@@ -1,90 +1,77 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { Book } from '@/types/book';
-import { DEFAULT_BOOK, DEFAULT_PAGE } from '@/types/book';
+import { Book, DEFAULT_PAGE_TEXT } from '@/types/book';
+import { BookTemplate } from '@/data/bookTemplates';
 
-/**
- * Creates a new empty book with a default first page
- * @param userId The user ID for the book ownership
- * @returns A new Book object
- */
-export const createEmptyBook = (userId: string): Book => {
-  const newBookId = uuidv4();
-  const newPageId = uuidv4();
-  
+// Create an empty book with default values
+export function createEmptyBook(userId: string): Book {
+  const bookId = uuidv4();
+  const now = new Date().toISOString();
+
   return {
-    id: newBookId,
+    id: bookId,
     title: 'Untitled Book',
-    pages: [{
-      id: newPageId,
-      bookId: newBookId,
-      pageNumber: 1,
-      text: 'This is the first page of your new book! Click here to edit the text.',
-      image: '',
-      layout: 'text-left-image-right',
-      textFormatting: {
+    author: '',
+    description: '',
+    userId: userId,
+    coverImage: '',
+    dimensions: {
+      width: 8.5,
+      height: 11
+    },
+    orientation: 'portrait',
+    pages: [],
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+// Create a book from a template
+export function createBookFromTemplate(template: BookTemplate, userId: string): Book {
+  const bookId = uuidv4();
+  const now = new Date().toISOString();
+  
+  // Create the book with template values
+  const book: Book = {
+    id: bookId,
+    title: template.title,
+    author: '',
+    description: template.description || '',
+    userId: userId,
+    coverImage: template.coverImage || '',
+    dimensions: template.dimensions || {
+      width: 8.5,
+      height: 11
+    },
+    orientation: template.orientation || 'portrait',
+    pages: [],
+    createdAt: now,
+    updatedAt: now
+  };
+  
+  // Add pages from the template
+  if (template.pages) {
+    book.pages = template.pages.map((page, index) => ({
+      id: uuidv4(),
+      bookId: bookId,
+      pageNumber: index + 1,
+      text: page.text || DEFAULT_PAGE_TEXT,
+      image: page.image || '',
+      layout: page.layout || 'text-left-image-right',
+      textFormatting: page.textFormatting || {
         fontFamily: 'Arial',
         fontSize: 16,
-        fontColor: '#000000'
+        fontColor: '#000000',
+        isBold: false,
+        isItalic: false
       },
-      imageSettings: {
+      imageSettings: page.imageSettings || {
         scale: 1,
         position: { x: 0, y: 0 },
         fitMethod: 'contain'
       }
-    }],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    author: 'Anonymous',
-    description: '',
-    orientation: 'portrait',
-    dimensions: {
-      width: 8.5,
-      height: 11
-    },
-    userId: userId
-  };
-};
-
-/**
- * Creates a new book with a default first page
- * @param title The title of the new book
- * @param books The current collection of books
- * @returns Updated array of books including the new book
- */
-export const createBook = async (title: string, books: Book[]): Promise<Book[]> => {
-  const newBook = createEmptyBook('');
-  newBook.title = title;
+    }));
+  }
   
-  return [...books, newBook];
-};
-
-/**
- * Creates a new book based on a template
- * @param template The template to use for the book
- * @param userId The user ID for book ownership
- * @returns A new Book object based on the template
- */
-export const createBookFromTemplate = (template: any, userId: string): Book => {
-  const newBookId = uuidv4();
-  
-  return {
-    id: newBookId,
-    title: template.title,
-    pages: template.pages.map((page: any) => ({
-      ...page,
-      id: uuidv4(),
-      bookId: newBookId,
-    })),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    author: 'Anonymous',
-    description: '',
-    orientation: 'portrait',
-    dimensions: {
-      width: 8.5,
-      height: 11
-    },
-    userId: userId
-  };
-};
+  return book;
+}

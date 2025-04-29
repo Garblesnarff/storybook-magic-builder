@@ -1,9 +1,6 @@
-import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '@/integrations/supabase/client';
-import { Book } from '@/types/book';
-import { BookTemplate } from '@/data/bookTemplates';
 
-import { createBook, createBookFromTemplate } from './book/bookCreation';
+import { Book } from '@/types/book';
+import { createBook as createBookImpl, createBookFromTemplate as createBookFromTemplateImpl } from './book/bookCreation';
 import { updateBook, deleteBook } from './book/bookOperations';
 import { duplicatePage, createNewPage } from './page/pageCreation';
 import { updatePage, deletePage, reorderPage } from './page/pageModification';
@@ -32,8 +29,8 @@ export const loadBook = (books: Book[], bookId: string): Book | null => {
 };
 
 export {
-  createBook,
-  createBookFromTemplate,
+  createBookImpl as createBook,
+  createBookFromTemplateImpl as createBookFromTemplate,
   updateBook,
   deleteBook,
   updatePage,

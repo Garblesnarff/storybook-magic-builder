@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-export function useImageLoader(src: string | undefined) {
+export function useImageLoader(src: string) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isInteractionReady, setIsInteractionReady] = useState(false);

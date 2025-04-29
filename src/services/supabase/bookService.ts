@@ -1,6 +1,7 @@
 
-import { Book } from '@/types/book';
+import { Book, BookPage } from '@/types/book';
 import { supabase } from '../../integrations/supabase/client';
+import { databasePageToBookPage, bookPageToDatabasePage } from './utils';
 
 // Fetch all books for a user
 export const fetchBooks = async (userId: string): Promise<Book[]> => {
@@ -22,6 +23,11 @@ export const fetchBooks = async (userId: string): Promise<Book[]> => {
       
       if (pagesError) throw pagesError;
       
+      // Convert database pages to application BookPage format
+      const bookPages: BookPage[] = (pagesData || []).map((dbPage: any) => 
+        databasePageToBookPage(dbPage)
+      );
+      
       // Convert DB format to application format
       return {
         id: bookData.id,
@@ -35,7 +41,7 @@ export const fetchBooks = async (userId: string): Promise<Book[]> => {
           height: bookData.height || 11
         },
         orientation: (bookData.orientation as "portrait" | "landscape") || 'portrait',
-        pages: pagesData || [],
+        pages: bookPages,
         createdAt: bookData.created_at || new Date().toISOString(),
         updatedAt: bookData.updated_at || new Date().toISOString()
       };
@@ -74,22 +80,19 @@ export const createBook = async (book: Book): Promise<Book> => {
     
     // Insert all pages
     if (book.pages.length > 0) {
-      const { error: pagesError } = await supabase
-        .from('book_pages')
-        .insert(book.pages.map(page => ({
-          id: page.id,
-          book_id: book.id,
-          page_number: page.pageNumber,
-          text: page.text,
-          image_url: page.image,
-          layout: page.layout,
-          font_family: page.textFormatting?.fontFamily,
-          font_size: page.textFormatting?.fontSize,
-          font_color: page.textFormatting?.fontColor,
-          image_settings: page.imageSettings
-        })));
+      // Convert each page to database format
+      const dbPages = book.pages.map(page => 
+        bookPageToDatabasePage(page, book.id)
+      );
       
-      if (pagesError) throw pagesError;
+      // Insert all pages
+      for (const dbPage of dbPages) {
+        const { error } = await supabase
+          .from('book_pages')
+          .insert(dbPage);
+          
+        if (error) throw error;
+      }
     }
     
     return book;

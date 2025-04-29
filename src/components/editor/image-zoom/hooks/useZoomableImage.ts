@@ -10,7 +10,7 @@ export function useZoomableImage(imageUrl: string | undefined, initialSettings?:
   const imageRef = useRef<HTMLImageElement>(null);
   
   // Use our hooks
-  const { dimensions, updateDimensions } = useContainerDimensions(containerRef);
+  const { updateDimensions } = useContainerDimensions(containerRef);
   const { imageLoaded, isLoading, isInteractionReady, handleImageLoad, error } = useImageLoader(imageUrl || '');
   
   // State for image interactions

@@ -1,162 +1,102 @@
-import { useState } from 'react';
+
+import React, { useEffect } from 'react';
 import { Layout } from '@/components/Layout';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { IMAGE_STYLES } from '@/types/book';
-import { useAuth } from '@/contexts/AuthContext';
 
 const SettingsPage = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
-  const [defaultAuthor, setDefaultAuthor] = useState('Anonymous');
-  const [defaultOrientation, setDefaultOrientation] = useState('portrait');
-  const [defaultImageStyle, setDefaultImageStyle] = useState('CARTOON');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  // Example settings
+  const [displayName, setDisplayName] = React.useState('');
+  const [email, setEmail] = React.useState('');
 
   useEffect(() => {
-    const storedAuthor = localStorage.getItem('defaultAuthor');
-    const storedOrientation = localStorage.getItem('defaultOrientation');
-    const storedImageStyle = localStorage.getItem('defaultImageStyle');
-    const storedName = localStorage.getItem('userName');
-    const storedEmail = localStorage.getItem('userEmail');
-    
-    if (storedAuthor) setDefaultAuthor(storedAuthor);
-    if (storedOrientation) setDefaultOrientation(storedOrientation);
-    if (storedImageStyle) setDefaultImageStyle(storedImageStyle);
-    if (storedName) setName(storedName);
-    if (storedEmail) setEmail(storedEmail);
-  }, []);
+    // Initialize with user data if available
+    if (user) {
+      setDisplayName(user.name || '');
+      setEmail(user.email || '');
+    }
+  }, [user]);
 
-  const saveAccountSettings = () => {
-    localStorage.setItem('userName', name);
-    localStorage.setItem('userEmail', email);
-    toast.success('Account settings saved!');
+  const handleSaveProfile = () => {
+    // Placeholder for save functionality
+    toast.success('Profile saved successfully');
   };
 
-  const saveDefaultBookSettings = () => {
-    localStorage.setItem('defaultAuthor', defaultAuthor);
-    localStorage.setItem('defaultOrientation', defaultOrientation);
-    toast.success('Default book settings saved!');
-  };
-
-  const saveImageSettings = () => {
-    localStorage.setItem('defaultImageStyle', defaultImageStyle);
-    toast.success('Image settings saved!');
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('You have been signed out');
+    } catch (error) {
+      toast.error('Failed to sign out');
+    }
   };
 
   return (
     <Layout>
-      <div className="py-8 max-w-xl">
-        <h1 className="font-display text-2xl font-semibold text-gray-900 mb-6">Settings</h1>
+      <div className="container mx-auto py-8">
+        <h1 className="text-3xl font-bold mb-6">Settings</h1>
         
-        <div className="glass-panel rounded-xl p-6 mb-6">
-          <h2 className="font-display text-lg font-semibold mb-4">Account</h2>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Your Name</Label>
-              <Input 
-                id="name" 
-                placeholder="Enter your name" 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="Enter your email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            
-            <Button 
-              onClick={saveAccountSettings} 
-              className="mt-2"
-            >
-              Save Account Settings
-            </Button>
-          </div>
-        </div>
-        
-        <div className="glass-panel rounded-xl p-6 mb-6">
-          <h2 className="font-display text-lg font-semibold mb-4">Default Book Settings</h2>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Default Page Orientation</Label>
-              <RadioGroup 
-                value={defaultOrientation}
-                onValueChange={(value) => setDefaultOrientation(value)}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="portrait" id="portrait" />
-                  <Label htmlFor="portrait">Portrait (8.5" × 11")</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="landscape" id="landscape" />
-                  <Label htmlFor="landscape">Landscape (11" × 8.5")</Label>
-                </div>
-              </RadioGroup>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="default-author">Default Author Name</Label>
-              <Input 
-                id="default-author" 
-                placeholder="Enter default author name" 
-                value={defaultAuthor}
-                onChange={(e) => setDefaultAuthor(e.target.value)}
-              />
-            </div>
-            
-            <Button 
-              onClick={saveDefaultBookSettings} 
-              className="mt-2"
-            >
-              Save Default Settings
-            </Button>
-          </div>
-        </div>
-        
-        <div className="glass-panel rounded-xl p-6">
-          <h2 className="font-display text-lg font-semibold mb-4">Image Generation</h2>
-          
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              Configure your image generation preferences. These settings will be applied when generating new images.
-            </p>
-            
-            <div className="space-y-2">
-              <Label>Default Image Style</Label>
-              <RadioGroup 
-                value={defaultImageStyle}
-                onValueChange={(value) => setDefaultImageStyle(value)}
-              >
-                {IMAGE_STYLES.map(style => (
-                  <div className="flex items-center space-x-2" key={style.id}>
-                    <RadioGroupItem value={style.id} id={style.id.toLowerCase()} />
-                    <Label htmlFor={style.id.toLowerCase()}>{style.name}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-            
-            <Button 
-              onClick={saveImageSettings} 
-              className="mt-2"
-            >
-              Save Image Settings
-            </Button>
-          </div>
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Settings</CardTitle>
+              <CardDescription>
+                Update your personal information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Display Name</Label>
+                <Input 
+                  id="name" 
+                  value={displayName} 
+                  onChange={(e) => setDisplayName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled
+                />
+                <p className="text-sm text-gray-500">Email cannot be changed</p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleSaveProfile}>Save Changes</Button>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Account</CardTitle>
+              <CardDescription>
+                Manage your account settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-500 mb-4">
+                Sign out from your account or manage other account settings.
+              </p>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline" onClick={handleSignOut}>
+                Sign Out
+              </Button>
+              <Button variant="destructive">
+                Delete Account
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
       </div>
     </Layout>

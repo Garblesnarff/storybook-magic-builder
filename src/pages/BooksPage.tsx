@@ -1,14 +1,12 @@
-
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { BookList } from '@/components/BookList';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
+import { BookList } from '@/components/BookList';
+import { useBook } from '@/contexts/BookContext';
 import { Button } from '@/components/ui/button';
 import { TemplateSelectionDialog } from '@/components/TemplateSelectionDialog';
-import { useBook } from '@/contexts/BookContext';
+import { useNavigate } from 'react-router-dom';
+import { PlusCircle } from 'lucide-react';
 import { BookTemplate } from '@/data/bookTemplates';
-import { useAuth } from '@/contexts/AuthContext';
-import { PlusCircle, Loader2 } from 'lucide-react';
 import { Book } from '@/types/book';
 
 const BooksPage = () => {

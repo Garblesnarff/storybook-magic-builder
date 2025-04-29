@@ -1,424 +1,367 @@
-import { jsPDF } from 'jspdf';
-import { Book, BookPage } from '@/types/book';
-import { toast } from "@/components/ui/use-toast";
+import PDFKit from 'pdfkit';
+import blobStream from 'blob-stream';
+import { Book } from '@/types/book';
 
-export const generatePdfFilename = (book: Book): string => {
-  const sanitizedTitle = book.title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-  return `${sanitizedTitle}_${new Date().toISOString().split('T')[0]}.pdf`;
+// Function to convert inches to points (1 inch = 72 points)
+const inchesToPoints = (inches: number) => {
+  return inches * 72;
 };
 
-export const exportBookToPdf = async (book: Book): Promise<Blob> => {
-  try {
-    // Create a new PDF document
-    const pdf = new jsPDF({
-      orientation: book.orientation,
-      unit: 'in',
-      format: [book.dimensions.width, book.dimensions.height]
-    });
-
-    // Set default font
-    pdf.setFont('Helvetica');
-
-    // Get page dimensions in points
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-
-    // Margins in inches
-    const margin = 0.5;
-
-    const errors: string[] = [];
-
-    // Process each page
-    for (let i = 0; i < book.pages.length; i++) {
-      // Add a new page for all pages except the first one
-      if (i > 0) {
-        pdf.addPage();
-      }
-
-      const page = book.pages[i];
-      try {
-        await addPageToPdf(pdf, page, pageWidth, pageHeight, margin);
-      } catch (err) {
-        console.error(`Error exporting page ${i + 1}:`, err);
-        errors.push(`Page ${i + 1}`);
-      }
+// Function to add a page to the PDF document
+const addPage = (doc: PDFKit.PDFDocument, book: Book) => {
+  doc.addPage({
+    size: [inchesToPoints(book.dimensions.width), inchesToPoints(book.dimensions.height)],
+    margins: {
+      top: inchesToPoints(0.5),
+      bottom: inchesToPoints(0.5),
+      left: inchesToPoints(0.5),
+      right: inchesToPoints(0.5)
     }
-
-    if (errors.length > 0) {
-      toast({
-        title: 'PDF Export Completed with Errors',
-        description: `Some pages failed to export: ${errors.join(', ')}`,
-        variant: 'destructive',
-      });
-    }
-
-    // Return as blob
-    return pdf.output('blob');
-  } catch (err) {
-    console.error('Error exporting book to PDF:', err);
-    toast({
-      title: 'PDF Export Failed',
-      description: 'An error occurred while exporting the book to PDF. Please try again.',
-      variant: 'destructive',
-    });
-    throw err;
-  }
+  });
 };
 
-const addPageToPdf = async (
-  pdf: jsPDF,
-  pageData: BookPage,
+// Function to add text to the PDF document
+const addText = (
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  y: number,
+  options: PDFKit.Mixins.TextOptions
+) => {
+  doc.text(text, x, y, options);
+};
+
+// Function to add an image to the PDF document
+const addImage = (
+  doc: PDFKit.PDFDocument,
+  image: string,
+  x: number,
+  y: number,
+  options: { width?: number; height?: number }
+) => {
+  doc.image(image, x, y, options);
+};
+
+// Function to set the font and size for the PDF document
+const setFont = (doc: PDFKit.PDFDocument, font: string, size: number) => {
+  doc.font(font).fontSize(size);
+};
+
+// Function to draw a rectangle
+const drawRectangle = (
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: string
+) => {
+  doc.rect(x, y, width, height).fill(color);
+};
+
+// Function to calculate image position and size based on layout
+const calculateImageLayout = (
+  book: Book,
   pageWidth: number,
   pageHeight: number,
-  margin: number
-): Promise<void> => {
-  // Set background color if specified
-  if (pageData.backgroundColor) {
-    pdf.setFillColor(pageData.backgroundColor);
-    pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-  }
-
-  // Handle different layouts
-  switch (pageData.layout) {
+  layout: string,
+  imageWidthRatio: number,
+  imageHeightRatio: number
+) => {
+  let imageX, imageY, imageWidth, imageHeight;
+  
+  switch (layout) {
     case 'text-left-image-right':
-      await addTextLeftImageRight(pdf, pageData, pageWidth, pageHeight, margin);
+      imageWidth = pageWidth * imageWidthRatio;
+      imageHeight = pageHeight * imageHeightRatio;
+      imageX = pageWidth * (1 - imageWidthRatio);
+      imageY = (pageHeight - imageHeight) / 2;
       break;
-    case 'image-left-text-right':
-      await addImageLeftTextRight(pdf, pageData, pageWidth, pageHeight, margin);
+    case 'text-right-image-left':
+      imageWidth = pageWidth * imageWidthRatio;
+      imageHeight = pageHeight * imageHeightRatio;
+      imageX = 0;
+      imageY = (pageHeight - imageHeight) / 2;
       break;
     case 'text-top-image-bottom':
-      await addTextTopImageBottom(pdf, pageData, pageWidth, pageHeight, margin);
+      imageWidth = pageWidth * imageWidthRatio;
+      imageHeight = pageHeight * imageHeightRatio;
+      imageX = (pageWidth - imageWidth) / 2;
+      imageY = pageHeight * (1 - imageHeightRatio);
       break;
-    case 'image-top-text-bottom':
-      await addImageTopTextBottom(pdf, pageData, pageWidth, pageHeight, margin);
+    case 'text-bottom-image-top':
+      imageWidth = pageWidth * imageWidthRatio;
+      imageHeight = pageHeight * imageHeightRatio;
+      imageX = (pageWidth - imageWidth) / 2;
+      imageY = 0;
       break;
-    case 'full-page-text':
-      addFullPageText(pdf, pageData, pageWidth, pageHeight, margin);
+    case 'full-image':
+      imageWidth = pageWidth;
+      imageHeight = pageHeight;
+      imageX = 0;
+      imageY = 0;
       break;
-    case 'full-page-image':
-      await addFullPageImage(pdf, pageData, pageWidth, pageHeight);
+    default: // 'text-only'
+      imageX = 0;
+      imageY = 0;
+      imageWidth = 0;
+      imageHeight = 0;
       break;
-    default:
-      // Default to text-left-image-right
-      await addTextLeftImageRight(pdf, pageData, pageWidth, pageHeight, margin);
   }
+  
+  return { imageX, imageY, imageWidth, imageHeight };
 };
 
-const addTextLeftImageRight = async (
-  pdf: jsPDF,
-  pageData: BookPage,
+// Function to calculate text position and size based on layout
+const calculateTextLayout = (
+  book: Book,
   pageWidth: number,
   pageHeight: number,
-  margin: number
-): Promise<void> => {
-  // Text area (left half)
-  const textWidth = (pageWidth / 2) - (margin * 1.5);
-  const textX = margin;
-  const textY = margin;
-  const textHeight = pageHeight - (margin * 2);
-
-  // Add text
-  addFormattedText(pdf, pageData.text, pageData.textFormatting, textX, textY, textWidth, textHeight);
-
-  // Image area (right half)
-  if (pageData.image) {
-    const imageX = pageWidth / 2;
-    const imageY = margin;
-    const imageWidth = (pageWidth / 2) - (margin * 1.5);
-    const imageHeight = pageHeight - (margin * 2);
-
-    await addImage(pdf, pageData.image, imageX, imageY, imageWidth, imageHeight);
+  layout: string,
+  imageWidthRatio: number,
+  imageHeightRatio: number
+) => {
+  let textX, textY, textWidth, textHeight;
+  
+  switch (layout) {
+    case 'text-left-image-right':
+      textWidth = pageWidth * (1 - imageWidthRatio);
+      textHeight = pageHeight * 0.8;
+      textX = 0;
+      textY = (pageHeight - textHeight) / 2;
+      break;
+    case 'text-right-image-left':
+      textWidth = pageWidth * (1 - imageWidthRatio);
+      textHeight = pageHeight * 0.8;
+      textX = pageWidth * imageWidthRatio;
+      textY = (pageHeight - textHeight) / 2;
+      break;
+    case 'text-top-image-bottom':
+      textWidth = pageWidth * 0.8;
+      textHeight = pageHeight * (1 - imageHeightRatio);
+      textX = (pageWidth - textWidth) / 2;
+      textY = 0;
+      break;
+    case 'text-bottom-image-top':
+      textWidth = pageWidth * 0.8;
+      textHeight = pageHeight * (1 - imageHeightRatio);
+      textX = (pageWidth - textWidth) / 2;
+      textY = pageHeight * imageHeightRatio;
+      break;
+    case 'text-only':
+      textWidth = pageWidth * 0.8;
+      textHeight = pageHeight * 0.8;
+      textX = (pageWidth - textWidth) / 2;
+      textY = (pageHeight - textHeight) / 2;
+      break;
+    default: // 'full-image'
+      textX = 0;
+      textY = 0;
+      textWidth = 0;
+      textHeight = 0;
+      break;
   }
+  
+  return { textX, textY, textWidth, textHeight };
 };
 
-const addImageLeftTextRight = async (
-  pdf: jsPDF,
-  pageData: BookPage,
-  pageWidth: number,
-  pageHeight: number,
-  margin: number
-): Promise<void> => {
-  // Image area (left half)
-  if (pageData.image) {
-    const imageX = margin;
-    const imageY = margin;
-    const imageWidth = (pageWidth / 2) - (margin * 1.5);
-    const imageHeight = pageHeight - (margin * 2);
-
-    await addImage(pdf, pageData.image, imageX, imageY, imageWidth, imageHeight);
-  }
-
-  // Text area (right half)
-  const textWidth = (pageWidth / 2) - (margin * 1.5);
-  const textX = pageWidth / 2;
-  const textY = margin;
-  const textHeight = pageHeight - (margin * 2);
-
-  // Add text
-  addFormattedText(pdf, pageData.text, pageData.textFormatting, textX, textY, textWidth, textHeight);
-};
-
-const addTextTopImageBottom = async (
-  pdf: jsPDF,
-  pageData: BookPage,
-  pageWidth: number,
-  pageHeight: number,
-  margin: number
-): Promise<void> => {
-  // Text area (top half)
-  const textWidth = pageWidth - (margin * 2);
-  const textX = margin;
-  const textY = margin;
-  const textHeight = (pageHeight / 2) - (margin * 1.5);
-
-  // Add text
-  addFormattedText(pdf, pageData.text, pageData.textFormatting, textX, textY, textWidth, textHeight);
-
-  // Image area (bottom half)
-  if (pageData.image) {
-    const imageX = margin;
-    const imageY = pageHeight / 2;
-    const imageWidth = pageWidth - (margin * 2);
-    const imageHeight = (pageHeight / 2) - (margin * 1.5);
-
-    await addImage(pdf, pageData.image, imageX, imageY, imageWidth, imageHeight);
-  }
-};
-
-const addImageTopTextBottom = async (
-  pdf: jsPDF,
-  pageData: BookPage,
-  pageWidth: number,
-  pageHeight: number,
-  margin: number
-): Promise<void> => {
-  // Image area (top half)
-  if (pageData.image) {
-    const imageX = margin;
-    const imageY = margin;
-    const imageWidth = pageWidth - (margin * 2);
-    const imageHeight = (pageHeight / 2) - (margin * 1.5);
-
-    await addImage(pdf, pageData.image, imageX, imageY, imageWidth, imageHeight);
-  }
-
-  // Text area (bottom half)
-  const textWidth = pageWidth - (margin * 2);
-  const textX = margin;
-  const textY = pageHeight / 2;
-  const textHeight = (pageHeight / 2) - (margin * 1.5);
-
-  // Add text
-  addFormattedText(pdf, pageData.text, pageData.textFormatting, textX, textY, textWidth, textHeight);
-};
-
-const addFullPageText = (
-  pdf: jsPDF,
-  pageData: BookPage,
-  pageWidth: number,
-  pageHeight: number,
-  margin: number
-): void => {
-  // Text area (full page with margins)
-  const textWidth = pageWidth - (margin * 2);
-  const textX = margin;
-  const textY = margin;
-  const textHeight = pageHeight - (margin * 2);
-
-  // Add text
-  addFormattedText(pdf, pageData.text, pageData.textFormatting, textX, textY, textWidth, textHeight);
-};
-
-const addFullPageImage = async (
-  pdf: jsPDF,
-  pageData: BookPage,
-  pageWidth: number,
-  pageHeight: number
-): Promise<void> => {
-  // Image area (full page)
-  if (pageData.image) {
-    await addImage(pdf, pageData.image, 0, 0, pageWidth, pageHeight);
-  }
-};
-
-const addFormattedText = (
-  pdf: jsPDF,
-  text: string,
-  formatting: any,
-  x: number,
-  y: number,
-  width: number,
-  height: number
-): void => {
-  // Set font style based on formatting
-  if (formatting) {
-    // Set font family
-    const fontFamily = formatting.fontFamily || 'Helvetica';
-    
-    // Set font style (bold, italic, or both)
-    let fontStyle = 'normal';
-    if (formatting.isBold && formatting.isItalic) {
-      fontStyle = 'bolditalic';
-    } else if (formatting.isBold) {
-      fontStyle = 'bold';
-    } else if (formatting.isItalic) {
-      fontStyle = 'italic';
+const renderPdf = async (book: Book) => {
+  const doc = new PDFKit({
+    size: [inchesToPoints(book.dimensions.width), inchesToPoints(book.dimensions.height)],
+    margins: {
+      top: inchesToPoints(0.5),
+      bottom: inchesToPoints(0.5),
+      left: inchesToPoints(0.5),
+      right: inchesToPoints(0.5)
     }
+  });
+  
+  const stream = blobStream();
+  
+  // Set document metadata
+  doc.info['Title'] = book.title;
+  doc.info['Author'] = book.author;
+  doc.info['Subject'] = book.description;
+  doc.info['CreationDate'] = book.createdAt;
+  doc.info['ModDate'] = book.updatedAt;
+  
+  const pageWidth = inchesToPoints(book.dimensions.width);
+  const pageHeight = inchesToPoints(book.dimensions.height);
+  
+  // Function to add a page number in the footer
+  const addFooter = (pageNum: number, totalPages: number) => {
+    const footerText = `Page ${pageNum} of ${totalPages}`;
+    const footerOptions = {
+      align: 'center',
+    };
     
-    // Set font color
-    if (formatting.fontColor) {
-      // Convert hex color to RGB
-      const r = parseInt(formatting.fontColor.slice(1, 3), 16);
-      const g = parseInt(formatting.fontColor.slice(3, 5), 16);
-      const b = parseInt(formatting.fontColor.slice(5, 7), 16);
-      pdf.setTextColor(r, g, b);
-    } else {
-      pdf.setTextColor(0);
-    }
-    
-    // Set font size (convert from px to pt)
-    const fontSize = formatting.fontSize ? formatting.fontSize / 1.33 : 12;
-    
-    pdf.setFont(fontFamily, fontStyle);
-    pdf.setFontSize(fontSize);
-  }
-
-  // Add text with proper wrapping
-  const splitText = pdf.splitTextToSize(text, width);
-  pdf.text(splitText, x, y + 0.2); // Add a small offset for better positioning
-};
-
-const addImage = async (
-  pdf: jsPDF,
-  imageData: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number
-): Promise<void> => {
-  try {
-    let imageSrc: string | null = null;
-    let format: string = 'PNG'; // Default format
-
-    // Determine image source and format
-    if (imageData.startsWith('data:image')) {
-      // Handle base64 data URLs directly
-      imageSrc = imageData;
-      const formatPart = imageData.split(';')[0].split('/')[1];
-      if (formatPart) {
-        format = formatPart.toUpperCase();
-        if (format === 'JPEG') format = 'JPG'; // jsPDF uses JPG
+    doc.fillColor('gray');
+    setFont(doc, 'Helvetica', 10);
+    addText(
+      doc,
+      footerText,
+      0,
+      pageHeight - inchesToPoints(0.5),
+      {
+        ...footerOptions,
+        width: pageWidth,
       }
-      console.log(`Using provided base64 image. Format: ${format}`);
-
-    } else {
-      // Handle URL images by fetching and converting to base64
-      console.log(`Fetching image from URL: ${imageData}`);
+    );
+    doc.fillColor('black'); // Reset fill color to black
+  };
+  
+  // Loop through each page and add content
+  for (let i = 0; i < book.pages.length; i++) {
+    const page = book.pages[i];
+    
+    if (i > 0) {
+      addPage(doc, book);
+    }
+    
+    // Draw background color
+    if (page.backgroundColor) {
+      drawRectangle(
+        doc,
+        0,
+        0,
+        pageWidth,
+        pageHeight,
+        page.backgroundColor
+      );
+    }
+    
+    // Calculate image layout
+    const imageWidthRatio = 0.4;
+    const imageHeightRatio = 0.6;
+    const {
+      imageX,
+      imageY,
+      imageWidth,
+      imageHeight
+    } = calculateImageLayout(
+      book,
+      pageWidth,
+      pageHeight,
+      page.layout,
+      imageWidthRatio,
+      imageHeightRatio
+    );
+    
+    // Add image if it exists
+    if (page.image) {
       try {
-        const response = await fetch(imageData);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch image: ${response.statusText}`);
-        }
-        const blob = await response.blob();
-
-        // Determine image format from blob type
-        if (blob.type === 'image/jpeg' || blob.type === 'image/jpg') {
-          format = 'JPG'; // jsPDF uses JPG
-        } else if (blob.type === 'image/png') {
-          format = 'PNG';
-        } else {
-           console.warn(`Unknown image blob type: ${blob.type}. Defaulting to PNG.`);
-           format = 'PNG';
-        }
-        console.log(`Image format determined as: ${format}`);
-
-        // Convert Blob to base64 Data URL
-        imageSrc = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
+        addImage(
+          doc,
+          page.image,
+          imageX,
+          imageY,
+          {
+            width: imageWidth,
+            height: imageHeight
+          }
+        );
+      } catch (error) {
+        console.error('Error adding image:', error);
+        // Fallback: Add a placeholder or skip the image
+        doc.rect(imageX, imageY, imageWidth, imageHeight).stroke();
+        doc.text('Image failed to load', imageX + 5, imageY + 5, {
+          width: imageWidth - 10,
+          height: imageHeight - 10,
+          align: 'center',
+          valign: 'center'
         });
-        console.log(`Adding fetched image (base64) to PDF. Format: ${format}`);
-
-      } catch (fetchError) {
-        console.error(`Error fetching or processing image URL ${imageData}:`, fetchError);
-        // Skip adding the image on fetch error
-        return;
       }
     }
-
-    // If we have an image source (either original base64 or fetched), calculate aspect ratio and add
-    if (imageSrc) {
-      const img = new Image();
-      img.src = imageSrc;
-
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => {
-          try {
-            const imgWidth = img.naturalWidth;
-            const imgHeight = img.naturalHeight;
-
-            if (imgWidth === 0 || imgHeight === 0) {
-              console.error('Image has zero dimensions:', imageSrc);
-              resolve(); // Skip adding zero-dimension image
-              return;
-            }
-
-            const imgRatio = imgWidth / imgHeight;
-            const boxRatio = width / height;
-
-            let drawWidth = width;
-            let drawHeight = height;
-
-            // Calculate dimensions to fit within the box while preserving aspect ratio ('contain' logic)
-            if (imgRatio > boxRatio) { // Image is wider than the box
-              drawHeight = width / imgRatio;
-            } else { // Image is taller than or equal to the box
-              drawWidth = height * imgRatio;
-            }
-
-            // Calculate centering offsets
-            const offsetX = (width - drawWidth) / 2;
-            const offsetY = (height - drawHeight) / 2;
-
-            // Add the image with corrected dimensions and centering
-            pdf.addImage(
-              imageSrc!, // Use the determined image source (base64)
-              format,
-              x + offsetX, // Centered X
-              y + offsetY, // Centered Y
-              drawWidth,   // Aspect-corrected width
-              drawHeight,  // Aspect-corrected height
-              undefined,
-              'FAST'
-            );
-            resolve();
-          } catch (addImgError) {
-             console.error('Error calculating image dimensions or adding image to PDF:', addImgError);
-             reject(addImgError); // Reject the promise on error during calculation/adding
-          }
-        };
-        img.onerror = (err) => {
-          console.error('Failed to load image data for dimension calculation:', imageSrc, err);
-          reject(new Error('Image loading failed')); // Reject the promise on image load error
-        };
-      });
-    } else {
-       console.warn('No valid image source to add to PDF.');
+    
+    // Calculate text layout
+    const {
+      textX,
+      textY,
+      textWidth,
+      textHeight
+    } = calculateTextLayout(
+      book,
+      pageWidth,
+      pageHeight,
+      page.layout,
+      imageWidthRatio,
+      imageHeightRatio
+    );
+    
+    // Add text if it exists
+    if (page.text) {
+      setFont(
+        doc,
+        page.textFormatting?.fontFamily || 'Helvetica',
+        page.textFormatting?.fontSize || 12
+      );
+      
+      doc.fillColor(page.textFormatting?.fontColor || 'black');
+      
+      const textOptions = {
+        width: textWidth,
+        height: textHeight,
+        align: 'center',
+        valign: 'center'
+      };
+      
+      addText(
+        doc,
+        page.text,
+        textX,
+        textY,
+        textOptions
+      );
+      
+      doc.fillColor('black'); // Reset fill color to black
     }
-
-  } catch (error) {
-    console.error('Error adding image to PDF:', error);
-    // Continue without the image if an error occurred in the outer try
+    
+    // Add footer with page number
+    addFooter(i + 1, book.pages.length);
   }
+  
+  doc.end();
+  
+  return new Promise<Blob>((resolve, reject) => {
+    stream.on('finish', () => {
+      const blob = stream.toBlob('application/pdf');
+      resolve(blob);
+    });
+    
+    stream.on('error', (err) => {
+      reject(err);
+    });
+  });
 };
 
-const renderHeader = (doc, book, pageNum, totalPages, width) => {
-  // Remove unused height variable from function parameters
-  const headerY = 15;
-  doc.setFontSize(8);
-  doc.setTextColor(150, 150, 150);
-  doc.text(book.title, 20, headerY);
-  doc.text(`Page ${pageNum} of ${totalPages}`, width - 40, headerY, { align: 'right' });
-};
+// Properly type the renderHeader function
+function renderHeader(
+  doc: PDFKit.PDFDocument, 
+  book: Book, 
+  pageNum: number, 
+  totalPages: number, 
+  width: number
+): void {
+  // You can add a header to each page here
+  // For example, you can add the book title and page number
+  const headerText = book.title;
+  const headerOptions = {
+    align: 'center',
+  };
+  
+  doc.fillColor('gray');
+  setFont(doc, 'Helvetica', 10);
+  addText(
+    doc,
+    headerText,
+    0,
+    inchesToPoints(0.5),
+    {
+      ...headerOptions,
+      width: width,
+    }
+  );
+  doc.fillColor('black'); // Reset fill color to black
+}
+
+export default renderPdf;
