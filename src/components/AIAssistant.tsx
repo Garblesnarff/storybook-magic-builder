@@ -49,7 +49,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     return Promise.resolve();
   };
 
-  // Initialize the hook with null values since we're not operating on a specific page
+  // Initialize the hook with the correct arguments
   const {
     isGeneratingText,
     isGeneratingImage,
@@ -57,7 +57,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     generatedImage,
     generateText,
     generateImage
-  } = useAIOperations(null, handleUpdatePage, () => {}, undefined);
+  } = useAIOperations(null, handleUpdatePage);
 
   const handleGenerateText = async () => {
     await generateText(prompt, temperature, maxTokens);
