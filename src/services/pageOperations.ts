@@ -1,7 +1,9 @@
-import { Book, BookPage, ImageSettings, PageLayout } from '@/types/book';
+
+import { Book, BookPage, ImageSettings } from '@/types/book';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { bookPageToDatabasePage, databasePageToBookPage } from './supabase/utils';
+import { addPageToSupabase, updatePageInSupabase, deletePageFromSupabase } from './supabase/pageService';
 
 // Convert ImageSettings to a plain object that can be stored as JSON
 function convertImageSettingsToJson(settings: ImageSettings | undefined): Record<string, any> | undefined {
@@ -14,89 +16,117 @@ function convertImageSettingsToJson(settings: ImageSettings | undefined): Record
   };
 }
 
-export async function createPageForBook(bookId: string, pageNumber: number, text: string): Promise<BookPage> {
-  const pageId = `page-${Date.now()}-${uuidv4()}`;
-  
-  const newPage: BookPage = {
-    id: pageId,
-    bookId,
-    pageNumber,
-    text: text || '',
-    image: '',
-    layout: 'text-left-image-right',
-    backgroundColor: null,
-    textFormatting: {
-      fontFamily: 'Arial',
-      fontSize: 16,
-      fontColor: '#000000',
-      isBold: false,
-      isItalic: false,
-    },
-    imageSettings: {
-      scale: 1,
-      position: { x: 0, y: 0 },
-      fitMethod: 'contain'
-    }
-  };
-  
-  // Save to database
+// Create a new page for a book
+export async function createPage(bookId: string): Promise<string | undefined> {
   try {
-    const dbPage = bookPageToDatabasePage(newPage, bookId);
+    // Get the current book pages to determine new page number
+    const { data: bookData, error: bookError } = await supabase
+      .from('books')
+      .select('*, book_pages(*)')
+      .eq('id', bookId)
+      .single();
     
-    // Convert ImageSettings to JSON format
-    dbPage.image_settings = convertImageSettingsToJson(newPage.imageSettings);
-    
-    const { error } = await supabase.from('pages').insert(dbPage);
-    
-    if (error) {
-      console.error('Error creating page:', error);
-      throw new Error(`Failed to save page: ${error.message}`);
+    if (bookError || !bookData) {
+      console.error('Error fetching book:', bookError);
+      throw new Error(`Failed to fetch book: ${bookError?.message || 'Unknown error'}`);
     }
     
-    return newPage;
+    // Calculate the next page number
+    const pageNumber = bookData.book_pages ? bookData.book_pages.length + 1 : 1;
+    
+    // Create the new page
+    const newPage = await addPageToSupabase(bookId, pageNumber);
+    
+    if (!newPage) {
+      throw new Error('Failed to create page');
+    }
+    
+    return newPage.id;
   } catch (err) {
-    console.error('Error in createPageForBook:', err);
+    console.error('Error in createPage:', err);
     throw err;
   }
 }
 
-export async function updatePageInDatabase(page: BookPage): Promise<BookPage> {
+export async function updatePage(page: BookPage): Promise<Book> {
   try {
-    const dbPage = bookPageToDatabasePage(page, page.bookId);
-    
-    // Convert ImageSettings to JSON format
-    dbPage.image_settings = convertImageSettingsToJson(page.imageSettings);
-    
-    const { error } = await supabase
-      .from('pages')
-      .update(dbPage)
-      .eq('id', page.id);
-    
-    if (error) {
-      console.error('Error updating page:', error);
-      throw new Error(`Failed to update page: ${error.message}`);
+    // First, let's convert any image settings to a format that can be stored in the database
+    if (page.imageSettings) {
+      page = {
+        ...page,
+        imageSettings: page.imageSettings
+      };
     }
     
-    return page;
+    // Update the page in the database
+    const success = await updatePageInSupabase(page.bookId, page);
+    if (!success) {
+      throw new Error('Failed to update page in database');
+    }
+    
+    // Now fetch the updated book to return
+    const { data: book, error: bookError } = await supabase
+      .from('books')
+      .select('*, book_pages(*)')
+      .eq('id', page.bookId)
+      .single();
+    
+    if (bookError || !book) {
+      console.error('Error fetching updated book:', bookError);
+      throw new Error(`Failed to fetch updated book: ${bookError?.message || 'Unknown error'}`);
+    }
+    
+    // Convert the database book to our Book type
+    const bookPages = book.book_pages.map(databasePageToBookPage);
+    
+    // Construct and return the book with updated pages
+    const updatedBook: Book = {
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      description: book.description || '',
+      userId: book.user_id || '',
+      coverImage: book.cover_image_url || '',
+      dimensions: {
+        width: book.width,
+        height: book.height
+      },
+      orientation: book.orientation,
+      pages: bookPages,
+      createdAt: book.created_at,
+      updatedAt: book.updated_at
+    };
+    
+    return updatedBook;
   } catch (err) {
-    console.error('Error in updatePageInDatabase:', err);
+    console.error('Error in updatePage:', err);
     throw err;
   }
 }
 
-export async function deletePageFromDatabase(pageId: string): Promise<void> {
+export async function deletePage(pageId: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('pages')
-      .delete()
-      .eq('id', pageId);
+    // First get the page to find its book ID
+    const { data: page, error: pageError } = await supabase
+      .from('book_pages')
+      .select('book_id')
+      .eq('id', pageId)
+      .single();
     
-    if (error) {
-      console.error('Error deleting page:', error);
-      throw new Error(`Failed to delete page: ${error.message}`);
+    if (pageError || !page) {
+      console.error('Error fetching page:', pageError);
+      throw new Error(`Failed to fetch page: ${pageError?.message || 'Unknown error'}`);
+    }
+    
+    const bookId = page.book_id;
+    
+    // Delete the page
+    const success = await deletePageFromSupabase(bookId, pageId);
+    if (!success) {
+      throw new Error('Failed to delete page');
     }
   } catch (err) {
-    console.error('Error in deletePageFromDatabase:', err);
+    console.error('Error in deletePage:', err);
     throw err;
   }
 }

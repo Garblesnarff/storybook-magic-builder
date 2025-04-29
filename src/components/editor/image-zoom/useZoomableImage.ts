@@ -1,5 +1,5 @@
 
-import { useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 import { useZoomableImage as useZoomableImageHook } from './hooks/useZoomableImage';
 

@@ -70,9 +70,20 @@ export function usePageState(bookId: string | undefined) {
   // Create a wrapped version of handleImageSettingsChange that works with the expected signature
   const wrappedHandleImageSettingsChange = useCallback((settings: ImageSettings) => {
     if (!currentPageData) return Promise.resolve();
-    const handler = handleImageSettingsChange(settings);
-    return handler(currentPageData);
-  }, [handleImageSettingsChange, currentPageData]);
+    
+    return new Promise<void>((resolve, reject) => {
+      const updatedPage: BookPage = {
+        ...currentPageData,
+        imageSettings: settings
+      };
+      
+      setSaving(true);
+      updatePage(updatedPage)
+        .then(() => resolve())
+        .catch(reject)
+        .finally(() => setSaving(false));
+    });
+  }, [handleImageSettingsChange, currentPageData, setSaving, updatePage]);
   
   return {
     currentPageData,

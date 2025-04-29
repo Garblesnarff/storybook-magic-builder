@@ -1,226 +1,124 @@
-import { supabase } from '../../../integrations/supabase/client';
-import { Book, BookPage } from '@/types/book';
-import { databasePageToBookPage } from '../utils';
 
-export async function loadUserBooks(userId: string): Promise<Book[]> {
+import { supabase } from '@/integrations/supabase/client';
+import { Book, BookPage } from '@/types/book';
+import { databaseBookToBook, databasePageToBookPage } from './utils';
+
+// Function to fetch all books for a user
+export const fetchUserBooks = async (userId: string): Promise<Book[]> => {
   try {
-    const { data: booksData, error: booksError } = await supabase
+    const { data, error } = await supabase
       .from('books')
-      .select(`
-        *,
-        pages:pages(*)
-      `)
-      .eq('user_id', userId)
-      .order('updated_at', { ascending: false });
+      .select('*, book_pages(*)')
+      .eq('user_id', userId);
     
-    if (booksError) throw booksError;
+    if (error) {
+      console.error('Error fetching books:', error);
+      throw error;
+    }
     
-    if (!booksData || booksData.length === 0) {
+    if (!data) {
       return [];
     }
     
-    const books = booksData.map(book => {
-      const bookPages: BookPage[] = (book.pages || []).map((page: any) => databasePageToBookPage(page));
-      
-      // Make sure we don't pass null values where strings are expected
-      return {
-        id: book.id,
-        title: book.title || '',
-        author: book.author || '',
-        description: book.description || '',
-        userId: book.user_id || userId,
-        coverImage: book.cover_image_url || '',
-        dimensions: {
-          width: book.width,
-          height: book.height
-        },
-        orientation: book.orientation as 'portrait' | 'landscape',
-        pages: bookPages,
-        createdAt: book.created_at,
-        updatedAt: book.updated_at
-      };
-    });
+    // Convert database books to our Book type
+    const books = data.map(databaseBookToBook);
     
     return books;
   } catch (error) {
-    console.error('Error loading books:', error);
-    throw error;
-  }
-}
-
-// Fetch all books for a user
-export const fetchBooks = async (userId: string): Promise<Book[]> => {
-  try {
-    const { data: booksData, error } = await supabase
-      .from('books')
-      .select('*')
-      .eq('user_id', userId);
-      
-    if (error) throw error;
-    
-    // Transform the database books into our Book type
-    const books: Book[] = await Promise.all(booksData.map(async (bookData: any) => {
-      const { data: pagesData, error: pagesError } = await supabase
-        .from('book_pages')
-        .select('*')
-        .eq('book_id', bookData.id)
-        .order('page_number', { ascending: true });
-      
-      if (pagesError) throw pagesError;
-      
-      // Convert database pages to application BookPage format
-      const bookPages: BookPage[] = (pagesData || []).map((dbPage: any) => 
-        databasePageToBookPage(dbPage)
-      );
-      
-      // Convert DB format to application format
-      return {
-        id: bookData.id,
-        title: bookData.title || 'Untitled Book',
-        author: bookData.author || '',
-        description: bookData.description || '',
-        userId: bookData.user_id,
-        coverImage: bookData.cover_image_url || '',
-        dimensions: {
-          width: bookData.width || 8.5,
-          height: bookData.height || 11
-        },
-        orientation: (bookData.orientation as "portrait" | "landscape") || 'portrait',
-        pages: bookPages,
-        createdAt: bookData.created_at || new Date().toISOString(),
-        updatedAt: bookData.updated_at || new Date().toISOString()
-      };
-    }));
-    
-    return books;
-  } catch (error) {
-    console.error('Error fetching books:', error);
+    console.error('Failed to fetch books', error);
     throw error;
   }
 };
 
-// Create a new book
-export const createBook = async (book: Book): Promise<Book> => {
+// Function to create a new book in Supabase
+export const createBookInSupabase = async (book: Book): Promise<Book> => {
   try {
-    // Insert the book
-    const { error: bookError } = await supabase
+    // Insert the book record
+    const { data: bookData, error: bookError } = await supabase
       .from('books')
-      .insert([
-        {
-          id: book.id,
-          title: book.title,
-          author: book.author,
-          description: book.description,
-          user_id: book.userId,
-          cover_image_url: book.coverImage,
-          width: book.dimensions.width,
-          height: book.dimensions.height,
-          orientation: book.orientation,
-          created_at: book.createdAt,
-          updated_at: book.updatedAt
-        }
-      ]);
+      .insert({
+        id: book.id,
+        title: book.title,
+        author: book.author,
+        description: book.description,
+        user_id: book.userId,
+        cover_image_url: book.coverImage,
+        width: book.dimensions.width,
+        height: book.dimensions.height,
+        orientation: book.orientation
+      })
+      .select()
+      .single();
     
-    if (bookError) throw bookError;
+    if (bookError || !bookData) {
+      console.error('Error creating book:', bookError);
+      throw bookError;
+    }
     
-    // Insert all pages
-    if (book.pages.length > 0) {
-      // Convert each page to database format
-      const dbPages = book.pages.map(page => 
-        bookPageToDatabasePage(page, book.id)
-      );
+    // If the book has pages, insert them
+    if (book.pages && book.pages.length > 0) {
+      const dbPages = book.pages.map(page => ({
+        id: page.id,
+        book_id: book.id,
+        page_number: page.pageNumber,
+        text: page.text,
+        image_url: page.image,
+        layout: page.layout,
+        font_family: page.textFormatting?.fontFamily,
+        font_size: page.textFormatting?.fontSize,
+        font_color: page.textFormatting?.fontColor,
+        image_settings: page.imageSettings ? JSON.stringify(page.imageSettings) : null
+      }));
       
-      // Insert all pages
-      for (const dbPage of dbPages) {
-        const { error } = await supabase
-          .from('book_pages')
-          .insert(dbPage);
-          
-        if (error) throw error;
+      const { error: pagesError } = await supabase
+        .from('book_pages')
+        .insert(dbPages);
+      
+      if (pagesError) {
+        console.error('Error creating book pages:', pagesError);
+        throw pagesError;
       }
     }
     
-    return book;
+    // Return the created book
+    return databaseBookToBook(bookData);
   } catch (error) {
-    console.error('Error creating book:', error);
+    console.error('Failed to create book in Supabase', error);
     throw error;
   }
 };
 
-// Fetch a specific book by ID
-export const fetchBook = async (bookId: string): Promise<Book | null> => {
+// Function to fetch a single book from Supabase
+export const fetchBookFromSupabase = async (bookId: string): Promise<Book | null> => {
   try {
-    const { data: bookData, error } = await supabase
+    const { data, error } = await supabase
       .from('books')
-      .select('*')
+      .select('*, book_pages(*)')
       .eq('id', bookId)
       .single();
     
     if (error) {
-      if (error.code === 'PGRST116') {
-        // No rows found
-        return null;
-      }
-      throw error;
+      console.error('Error fetching book:', error);
+      return null; // Return null instead of throwing to handle "no rows returned" elegantly
     }
     
-    const { data: pagesData, error: pagesError } = await supabase
-      .from('book_pages')
-      .select('*')
-      .eq('book_id', bookId)
-      .order('page_number', { ascending: true });
+    if (!data) {
+      return null;
+    }
     
-    if (pagesError) throw pagesError;
-    
-    // Map database page to app BookPage format
-    const mappedPages = pagesData ? pagesData.map((dbPage: any) => ({
-      id: dbPage.id,
-      bookId: dbPage.book_id,
-      pageNumber: dbPage.page_number,
-      text: dbPage.text || '',
-      image: dbPage.image_url || '',
-      layout: dbPage.layout || 'text-left-image-right',
-      textFormatting: {
-        fontFamily: dbPage.font_family || 'Arial',
-        fontSize: dbPage.font_size || 16,
-        fontColor: dbPage.font_color || '#000000',
-        isBold: dbPage.is_bold || false,
-        isItalic: dbPage.is_italic || false
-      },
-      imageSettings: dbPage.image_settings || {
-        scale: 1,
-        position: { x: 0, y: 0 },
-        fitMethod: 'contain'
-      }
-    })) : [];
-    
-    return {
-      id: bookData.id,
-      title: bookData.title || 'Untitled Book',
-      author: bookData.author || '',
-      description: bookData.description || '',
-      userId: bookData.user_id,
-      coverImage: bookData.cover_image_url || '',
-      dimensions: {
-        width: bookData.width || 8.5,
-        height: bookData.height || 11
-      },
-      orientation: (bookData.orientation as "portrait" | "landscape") || 'portrait',
-      pages: mappedPages,
-      createdAt: bookData.created_at || new Date().toISOString(),
-      updatedAt: bookData.updated_at || new Date().toISOString()
-    };
+    // Convert database book to our Book type
+    return databaseBookToBook(data);
   } catch (error) {
-    console.error('Error fetching book:', error);
+    console.error('Failed to fetch book', error);
     throw error;
   }
 };
 
-// Update a book
-export const updateBook = async (book: Book): Promise<Book> => {
+// Function to update a book in Supabase
+export const updateBookInSupabase = async (book: Book): Promise<Book> => {
   try {
-    // Update the book
-    const { error: bookError } = await supabase
+    // Update the book record
+    const { data: bookData, error: bookError } = await supabase
       .from('books')
       .update({
         title: book.title,
@@ -232,37 +130,40 @@ export const updateBook = async (book: Book): Promise<Book> => {
         orientation: book.orientation,
         updated_at: new Date().toISOString()
       })
-      .eq('id', book.id);
+      .eq('id', book.id)
+      .select()
+      .single();
     
-    if (bookError) throw bookError;
+    if (bookError || !bookData) {
+      console.error('Error updating book:', bookError);
+      throw bookError;
+    }
     
-    return book;
+    // Return the updated book
+    return databaseBookToBook(bookData);
   } catch (error) {
-    console.error('Error updating book:', error);
+    console.error('Failed to update book in Supabase', error);
     throw error;
   }
 };
 
-// Delete a book
-export const deleteBook = async (bookId: string): Promise<void> => {
+// Function to delete a book from Supabase
+export const deleteBookFromSupabase = async (bookId: string): Promise<boolean> => {
   try {
-    // Delete the pages first (cascade delete doesn't always work reliably)
-    const { error: pagesError } = await supabase
-      .from('book_pages')
-      .delete()
-      .eq('book_id', bookId);
-    
-    if (pagesError) throw pagesError;
-    
-    // Delete the book
-    const { error: bookError } = await supabase
+    // Delete the book record (cascade will delete pages)
+    const { error } = await supabase
       .from('books')
       .delete()
       .eq('id', bookId);
     
-    if (bookError) throw bookError;
+    if (error) {
+      console.error('Error deleting book:', error);
+      return false;
+    }
+    
+    return true;
   } catch (error) {
-    console.error('Error deleting book:', error);
+    console.error('Failed to delete book from Supabase', error);
     throw error;
   }
 };
