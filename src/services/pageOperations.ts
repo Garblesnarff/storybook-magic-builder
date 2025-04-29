@@ -1,8 +1,7 @@
-
 import { Book, BookPage, ImageSettings } from '@/types/book';
-import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
-import { bookPageToDatabasePage, databasePageToBookPage } from './supabase/utils';
+// Remove unused imports
+import { databasePageToBookPage } from './supabase/utils';
 import { addPageToSupabase, updatePageInSupabase, deletePageFromSupabase } from './supabase/pageService';
 
 // Convert ImageSettings to a plain object that can be stored as JSON
@@ -48,6 +47,7 @@ export async function createPage(bookId: string): Promise<string | undefined> {
   }
 }
 
+// Update the function to use the correct orientation type
 export async function updatePage(page: BookPage): Promise<Book> {
   try {
     // First, let's convert any image settings to a format that can be stored in the database
@@ -79,7 +79,6 @@ export async function updatePage(page: BookPage): Promise<Book> {
     // Convert the database book to our Book type
     const bookPages = book.book_pages.map(databasePageToBookPage);
     
-    // Construct and return the book with updated pages
     const updatedBook: Book = {
       id: book.id,
       title: book.title,
@@ -91,7 +90,7 @@ export async function updatePage(page: BookPage): Promise<Book> {
         width: book.width,
         height: book.height
       },
-      orientation: book.orientation,
+      orientation: book.orientation as "portrait" | "landscape",
       pages: bookPages,
       createdAt: book.created_at,
       updatedAt: book.updated_at

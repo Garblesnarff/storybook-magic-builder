@@ -1,6 +1,5 @@
-
 import { Book } from '@/types/book';
-import { createBook as createBookImpl, createBookFromTemplate as createBookFromTemplateImpl } from './book/bookCreation';
+import { createBook as createBookImpl, createBookFromTemplate as createBookFromTemplateImpl, createEmptyBook } from './book/bookCreation';
 import { updateBook, deleteBook } from './book/bookOperations';
 import { duplicatePage, createNewPage } from './page/pageCreation';
 import { updatePage, deletePage, reorderPage } from './page/pageModification';

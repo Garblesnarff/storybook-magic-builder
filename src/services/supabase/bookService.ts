@@ -1,7 +1,49 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Book, BookPage } from '@/types/book';
-import { databaseBookToBook, databasePageToBookPage } from './utils';
+import { Book } from '@/types/book';
+// Remove unused imports
+
+// Create the missing utility functions that were imported
+const databaseBookToBook = (dbBook: any): Book => {
+  // Convert database book format to our Book type
+  const pages = dbBook.book_pages ? dbBook.book_pages.map(databasePageToBookPage) : [];
+  
+  return {
+    id: dbBook.id,
+    title: dbBook.title,
+    author: dbBook.author,
+    description: dbBook.description || '',
+    userId: dbBook.user_id || '',
+    coverImage: dbBook.cover_image_url || '',
+    dimensions: {
+      width: dbBook.width,
+      height: dbBook.height
+    },
+    orientation: dbBook.orientation as "portrait" | "landscape",
+    pages,
+    createdAt: dbBook.created_at,
+    updatedAt: dbBook.updated_at
+  };
+};
+
+const databasePageToBookPage = (dbPage: any) => {
+  // Convert database page format to our BookPage type
+  return {
+    id: dbPage.id,
+    bookId: dbPage.book_id,
+    pageNumber: dbPage.page_number,
+    text: dbPage.text || '',
+    image: dbPage.image_url || '',
+    layout: dbPage.layout || 'text-left-image-right',
+    textFormatting: {
+      fontFamily: dbPage.font_family || 'Arial',
+      fontSize: dbPage.font_size || 16,
+      fontColor: dbPage.font_color || '#000000'
+    },
+    imageSettings: dbPage.image_settings ? JSON.parse(dbPage.image_settings) : undefined,
+    backgroundColor: dbPage.background_color
+  };
+};
 
 // Function to fetch all books for a user
 export const fetchUserBooks = async (userId: string): Promise<Book[]> => {
@@ -20,8 +62,8 @@ export const fetchUserBooks = async (userId: string): Promise<Book[]> => {
       return [];
     }
     
-    // Convert database books to our Book type
-    const books = data.map(databaseBookToBook);
+    // Convert database books to our Book type with explicit typing
+    const books: Book[] = data.map(databaseBookToBook);
     
     return books;
   } catch (error) {
