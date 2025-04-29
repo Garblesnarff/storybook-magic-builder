@@ -56,7 +56,7 @@ export function usePageState(bookId: string | undefined) {
   }, [currentPageData, updatePage, setSaving]);
   
   // Image settings
-  const { handleImageSettingsChange: imageSettingsHandler } = useImageSettings(updatePage, setSaving);
+  const { handleImageSettingsChange } = useImageSettings(updatePage, setSaving);
   
   // Page actions
   const { handleAddPage, handleDuplicatePage, handleDeletePage, handleReorderPage } = 
