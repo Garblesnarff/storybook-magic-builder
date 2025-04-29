@@ -65,6 +65,12 @@ const EditorPage = () => {
     }
   };
 
+  // Create wrapper for handleTextChange to return a Promise
+  const handleTextChangeWithPromise = async (text: string) => {
+    handleTextChange(text);
+    return Promise.resolve();
+  };
+
   // Create placeholder function for handleGenerateImage
   const handleGenerateImage = async () => {
     console.log('Generate image functionality will be implemented later');
@@ -95,7 +101,7 @@ const EditorPage = () => {
           handleExportPDF={handleExportPDF}
           handleApplyAIText={handleApplyAIText}
           handleApplyAIImage={handleApplyAIImage}
-          handleTextChange={handleTextChange}
+          handleTextChange={handleTextChangeWithPromise}
           handleLayoutChange={handleLayoutChange}
           handleTextFormattingChange={handleTextFormattingChange}
           handleGenerateImage={handleGenerateImage}

@@ -1,3 +1,4 @@
+
 import PDFKit from 'pdfkit';
 import blobStream from 'blob-stream';
 import { Book } from '@/types/book';
@@ -61,7 +62,6 @@ const drawRectangle = (
 
 // Function to calculate image position and size based on layout
 const calculateImageLayout = (
-  book: Book,
   pageWidth: number,
   pageHeight: number,
   layout: string,
@@ -114,7 +114,6 @@ const calculateImageLayout = (
 
 // Function to calculate text position and size based on layout
 const calculateTextLayout = (
-  book: Book,
   pageWidth: number,
   pageHeight: number,
   layout: string,
@@ -177,6 +176,7 @@ const renderPdf = async (book: Book) => {
   });
   
   const stream = blobStream();
+  doc.pipe(stream);
   
   // Set document metadata
   doc.info['Title'] = book.title;
@@ -239,7 +239,6 @@ const renderPdf = async (book: Book) => {
       imageWidth,
       imageHeight
     } = calculateImageLayout(
-      book,
       pageWidth,
       pageHeight,
       page.layout,
@@ -280,7 +279,6 @@ const renderPdf = async (book: Book) => {
       textWidth,
       textHeight
     } = calculateTextLayout(
-      book,
       pageWidth,
       pageHeight,
       page.layout,
@@ -328,40 +326,10 @@ const renderPdf = async (book: Book) => {
       resolve(blob);
     });
     
-    stream.on('error', (err) => {
+    stream.on('error', (err: Error) => {
       reject(err);
     });
   });
 };
-
-// Properly type the renderHeader function
-function renderHeader(
-  doc: PDFKit.PDFDocument, 
-  book: Book, 
-  pageNum: number, 
-  totalPages: number, 
-  width: number
-): void {
-  // You can add a header to each page here
-  // For example, you can add the book title and page number
-  const headerText = book.title;
-  const headerOptions = {
-    align: 'center',
-  };
-  
-  doc.fillColor('gray');
-  setFont(doc, 'Helvetica', 10);
-  addText(
-    doc,
-    headerText,
-    0,
-    inchesToPoints(0.5),
-    {
-      ...headerOptions,
-      width: width,
-    }
-  );
-  doc.fillColor('black'); // Reset fill color to black
-}
 
 export default renderPdf;

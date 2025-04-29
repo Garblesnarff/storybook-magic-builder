@@ -1,7 +1,52 @@
-
+import { supabase } from '../../../integrations/supabase/client';
 import { Book, BookPage } from '@/types/book';
-import { supabase } from '../../integrations/supabase/client';
-import { databasePageToBookPage, bookPageToDatabasePage } from './utils';
+import { databasePageToBookPage } from '../utils';
+
+export async function loadUserBooks(userId: string): Promise<Book[]> {
+  try {
+    const { data: booksData, error: booksError } = await supabase
+      .from('books')
+      .select(`
+        *,
+        pages:pages(*)
+      `)
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+    
+    if (booksError) throw booksError;
+    
+    if (!booksData || booksData.length === 0) {
+      return [];
+    }
+    
+    const books = booksData.map(book => {
+      const bookPages: BookPage[] = (book.pages || []).map((page: any) => databasePageToBookPage(page));
+      
+      // Make sure we don't pass null values where strings are expected
+      return {
+        id: book.id,
+        title: book.title || '',
+        author: book.author || '',
+        description: book.description || '',
+        userId: book.user_id || userId,
+        coverImage: book.cover_image_url || '',
+        dimensions: {
+          width: book.width,
+          height: book.height
+        },
+        orientation: book.orientation as 'portrait' | 'landscape',
+        pages: bookPages,
+        createdAt: book.created_at,
+        updatedAt: book.updated_at
+      };
+    });
+    
+    return books;
+  } catch (error) {
+    console.error('Error loading books:', error);
+    throw error;
+  }
+}
 
 // Fetch all books for a user
 export const fetchBooks = async (userId: string): Promise<Book[]> => {

@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -12,13 +12,13 @@ const SettingsPage = () => {
   const { user, signOut } = useAuth();
 
   // Example settings
-  const [displayName, setDisplayName] = React.useState('');
-  const [email, setEmail] = React.useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
     // Initialize with user data if available
     if (user) {
-      setDisplayName(user.name || '');
+      setDisplayName(user.email?.split('@')[0] || '');
       setEmail(user.email || '');
     }
   }, [user]);
