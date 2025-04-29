@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Book } from '@/types/book';
 // Remove unused imports
 
-// Create the missing utility functions that were imported
+// Convert database book format to our Book type
 const databaseBookToBook = (dbBook: any): Book => {
   // Convert database book format to our Book type
   const pages = dbBook.book_pages ? dbBook.book_pages.map(databasePageToBookPage) : [];
@@ -48,6 +48,12 @@ const databasePageToBookPage = (dbPage: any) => {
 // Function to fetch all books for a user
 export const fetchUserBooks = async (userId: string): Promise<Book[]> => {
   try {
+    // Check if userId is valid before making the request
+    if (!userId || userId === 'anonymous') {
+      console.info('No books found for the user');
+      return [];
+    }
+    
     const { data, error } = await supabase
       .from('books')
       .select('*, book_pages(*)')
@@ -75,6 +81,7 @@ export const fetchUserBooks = async (userId: string): Promise<Book[]> => {
 // Function to create a new book in Supabase
 export const createBookInSupabase = async (book: Book): Promise<Book> => {
   try {
+    // Ensure all required fields are provided, especially width and height
     // Insert the book record
     const { data: bookData, error: bookError } = await supabase
       .from('books')
@@ -85,9 +92,9 @@ export const createBookInSupabase = async (book: Book): Promise<Book> => {
         description: book.description,
         user_id: book.userId,
         cover_image_url: book.coverImage,
-        width: book.dimensions.width,
-        height: book.dimensions.height,
-        orientation: book.orientation
+        width: book.dimensions.width || 8.5,  // Default width if not provided
+        height: book.dimensions.height || 11,  // Default height if not provided
+        orientation: book.orientation || 'portrait'  // Default orientation if not provided
       })
       .select()
       .single();

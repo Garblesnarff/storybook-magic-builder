@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, PlusCircle } from 'lucide-react';
 import { BookTemplate } from '@/data/bookTemplates';
 import { Book } from '@/types/book';
+import { toast } from 'sonner';
 
 const BooksPage = () => {
   const navigate = useNavigate();
@@ -28,7 +29,12 @@ const BooksPage = () => {
       const bookId = await createBook();
       if (bookId) {
         navigate(`/editor/${bookId}`);
+      } else {
+        toast.error("Failed to create a new book");
       }
+    } catch (error) {
+      console.error("Error creating book:", error);
+      toast.error("Failed to create a new book");
     } finally {
       setIsCreating(false);
     }
@@ -45,7 +51,12 @@ const BooksPage = () => {
       const bookId = await createBookFromTemplate(template);
       if (bookId) {
         navigate(`/editor/${bookId}`);
+      } else {
+        toast.error("Failed to create a book from template");
       }
+    } catch (error) {
+      console.error("Error creating book from template:", error);
+      toast.error("Failed to create a book from template");
     } finally {
       setIsCreating(false);
       setShowTemplateDialog(false);
@@ -53,11 +64,21 @@ const BooksPage = () => {
   };
 
   const handleDeleteBook = async (id: string) => {
-    await deleteBook(id);
+    try {
+      await deleteBook(id);
+    } catch (error) {
+      console.error("Error deleting book:", error);
+      toast.error("Failed to delete the book");
+    }
   };
 
   const handleUpdateBook = async (book: Book) => {
-    await updateBook(book);
+    try {
+      await updateBook(book);
+    } catch (error) {
+      console.error("Error updating book:", error);
+      toast.error("Failed to update the book");
+    }
   };
 
   return (
