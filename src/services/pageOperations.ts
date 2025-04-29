@@ -1,19 +1,8 @@
+
 import { Book, BookPage, ImageSettings } from '@/types/book';
 import { supabase } from '@/integrations/supabase/client';
-// Remove unused imports
 import { databasePageToBookPage } from './supabase/utils';
 import { addPageToSupabase, updatePageInSupabase, deletePageFromSupabase } from './supabase/pageService';
-
-// Convert ImageSettings to a plain object that can be stored as JSON
-function convertImageSettingsToJson(settings: ImageSettings | undefined): Record<string, any> | undefined {
-  if (!settings) return undefined;
-  
-  return {
-    scale: settings.scale || 1,
-    position: settings.position || { x: 0, y: 0 },
-    fitMethod: settings.fitMethod || 'contain'
-  };
-}
 
 // Create a new page for a book
 export async function createPage(bookId: string): Promise<string | undefined> {
@@ -51,12 +40,7 @@ export async function createPage(bookId: string): Promise<string | undefined> {
 export async function updatePage(page: BookPage): Promise<Book> {
   try {
     // First, let's convert any image settings to a format that can be stored in the database
-    if (page.imageSettings) {
-      page = {
-        ...page,
-        imageSettings: page.imageSettings
-      };
-    }
+    // (We'll handle this conversion in the updatePageInSupabase function)
     
     // Update the page in the database
     const success = await updatePageInSupabase(page.bookId, page);

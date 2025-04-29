@@ -1,5 +1,6 @@
+
 import { Book } from '@/types/book';
-import { createBook as createBookImpl, createBookFromTemplate as createBookFromTemplateImpl, createEmptyBook } from './book/bookCreation';
+import { createBookFromTemplate as createBookFromTemplateImpl } from './book/bookCreation';
 import { updateBook, deleteBook } from './book/bookOperations';
 import { duplicatePage, createNewPage } from './page/pageCreation';
 import { updatePage, deletePage, reorderPage } from './page/pageModification';
@@ -27,8 +28,28 @@ export const loadBook = (books: Book[], bookId: string): Book | null => {
   return books.find(book => book.id === bookId) || null;
 };
 
+// Define createBook function since it's missing from the import
+export const createBook = (userId: string, title = 'Untitled Book', description = ''): Book => {
+  const now = new Date().toISOString();
+  return {
+    id: `book-${Date.now()}`,
+    title,
+    author: '',
+    description,
+    userId,
+    coverImage: '',
+    dimensions: {
+      width: 8.5,
+      height: 11
+    },
+    orientation: 'portrait',
+    pages: [],
+    createdAt: now,
+    updatedAt: now
+  };
+};
+
 export {
-  createBookImpl as createBook,
   createBookFromTemplateImpl as createBookFromTemplate,
   updateBook,
   deleteBook,

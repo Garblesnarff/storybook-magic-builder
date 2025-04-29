@@ -1,6 +1,5 @@
-
 import { useEffect, useCallback } from 'react';
-import { BookPage, ImageSettings, PageLayout } from '@/types/book';
+import { BookPage, ImageSettings } from '@/types/book';
 import { useBook } from '@/contexts/BookContext';
 import { usePageOperations } from './usePageOperations';
 import { usePageSelection } from '@/hooks/page/usePageSelection';

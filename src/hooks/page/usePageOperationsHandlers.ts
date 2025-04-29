@@ -13,7 +13,7 @@ export function usePageOperationsHandlers(
   reorderPage: (id: string, newPosition: number) => Promise<void>,
   setSelectedPageId: (id: string | undefined) => void
 ) {
-  const { trackSavingOperation, completeSavingOperation } = useSavingState();
+  const { isSaving, setSaving, trackSavingOperation, completeSavingOperation } = useSavingState();
   
   // Handle adding a new page
   const handleAddPage = useCallback(async (): Promise<string | undefined> => {

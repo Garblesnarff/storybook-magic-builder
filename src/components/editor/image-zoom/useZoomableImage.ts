@@ -1,4 +1,6 @@
 
+// Simply remove the unused import
+
 import { useState, useEffect } from 'react';
 import { ImageSettings } from '@/types/book';
 
@@ -13,7 +15,7 @@ export function useZoomableImage(
 
 // The actual implementation that was moved to a separate file
 export function useZoomableImageHook(
-  imageUrl?: string,
+  src?: string,
   initialSettings?: ImageSettings,
   onSettingsChange?: (settings: ImageSettings) => void
 ) {

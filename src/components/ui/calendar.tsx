@@ -1,22 +1,22 @@
+
 import * as React from "react"
-import { Calendar as CalendarPrimitive } from "react-day-picker"
+import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
-export type CalendarProps = React.ComponentProps<typeof CalendarPrimitive>
+export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
 const Calendar = React.forwardRef<
-  React.ElementRef<typeof CalendarPrimitive>,
-  React.ComponentPropsWithoutRef<typeof CalendarPrimitive>
+  React.ElementRef<typeof DayPicker>,
+  React.ComponentPropsWithoutRef<typeof DayPicker>
 >((props, ref) => {
-  // Remove unused _props variables
   return (
-    <CalendarPrimitive
+    <DayPicker
       ref={ref}
       className={cn(
-        "p-3",
+        "p-3 pointer-events-auto",
         props.className
       )}
       classNames={{

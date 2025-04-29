@@ -1,3 +1,4 @@
+
 import { Layout } from '@/components/Layout';
 import { Navigate, useParams } from 'react-router-dom';
 import { usePageState } from '@/hooks/usePageState';
@@ -60,7 +61,7 @@ const EditorPage = () => {
   const handleReorderAdapter = (sourceIndex: number, destinationIndex: number) => {
     if (currentBook && currentBook.pages[sourceIndex]) {
       const pageId = currentBook.pages[sourceIndex].id;
-      // Convert string to number for the destination index
+      // Convert to number for the destination index
       handleReorderPage(pageId, destinationIndex);
     }
   };

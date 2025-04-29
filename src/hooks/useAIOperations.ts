@@ -16,17 +16,72 @@ export function useAIOperations(
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGeneratingText, setIsGeneratingText] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [processingStory, setProcessingStory] = useState(false);
 
-  const { 
-    isGenerating, 
-    processingStory, 
-    handleGenerateImage,
-    handleApplyAIText,
-    handleApplyAIImage 
-  } = usePageContentApplier(currentPageData, updatePage, setCurrentPageData, onAddPage);
+  const { applyText, applyImage } = usePageContentApplier(
+    (text: string) => {
+      if (currentPageData) {
+        const updatedPage = { ...currentPageData, text };
+        return updatePage(updatedPage);
+      }
+      return Promise.resolve();
+    },
+    (imageUrl: string) => {
+      if (currentPageData) {
+        const updatedPage = { ...currentPageData, image: imageUrl };
+        return updatePage(updatedPage);
+      }
+      return Promise.resolve();
+    }
+  );
   
   const { generateText: apiGenerateText } = useAITextGeneration();
   const { generateImage: apiGenerateImage } = useAIImageGeneration();
+
+  // Handle applying AI text to current page
+  const handleApplyAIText = async (text: string) => {
+    setProcessingStory(true);
+    try {
+      await applyText(text);
+    } finally {
+      setProcessingStory(false);
+    }
+  };
+
+  // Handle applying AI image to current page
+  const handleApplyAIImage = async (imageUrl: string) => {
+    setProcessingStory(true);
+    try {
+      await applyImage(imageUrl);
+    } finally {
+      setProcessingStory(false);
+    }
+  };
+
+  // Handle generating an image for the current page
+  const handleGenerateImage = async () => {
+    if (!currentPageData) return;
+    
+    setIsGenerating(true);
+    try {
+      const imageUrl = await apiGenerateImage(
+        currentPageData.text,
+        'REALISTIC', // Default style
+        currentPageData.bookId,
+        currentPageData.id
+      );
+      
+      if (imageUrl && currentPageData) {
+        const updatedPage = { ...currentPageData, image: imageUrl };
+        await updatePage(updatedPage);
+      }
+    } catch (error) {
+      console.error('Error generating image:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   // Generate text without applying it to a page
   const generateText = async (prompt: string, temperature = 0.7, maxTokens = 800): Promise<void> => {
