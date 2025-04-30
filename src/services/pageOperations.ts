@@ -8,9 +8,9 @@ import { addPage, duplicatePage } from './page/pageCreation';
 import { updatePage, deletePage, reorderPage } from './page/pageModification';
 
 // Add additional safety checks to ensure valid objects
-const safeCreateBook = (userId) => {
+const safeCreateBook = (userId, books = []) => {
   try {
-    return createBook(userId);
+    return createBook(userId, books);
   } catch (error) {
     console.error('Error in safeCreateBook:', error);
     return null;
