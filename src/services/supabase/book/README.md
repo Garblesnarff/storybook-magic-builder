@@ -18,22 +18,30 @@ This directory contains modules related to book operations in Supabase.
 ```typescript
 // Import specific functions directly
 import { fetchBookFromDatabase } from '@/services/supabase/book/fetchBook';
-import { createBookInSupabase } from '@/services/supabase/book/createBook';
+import { uploadImageToSupabase } from '@/services/supabase/book/imageUpload';
 
 // Or import from the index file
 import { 
   fetchBookFromDatabase,
-  createBookInSupabase 
+  uploadImageToSupabase
 } from '@/services/supabase/book';
 
 // Or use the legacy imports (backward compatible)
 import { 
   fetchBookFromDatabase,
-  createBookInSupabase 
+  uploadImageToSupabase
 } from '@/services/supabase/bookService';
 ```
+
+## Error Handling
+
+All functions include:
+- Error logging to console
+- User-friendly error messages via toast notifications
+- Type-safe return values with appropriate null/error handling
 
 ## Dependencies
 
 - Supabase client from `@/integrations/supabase/client`
+- Toast notifications via `sonner`
 - Book types from `@/types/book`
