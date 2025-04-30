@@ -1,6 +1,7 @@
 
 import { useBookOperations } from './useBookOperations';
 import { usePageOperations } from './usePageOperations';
+import { Book } from '@/types/book';
 
 export function useBookManager() {
   const {
@@ -13,7 +14,8 @@ export function useBookManager() {
     loadBook,
     loading: bookLoading,
     error: bookError,
-    setCurrentBook
+    setCurrentBook,
+    setBooks
   } = useBookOperations();
 
   const {
@@ -30,12 +32,27 @@ export function useBookManager() {
   const loading = bookLoading || pageLoading;
   const error = bookError || pageError;
 
+  // Ensure books is always an array
+  const safeBooks = Array.isArray(books) ? books : [];
+  
+  // Make sure currentBook type is preserved
+  const safeCurrentBook = currentBook || null;
+
+  // Create a safe update book method that validates the input book
+  const safeUpdateBook = async (book: Book) => {
+    if (!book || !book.id) {
+      console.error("Cannot update book: Invalid book object or missing ID");
+      return book;
+    }
+    return await updateBook(book);
+  };
+
   return {
-    books,
-    currentBook,
+    books: safeBooks,
+    currentBook: safeCurrentBook,
     createBook,
     createBookFromTemplate,
-    updateBook,
+    updateBook: safeUpdateBook,
     deleteBook,
     loadBook,
     addPage,
@@ -45,6 +62,7 @@ export function useBookManager() {
     duplicatePage,
     loading,
     error,
-    setCurrentBook
+    setCurrentBook,
+    setBooks
   };
 }

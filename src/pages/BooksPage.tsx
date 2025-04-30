@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 
 const BooksPage = () => {
   const navigate = useNavigate();
-  const { books, loading, createBook, createBookFromTemplate, deleteBook, updateBook } = useBook();
+  const { books = [], loading, createBook, createBookFromTemplate, deleteBook, updateBook } = useBook();
   
   const [isCreating, setIsCreating] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
@@ -81,6 +81,9 @@ const BooksPage = () => {
     }
   };
 
+  // Ensure books is always an array
+  const safeBooks = Array.isArray(books) ? books : [];
+
   return (
     <Layout className="bg-books-background bg-cover bg-center bg-no-repeat min-h-screen">
       <section className="container mx-auto my-8">
@@ -115,13 +118,13 @@ const BooksPage = () => {
           </div>
         </div>
         
-        {loading && !books.length ? (
+        {loading && !safeBooks.length ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
           <BookList 
-            books={books} 
+            books={safeBooks} 
             onCreateBook={handleCreateBook}
             onCreateBookFromTemplate={handleSelectTemplate}
             onDeleteBook={handleDeleteBook}

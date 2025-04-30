@@ -55,10 +55,27 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Create wrapper functions to ensure type compatibility
   const updatePageWrapper = async (page: BookPage): Promise<void> => {
-    await bookManager.updatePage(page);
+    // Validate page object to make sure it has the required properties
+    if (!page || !page.id) {
+      console.error("Invalid page object passed to updatePage");
+      return;
+    }
+    
+    // Ensure page has a bookId
+    if (!page.bookId && bookManager.currentBook) {
+      // If no bookId provided but we have a current book, use its id
+      const updatedPage = { ...page, bookId: bookManager.currentBook.id };
+      await bookManager.updatePage(updatedPage);
+    } else {
+      await bookManager.updatePage(page);
+    }
   };
 
   const updateBookWrapper = async (book: Book): Promise<void> => {
+    if (!book || !book.id) {
+      console.error("Invalid book object passed to updateBook");
+      return;
+    }
     // Call the manager's updateBook function but discard the return value to match the expected void return type
     await bookManager.updateBook(book);
   };
@@ -72,20 +89,26 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         : String(bookManager.error)
     : null;
   
+  // Safe addPage that checks for currentBook
+  const safeAddPage = async (): Promise<string | undefined> => {
+    if (!bookManager.currentBook?.id) {
+      console.error("Cannot add page: No current book selected");
+      return undefined;
+    }
+    
+    return await bookManager.addPage(bookManager.currentBook.id);
+  };
+  
   // Ensure types are properly aligned with the expected interface
   const contextValue: BookContextProps = {
-    books: bookManager.books,
+    books: Array.isArray(bookManager.books) ? bookManager.books : [],
     currentBook: bookManager.currentBook,
     createBook: bookManager.createBook,
     createBookFromTemplate: bookManager.createBookFromTemplate,
     updateBook: updateBookWrapper,
     deleteBook: bookManager.deleteBook,
     loadBook: bookManager.loadBook,
-    addPage: async () => {
-      if (!bookManager.currentBook?.id) return undefined;
-      const newPageId = await bookManager.addPage(bookManager.currentBook.id);
-      return newPageId;
-    },
+    addPage: safeAddPage,
     updatePage: updatePageWrapper,
     deletePage: bookManager.deletePage,
     reorderPage: bookManager.reorderPage,

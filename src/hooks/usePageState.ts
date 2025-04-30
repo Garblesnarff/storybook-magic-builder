@@ -68,7 +68,10 @@ export function usePageState(bookId: string | undefined) {
   // Effect to load the book if not already loaded
   useEffect(() => {
     if (bookId && !currentBook) {
-      loadBook(bookId);
+      loadBook(bookId).catch(err => {
+        console.error("Failed to load book:", err);
+        toast.error("Could not load the book. Please try again.");
+      });
     }
   }, [bookId, currentBook, loadBook]);
 
@@ -90,35 +93,44 @@ export function usePageState(bookId: string | undefined) {
     });
   }, [currentPageData, setSaving, updatePage]);
 
-  // Add function to handle narration generation with improved bookId checking
+  // Add function to handle narration generation with improved checks
   const handleGenerateNarration = useCallback(async () => {
-    if (!currentPageData || !currentBook) {
-      toast.error("Cannot generate narration: No page selected or book not loaded");
+    if (!currentPageData) {
+      toast.error("Cannot generate narration: No page selected");
       return Promise.resolve();
     }
-
+    
+    if (!currentBook) {
+      toast.error("Cannot generate narration: Book not loaded");
+      return Promise.resolve();
+    }
+    
     // Ensure we have both the page ID and book ID before proceeding
     if (!currentPageData.id) {
       toast.error("Cannot generate narration: Page ID is missing");
       return Promise.resolve();
     }
-
-    // Determine which bookId to use, ensure it's a string - using currentBook.id which we've verified exists
-    const effectiveBookId = currentBook.id;
+    
+    // Use the currentBook.id which we've verified exists
+    if (!currentBook.id) {
+      toast.error("Cannot generate narration: Book ID is missing");
+      return Promise.resolve();
+    }
 
     try {
       setSaving(true);
       const narrationUrl = await generateNarration(
         currentPageData.text,
-        effectiveBookId,  // We've already checked that currentBook exists
+        currentBook.id,  // Use the verified book ID
         currentPageData.id
       );
 
       if (narrationUrl) {
-        // Make sure the bookId is properly set in the updated page
+        // Create a complete BookPage object with required properties
         const updatedPage: BookPage = {
           ...currentPageData,
           narrationUrl,
+          bookId: currentBook.id  // Ensure bookId is explicitly set
         };
         await updatePage(updatedPage);
       }
@@ -151,4 +163,3 @@ export function usePageState(bookId: string | undefined) {
     handleGenerateNarration
   };
 }
-

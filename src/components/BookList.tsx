@@ -16,7 +16,7 @@ interface BookListProps {
 }
 
 export const BookList: React.FC<BookListProps> = ({ 
-  books, 
+  books = [], // Provide default empty array
   onCreateBook,
   onCreateBookFromTemplate,
   onDeleteBook,
@@ -43,6 +43,9 @@ export const BookList: React.FC<BookListProps> = ({
     }
   };
 
+  // Ensure books is always an array
+  const safeBooks = Array.isArray(books) ? books : [];
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -53,7 +56,7 @@ export const BookList: React.FC<BookListProps> = ({
         </Button>
       </div>
       
-      {books.length === 0 ? (
+      {safeBooks.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">You don't have any books yet. Create your first book to get started.</p>
           <Button onClick={handleCreateClick} className="bg-primary hover:bg-primary/90">
@@ -63,7 +66,7 @@ export const BookList: React.FC<BookListProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {books.map((book) => (
+          {safeBooks.map((book) => (
             <BookCard 
               key={book.id} 
               book={book} 
