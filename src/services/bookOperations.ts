@@ -14,13 +14,20 @@ import {
  */
 export const createNewBook = async (userId: string): Promise<Book> => {
   const newBookId = uuidv4();
+  
+  // Ensure we have valid dimensions and required fields
   const newBook: Book = {
     ...DEFAULT_BOOK,
     id: newBookId,
     userId: userId,
-    pages: [createNewPage(0, newBookId)], // Pass bookId to createNewPage
+    pages: [createNewPage(0, newBookId)],
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    // Explicitly include dimensions to ensure they're never undefined
+    dimensions: {
+      width: DEFAULT_BOOK.dimensions.width,
+      height: DEFAULT_BOOK.dimensions.height
+    }
   };
   
   // Create in Supabase and return the result

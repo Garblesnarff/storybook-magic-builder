@@ -23,7 +23,15 @@ export function useBookOperations() {
     async function fetchBooks() {
       try {
         setLoading(true);
+        setError(null);
         console.log('Loading books from Supabase...');
+        
+        if (!user || !user.id) {
+          console.log('No authenticated user found, skipping book load');
+          setBooks([]);
+          setLoading(false);
+          return;
+        }
         
         // Add null check for loadAllBooks result
         const fetchedBooks = await loadAllBooks() || [];
@@ -33,10 +41,8 @@ export function useBookOperations() {
           ? fetchedBooks.filter(book => book && typeof book === 'object')
           : [];
         
-        // Add null check for user
-        const userBooks = user && validFetchedBooks.length 
-          ? validFetchedBooks.filter(book => book.userId === user.id) 
-          : validFetchedBooks;
+        // Filter books by current user's ID
+        const userBooks = validFetchedBooks.filter(book => book.userId === user.id);
         
         setBooks(userBooks);
         
@@ -72,6 +78,7 @@ export function useBookOperations() {
     }
     
     try {
+      console.log('Creating new book for user:', user.id);
       const newBook = await createNewBook(user.id);
       
       // Add null/undefined check for the newBook
@@ -81,6 +88,7 @@ export function useBookOperations() {
         return null;
       }
       
+      console.log('Book created successfully:', newBook.id);
       setBooks(prevBooks => [...prevBooks, newBook]);
       setCurrentBook(newBook);
       return newBook.id;

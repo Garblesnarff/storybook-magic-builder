@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Layout } from '@/components/Layout';
 import { BookList } from '@/components/BookList';
@@ -16,7 +15,8 @@ const BooksPage: React.FC = () => {
     createBookFromTemplate, 
     updateBook,
     deleteBook, 
-    loading 
+    loading,
+    error 
   } = useBook();
   
   const { user } = useAuth();
@@ -24,33 +24,48 @@ const BooksPage: React.FC = () => {
   
   const handleCreateBook = async () => {
     try {
+      // Show loading toast
+      toast.loading('Creating your new book...');
+      
       const newBookId = await createBook();
+      
       if (newBookId) {
+        toast.dismiss();
         navigate(`/editor/${newBookId}`);
         toast.success('Book created successfully');
       } else {
+        toast.dismiss();
         // Handle case where book creation failed
-        toast.error('Failed to create book - no ID returned');
+        toast.error('Failed to create book - please try again');
+        console.error('Book creation failed: No ID returned');
       }
     } catch (error) {
+      toast.dismiss();
       console.error('Error creating book', error);
-      toast.error('Failed to create book');
+      toast.error('Failed to create book - please try again');
     }
   };
   
   const handleCreateBookFromTemplate = async (template: any) => {
     try {
+      toast.loading('Creating book from template...');
+      
       const newBookId = await createBookFromTemplate(template);
+      
       if (newBookId) {
+        toast.dismiss();
         navigate(`/editor/${newBookId}`);
         toast.success('Book created from template');
       } else {
+        toast.dismiss();
         // Handle case where book creation failed
-        toast.error('Failed to create book from template - no ID returned');
+        toast.error('Failed to create book from template - please try again');
+        console.error('Book creation from template failed: No ID returned');
       }
     } catch (error) {
+      toast.dismiss();
       console.error('Error creating book from template', error);
-      toast.error('Failed to create book from template');
+      toast.error('Failed to create book from template - please try again');
     }
   };
   
@@ -72,6 +87,23 @@ const BooksPage: React.FC = () => {
   
   // Ensure we're working with a valid array of books
   const validBooks = Array.isArray(books) ? books : [];
+  
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8 px-4">
+          <div className="p-8 bg-red-50 rounded-lg text-center">
+            <h2 className="text-xl font-bold text-red-700 mb-3">Error loading books</h2>
+            <p className="text-gray-700 mb-4">There was a problem loading your books.</p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
   
   if (loading) {
     return (
