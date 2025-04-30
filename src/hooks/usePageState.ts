@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useBook } from '@/contexts/BookContext';
 import { useBookLoading } from './page/useBookLoading';
@@ -30,11 +31,20 @@ export const usePageState = (bookId?: string) => {
   
   const { isSaving, trackSavingOperation, completeSavingOperation } = useSavingState();
   
-  useBookLoading(bookId, books, loadBook);
+  // Only try to load the book if we have a valid bookId
+  useBookLoading(bookId && bookId !== 'undefined' ? bookId : undefined, books, loadBook);
+  
   const { selectedPageId, setSelectedPageId, handlePageSelect } = usePageSelection(currentBook, books);
   const { currentPageData, setCurrentPageData } = usePageData(currentBook, selectedPageId);
   
   const updatePage = useCallback(async (page: BookPage): Promise<void> => {
+    // Add validation to ensure we have a valid page with required properties
+    if (!page || !page.id) {
+      console.error('Invalid page data provided to updatePage:', page);
+      toast.error('Invalid page data');
+      return;
+    }
+    
     try {
       console.log(`updatePage in usePageState called for page ${page.id}`);
       trackSavingOperation();
@@ -91,16 +101,29 @@ export const usePageState = (bookId?: string) => {
     setSelectedPageId
   );
   
-  const { handleTextChange, handleTextFormattingChange } = useTextEditor(currentPageData, updatePage);
+  // Only pass valid data to hooks
+  const { handleTextChange, handleTextFormattingChange } = useTextEditor(
+    currentPageData, 
+    updatePage
+  );
   
-  const { handleLayoutChange } = useLayoutManager(currentPageData, updatePage);
+  const { handleLayoutChange } = useLayoutManager(
+    currentPageData, 
+    updatePage
+  );
   
-  const { handleImageSettingsChange } = useImageSettings(currentPageData, updatePage);
+  const { handleImageSettingsChange } = useImageSettings(
+    currentPageData, 
+    updatePage
+  );
   
-  const { updateBookTitle } = useBookTitle(currentBook, updateBook);
+  const { updateBookTitle } = useBookTitle(
+    currentBook, 
+    updateBook
+  );
   
   return {
-    books,
+    books: Array.isArray(books) ? books : [],
     currentBook,
     selectedPageId,
     currentPageData,

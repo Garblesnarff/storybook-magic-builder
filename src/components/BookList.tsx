@@ -34,14 +34,27 @@ export const BookList: React.FC<BookListProps> = ({
   };
 
   const handleUpdateTitle = (id: string, newTitle: string) => {
-    const bookToUpdate = books.find(book => book.id === id);
+    // Add null check and validation
+    if (!id || !newTitle) {
+      console.error('Invalid ID or title in handleUpdateTitle');
+      return;
+    }
+    
+    const bookToUpdate = books.find(book => book && book.id === id);
     if (bookToUpdate) {
       onUpdateBook({
         ...bookToUpdate,
         title: newTitle
       });
+    } else {
+      console.error(`Book with ID ${id} not found`);
     }
   };
+
+  // Ensure books is always a valid array
+  const validBooks = Array.isArray(books) 
+    ? books.filter(book => book && typeof book === 'object' && book.id)
+    : [];
 
   return (
     <div className="space-y-8">
@@ -53,7 +66,7 @@ export const BookList: React.FC<BookListProps> = ({
         </Button>
       </div>
       
-      {books.length === 0 ? (
+      {validBooks.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">You don't have any books yet. Create your first book to get started.</p>
           <Button onClick={handleCreateClick} className="bg-primary hover:bg-primary/90">
@@ -63,7 +76,7 @@ export const BookList: React.FC<BookListProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {books.map((book) => (
+          {validBooks.map((book) => (
             <BookCard 
               key={book.id} 
               book={book} 

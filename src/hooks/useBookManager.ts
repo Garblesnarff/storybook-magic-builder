@@ -19,6 +19,9 @@ export function useBookManager() {
     setCurrentBook
   } = useBookOperations();
 
+  // Add null checks before passing books and currentBook to usePageOperations
+  const safeBooks = Array.isArray(books) ? books : [];
+  
   const {
     addPage,
     updatePage,
@@ -27,14 +30,19 @@ export function useBookManager() {
     duplicatePage,
     pageLoading,
     pageError
-  } = usePageOperations(books, currentBook, setBooks, setCurrentBook);
+  } = usePageOperations(
+    safeBooks, 
+    currentBook, 
+    setBooks, 
+    setCurrentBook
+  );
 
   // Combine loading and error states
   const loading = bookLoading || pageLoading;
   const error = bookError || pageError;
 
   return {
-    books,
+    books: safeBooks,
     currentBook,
     createBook,
     createBookFromTemplate,

@@ -49,12 +49,47 @@ export const useBook = () => {
   return context;
 };
 
+// Enhanced wrapper functions for the Provider
+const safeBookManagerWrapper = (bookManager) => {
+  // Add defensive wrapper functions for all book operations
+  return {
+    ...bookManager,
+    // Ensure books is always an array
+    books: Array.isArray(bookManager.books) ? bookManager.books : [],
+    
+    // Wrapper for createBook that ensures it returns a valid ID or null
+    createBook: async () => {
+      try {
+        return await bookManager.createBook() || null;
+      } catch (error) {
+        console.error('Error in createBook:', error);
+        return null;
+      }
+    },
+    
+    // Wrapper for createBookFromTemplate
+    createBookFromTemplate: async (template) => {
+      try {
+        return await bookManager.createBookFromTemplate(template) || null;
+      } catch (error) {
+        console.error('Error in createBookFromTemplate:', error);
+        return null;
+      }
+    },
+    
+    // Add similar defensive wrappers for other functions if needed
+  };
+};
+
 // Provider component that wraps the parts of our app that need the context
 export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const bookManager = useBookManager();
   
+  // Use the enhanced wrapper
+  const safeBookManager = safeBookManagerWrapper(bookManager);
+  
   return (
-    <BookContext.Provider value={bookManager}>
+    <BookContext.Provider value={safeBookManager}>
       {children}
     </BookContext.Provider>
   );

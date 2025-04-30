@@ -28,6 +28,9 @@ const BooksPage: React.FC = () => {
       if (newBookId) {
         navigate(`/editor/${newBookId}`);
         toast.success('Book created successfully');
+      } else {
+        // Handle case where book creation failed
+        toast.error('Failed to create book - no ID returned');
       }
     } catch (error) {
       console.error('Error creating book', error);
@@ -41,6 +44,9 @@ const BooksPage: React.FC = () => {
       if (newBookId) {
         navigate(`/editor/${newBookId}`);
         toast.success('Book created from template');
+      } else {
+        // Handle case where book creation failed
+        toast.error('Failed to create book from template - no ID returned');
       }
     } catch (error) {
       console.error('Error creating book from template', error);
@@ -49,6 +55,12 @@ const BooksPage: React.FC = () => {
   };
   
   const handleDeleteBook = async (id: string) => {
+    if (!id) {
+      console.error('Invalid book ID provided to handleDeleteBook');
+      toast.error('Invalid book ID');
+      return;
+    }
+    
     try {
       await deleteBook(id);
       toast.success('Book deleted');
@@ -57,6 +69,9 @@ const BooksPage: React.FC = () => {
       toast.error('Failed to delete book');
     }
   };
+  
+  // Ensure we're working with a valid array of books
+  const validBooks = Array.isArray(books) ? books : [];
   
   if (loading) {
     return (
@@ -87,7 +102,7 @@ const BooksPage: React.FC = () => {
   return (
     <Layout rootClassName="bg-books-background bg-cover bg-center bg-no-repeat"> 
       <div className="container mx-auto py-8 px-4">
-        {books.length === 0 ? (
+        {validBooks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[60vh] p-8 bg-white/80 backdrop-blur-sm rounded-lg shadow-lg">
             <h2 className="text-2xl font-bold mb-4">Welcome to Children's Book Generator!</h2>
             <p className="text-gray-600 mb-8 text-center">
@@ -103,7 +118,7 @@ const BooksPage: React.FC = () => {
           </div>
         ) : (
           <BookList
-            books={books}
+            books={validBooks}
             onCreateBook={handleCreateBook}
             onCreateBookFromTemplate={handleCreateBookFromTemplate}
             onDeleteBook={handleDeleteBook}

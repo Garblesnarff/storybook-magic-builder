@@ -7,10 +7,29 @@ import { updateBook, deleteBook } from './book/bookOperations';
 import { addPage, duplicatePage } from './page/pageCreation';
 import { updatePage, deletePage, reorderPage } from './page/pageModification';
 
+// Add additional safety checks to ensure valid objects
+const safeCreateBook = (...args) => {
+  try {
+    return createBook(...args);
+  } catch (error) {
+    console.error('Error in safeCreateBook:', error);
+    return null;
+  }
+};
+
+const safeCreateBookFromTemplate = (...args) => {
+  try {
+    return createBookFromTemplate(...args);
+  } catch (error) {
+    console.error('Error in safeCreateBookFromTemplate:', error);
+    return null;
+  }
+};
+
 // Re-export all functions to maintain the same API
 export {
-  createBook,
-  createBookFromTemplate,
+  safeCreateBook as createBook,
+  safeCreateBookFromTemplate as createBookFromTemplate,
   updateBook,
   deleteBook,
   addPage,

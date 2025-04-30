@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Book } from '../types/book';
 import { 
@@ -23,9 +24,20 @@ export function useBookOperations() {
       try {
         setLoading(true);
         console.log('Loading books from Supabase...');
-        const fetchedBooks = await loadAllBooks();
         
-        const userBooks = user ? fetchedBooks.filter(book => book.userId === user.id) : fetchedBooks;
+        // Add null check for loadAllBooks result
+        const fetchedBooks = await loadAllBooks() || [];
+        
+        // Ensure we have valid books before filtering
+        const validFetchedBooks = Array.isArray(fetchedBooks) 
+          ? fetchedBooks.filter(book => book && typeof book === 'object')
+          : [];
+        
+        // Add null check for user
+        const userBooks = user && validFetchedBooks.length 
+          ? validFetchedBooks.filter(book => book.userId === user.id) 
+          : validFetchedBooks;
+        
         setBooks(userBooks);
         
         if (userBooks.length) {
@@ -39,6 +51,8 @@ export function useBookOperations() {
         console.error('Error initializing books', e);
         setError('Failed to load books');
         setLoading(false);
+        // Set empty array to prevent null reference issues
+        setBooks([]);
       }
     }
 
@@ -59,6 +73,14 @@ export function useBookOperations() {
     
     try {
       const newBook = await createNewBook(user.id);
+      
+      // Add null/undefined check for the newBook
+      if (!newBook || typeof newBook !== 'object' || !newBook.id) {
+        console.error('Failed to create book: Invalid book data returned');
+        toast.error('Failed to create new book: Invalid data');
+        return null;
+      }
+      
       setBooks(prevBooks => [...prevBooks, newBook]);
       setCurrentBook(newBook);
       return newBook.id;
@@ -76,9 +98,27 @@ export function useBookOperations() {
     }
     
     try {
+      // Create base book object from template
       const newBook = template.createBook();
+      
+      // Save to database
       const savedBook = await createNewBook(user.id);
-      const mergedBook = { ...savedBook, ...newBook, id: savedBook.id, userId: user.id };
+      
+      // Add null/undefined check
+      if (!savedBook || !savedBook.id) {
+        toast.error('Failed to create book from template');
+        return null;
+      }
+      
+      // Merge template with saved book
+      const mergedBook = { 
+        ...savedBook, 
+        ...newBook, 
+        id: savedBook.id, 
+        userId: user.id 
+      };
+      
+      // Update the merged book in the database
       await updateBookService(mergedBook, books);
       
       setBooks(prevBooks => [...prevBooks, mergedBook]);
@@ -92,6 +132,12 @@ export function useBookOperations() {
   }, [books, user]);
 
   const loadBook = useCallback(async (id: string): Promise<Book | null> => {
+    if (!id) {
+      console.error('Invalid book ID provided to loadBook');
+      toast.error('Invalid book ID');
+      return null;
+    }
+    
     try {
       const book = await loadBookById(id);
       if (book) {
@@ -107,6 +153,12 @@ export function useBookOperations() {
   }, []);
 
   const updateBookState = useCallback(async (updatedBook: Book): Promise<void> => {
+    if (!updatedBook || !updatedBook.id) {
+      console.error('Invalid book data provided to updateBook');
+      toast.error('Failed to update book: Invalid data');
+      return;
+    }
+    
     try {
       const updatedBooksResult = await updateBookService(updatedBook, books); 
       setBooks(updatedBooksResult);
@@ -121,6 +173,12 @@ export function useBookOperations() {
   }, [books, currentBook]);
 
   const deleteBook = useCallback(async (id: string): Promise<void> => {
+    if (!id) {
+      console.error('Invalid book ID provided to deleteBook');
+      toast.error('Invalid book ID');
+      return;
+    }
+    
     try {
       const updatedBooksResult = await deleteBookService(id, books); 
       setBooks(updatedBooksResult);
