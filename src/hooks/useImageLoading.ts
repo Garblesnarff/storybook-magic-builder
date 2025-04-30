@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { preloadImage } from '@/utils/imageVerification';
+import { verifyImageUrl, preloadImage } from '@/utils/imageVerification';
 
 export function useImageLoading(imageUrl: string | null | undefined) {
   const [isLoading, setIsLoading] = useState(true);

@@ -1,20 +1,25 @@
+
+import React from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigate, useParams } from 'react-router-dom';
-import { usePageState } from '@/hooks/usePageState';
+import { useEditorPage } from '@/hooks/useEditorPage';
 import { EditorLoading } from '@/components/editor/EditorLoading';
 import { EditorMainContent } from '@/components/editor/EditorMainContent';
-import { useBook } from '@/contexts/BookContext';
 
 const EditorPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { books, currentBook } = useBook();
   
-  const editorState = usePageState(id);
-  
-  // Extract properties needed for EditorMainContent
   const {
-    currentPageData,
+    books,
+    currentBook,
     selectedPageId,
+    currentPageData,
+    isSaving,
+    isExporting,
+    isGenerating,
+    processingStory,
+    isNarrating,
+    loading,
     handlePageSelect,
     handleAddPage,
     handleDuplicatePage,
@@ -25,42 +30,20 @@ const EditorPage = () => {
     updatePage,
     handleReorderPage,
     handleDeletePage,
-    updateBookTitle,
-    isSaving,
-    isNarrating,
-    handleGenerateNarration
-  } = editorState;
-  
-  // These are placeholders for functions that will be implemented later
-  const isExporting = false;
-  const isGenerating = false;
-  const processingStory = false;
-  
-  const handleExportPDF = async () => {
-    // Placeholder function
-    console.log('Export PDF functionality will be implemented later');
-  };
-  
-  const handleApplyAIText = (prompt: string) => {
-    // Placeholder function
-    console.log('Apply AI text functionality will be implemented later', prompt);
-  };
-  
-  const handleApplyAIImage = (imageUrl: string) => {
-    // Placeholder function
-    console.log('Apply AI image functionality will be implemented later', imageUrl);
-  };
+    handleExportPDF,
+    handleApplyAIText,
+    handleApplyAIImage,
+    handleGenerateImage,
+    handleGenerateNarration,
+    handleTitleUpdate
+  } = useEditorPage(id);
 
-  // Create wrapper for handleTextChange to return a Promise
-  const handleTextChangeWithPromise = async (text: string) => {
-    handleTextChange(text);
-    return Promise.resolve();
-  };
-
-  // Create placeholder function for handleGenerateImage
-  const handleGenerateImage = async () => {
-    console.log('Generate image functionality will be implemented later');
-    return Promise.resolve();
+  // Create an adapter function to convert between the function signatures
+  const handleReorderAdapter = (sourceIndex: number, destinationIndex: number) => {
+    if (currentBook && currentBook.pages[sourceIndex]) {
+      const pageId = currentBook.pages[sourceIndex].id;
+      handleReorderPage(pageId, destinationIndex);
+    }
   };
 
   return (
@@ -83,18 +66,18 @@ const EditorPage = () => {
           handleAddPage={handleAddPage}
           handleDuplicatePage={handleDuplicatePage}
           handleDeletePage={handleDeletePage}
-          handleReorderPage={handleReorderPage}
+          handleReorderPage={handleReorderAdapter}
           handleExportPDF={handleExportPDF}
           handleApplyAIText={handleApplyAIText}
           handleApplyAIImage={handleApplyAIImage}
-          handleTextChange={handleTextChangeWithPromise}
+          handleTextChange={handleTextChange}
           handleLayoutChange={handleLayoutChange}
           handleTextFormattingChange={handleTextFormattingChange}
           handleGenerateImage={handleGenerateImage}
           handleImageSettingsChange={handleImageSettingsChange}
           handleGenerateNarration={handleGenerateNarration}
           updatePage={updatePage}
-          updateBookTitle={updateBookTitle}
+          updateBookTitle={handleTitleUpdate}
         />
       )}
     </Layout>

@@ -1,39 +1,38 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-export function useContainerDimensions(ref: React.RefObject<HTMLDivElement>) {
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+interface Dimensions {
+  width: number;
+  height: number;
+}
 
-  // Update dimensions when needed
-  const updateDimensions = useCallback(() => {
-    if (ref.current) {
-      const { width, height } = ref.current.getBoundingClientRect();
-      setDimensions({ width, height });
-    }
-  }, [ref]);
-  
-  // Initially update dimensions when component mounts
-  useEffect(() => {
-    updateDimensions();
+export function useContainerDimensions() {
+  const [containerDimensions, setContainerDimensions] = useState<Dimensions>({ width: 0, height: 0 });
+  const [imageDimensions, setImageDimensions] = useState<Dimensions>({ width: 0, height: 0 });
+
+  const updateContainerDimensions = useCallback((containerRef: React.RefObject<HTMLDivElement>) => {
+    if (!containerRef.current) return;
     
-    // Set up a resize observer to update dimensions when container resizes
-    const resizeObserver = new ResizeObserver(() => {
-      updateDimensions();
+    const { width, height } = containerRef.current.getBoundingClientRect();
+    console.log('Updating container dimensions:', width, height);
+    
+    setContainerDimensions(prev => {
+      if (prev.width === width && prev.height === height) return prev;
+      return { width, height };
     });
-    
-    if (ref.current) {
-      resizeObserver.observe(ref.current);
-    }
-    
-    return () => {
-      if (ref.current) {
-        resizeObserver.unobserve(ref.current);
-      }
-    };
-  }, [ref, updateDimensions]);
+  }, []);
 
-  return { 
-    dimensions,
-    updateDimensions
+  const updateImageDimensions = useCallback((imageRef: React.RefObject<HTMLImageElement>) => {
+    if (!imageRef.current) return;
+    
+    const { naturalWidth, naturalHeight } = imageRef.current;
+    setImageDimensions({ width: naturalWidth, height: naturalHeight });
+  }, []);
+
+  return {
+    containerDimensions,
+    imageDimensions,
+    updateContainerDimensions,
+    updateImageDimensions
   };
 }

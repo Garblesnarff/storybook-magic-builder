@@ -1,7 +1,8 @@
 
+import { Book } from '../types/book';
+import { BookTemplate } from '@/data/bookTemplates';
 import { useBookOperations } from './useBookOperations';
 import { usePageOperations } from './usePageOperations';
-import { Book } from '@/types/book';
 
 export function useBookManager() {
   const {
@@ -14,8 +15,8 @@ export function useBookManager() {
     loadBook,
     loading: bookLoading,
     error: bookError,
-    setCurrentBook,
-    setBooks
+    setBooks,
+    setCurrentBook
   } = useBookOperations();
 
   const {
@@ -24,35 +25,20 @@ export function useBookManager() {
     deletePage,
     reorderPage,
     duplicatePage,
-    loading: pageLoading,
-    error: pageError
-  } = usePageOperations();
+    pageLoading,
+    pageError
+  } = usePageOperations(books, currentBook, setBooks, setCurrentBook);
 
   // Combine loading and error states
   const loading = bookLoading || pageLoading;
   const error = bookError || pageError;
 
-  // Ensure books is always an array
-  const safeBooks = Array.isArray(books) ? books : [];
-  
-  // Make sure currentBook type is preserved
-  const safeCurrentBook = currentBook || null;
-
-  // Create a safe update book method that validates the input book
-  const safeUpdateBook = async (book: Book) => {
-    if (!book || !book.id) {
-      console.error("Cannot update book: Invalid book object or missing ID");
-      return book;
-    }
-    return await updateBook(book);
-  };
-
   return {
-    books: safeBooks,
-    currentBook: safeCurrentBook,
+    books,
+    currentBook,
     createBook,
     createBookFromTemplate,
-    updateBook: safeUpdateBook,
+    updateBook,
     deleteBook,
     loadBook,
     addPage,
@@ -61,8 +47,6 @@ export function useBookManager() {
     reorderPage,
     duplicatePage,
     loading,
-    error,
-    setCurrentBook,
-    setBooks
+    error
   };
 }

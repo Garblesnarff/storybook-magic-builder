@@ -1,84 +1,74 @@
 
-import { Book } from '@/types/book';
-import { createBookFromTemplate as createBookFromTemplateImpl } from './book/bookCreation';
-import { updateBook, deleteBook } from './book/bookOperations';
-import { duplicatePage, createNewPage } from './page/pageCreation';
-import { updatePage, deletePage, reorderPage } from './page/pageModification';
+import { Book, BookPage, DEFAULT_BOOK, DEFAULT_PAGE, DEFAULT_PAGE_TEXT } from '../types/book';
+import { v4 as uuidv4 } from 'uuid';
+import { 
+  saveBookToSupabase, 
+  loadBookFromSupabase,
+  loadBooksFromSupabase,
+  createBookInSupabase,
+  deleteBookFromSupabase
+} from './supabaseStorage';
 
-export const addPage = async (book: Book, allBooks: Book[]): Promise<[Book[], string]> => {
-  if (!book) {
-    throw new Error('No book selected');
-  }
-  
-  const newPage = createNewPage(book.id, book.pages.length + 1);
-  
-  const updatedBook = {
-    ...book,
-    pages: [...book.pages, newPage]
+/**
+ * Core book creation and management functions
+ */
+export const createNewBook = async (userId: string): Promise<Book> => {
+  const newBookId = uuidv4();
+  const newBook: Book = {
+    ...DEFAULT_BOOK,
+    id: newBookId,
+    userId: userId,
+    pages: [createNewPage(0, newBookId)], // Pass bookId to createNewPage
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
   
-  const updatedBooks = allBooks.map((b: Book) => 
-    b.id === book.id ? updatedBook : b
+  // Create in Supabase and return the result
+  const savedBook = await createBookInSupabase(newBook);
+  return savedBook || newBook; // Fallback to the local book if save fails
+};
+
+export const createNewPage = (pageNumber: number, bookId: string): BookPage => {
+  return {
+    ...DEFAULT_PAGE,
+    id: uuidv4(),
+    bookId, // Set the bookId
+    pageNumber,
+    text: DEFAULT_PAGE_TEXT  // Ensure we use the constant here
+  };
+};
+
+export const updateBook = async (book: Book, books: Book[]): Promise<Book[]> => {
+  const updatedBook = { 
+    ...book, 
+    updatedAt: new Date().toISOString() 
+  };
+  
+  const updatedBooks = books.map(b => 
+    b.id === updatedBook.id ? updatedBook : b
   );
   
-  return [updatedBooks, newPage.id];
+  // Save to Supabase
+  await saveBookToSupabase(updatedBook);
+  
+  return updatedBooks;
 };
 
-export const loadBook = (books: Book[], bookId: string): Book | null => {
-  return books.find(book => book.id === bookId) || null;
+export const deleteBook = async (id: string, books: Book[]): Promise<Book[]> => {
+  // Delete from Supabase
+  await deleteBookFromSupabase(id);
+  
+  // Update local state
+  const filteredBooks = books.filter(book => book.id !== id);
+  return filteredBooks;
 };
 
-// Define createBook function since it's missing from the import
-export const createBook = (userId: string, title = 'Untitled Book', description = ''): Book => {
-  const now = new Date().toISOString();
-  return {
-    id: `book-${Date.now()}`,
-    title,
-    author: '',
-    description,
-    userId,
-    coverImage: '',
-    dimensions: {
-      width: 8.5,
-      height: 11
-    },
-    orientation: 'portrait',
-    pages: [],
-    createdAt: now,
-    updatedAt: now
-  };
+// Load all books from Supabase
+export const loadAllBooks = async (): Promise<Book[]> => {
+  return await loadBooksFromSupabase();
 };
 
-export {
-  createBookFromTemplateImpl as createBookFromTemplate,
-  updateBook,
-  deleteBook,
-  updatePage,
-  deletePage,
-  reorderPage,
-  duplicatePage
-};
-
-export const createNewBook = (userId: string, title = 'Untitled Book'): Book => {
-  const now = new Date().toISOString();
-  return {
-    id: `book-${Date.now()}`,
-    title,
-    author: '',
-    description: '',
-    userId,
-    coverImage: '',
-    dimensions: {
-      width: 8.5,
-      height: 11
-    },
-    orientation: 'portrait',
-    pages: [],
-    createdAt: now,
-    updatedAt: now
-  };
-};
-
-export const createMockBooks = (userId: string): Book[] => {
-  return [createNewBook(userId, 'Sample Book')];
+// Load a specific book from Supabase
+export const loadBookById = async (bookId: string): Promise<Book | null> => {
+  return await loadBookFromSupabase(bookId);
 };

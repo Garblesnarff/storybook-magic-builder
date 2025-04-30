@@ -40,11 +40,11 @@ export const TemplateSelectionDialog: React.FC<TemplateSelectionDialogProps> = (
                 <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10 text-primary">
                   <Book size={20} />
                 </div>
-                <h3 className="font-medium">{template.title}</h3>
+                <h3 className="font-medium">{template.name}</h3>
               </div>
               <p className="text-sm text-muted-foreground flex-grow mb-2">{template.description}</p>
               <div className="text-xs text-muted-foreground">
-                Approximately {template.pages.length} page{template.pages.length !== 1 ? 's' : ''}
+                Approximately {template.pageCount} page{template.pageCount !== 1 ? 's' : ''}
               </div>
             </div>
           ))}

@@ -22,10 +22,9 @@ interface PageEditorProps {
 
 export const PageEditor: React.FC<PageEditorProps> = ({
   currentPageData,
-  // Commenting unused props to prevent TypeScript warnings
-  // handleTextChange,
-  // handleLayoutChange,
-  // handleTextFormattingChange,
+  handleTextChange,
+  handleLayoutChange,
+  handleTextFormattingChange,
   handleGenerateImage,
   isGenerating = false,
   previewText,

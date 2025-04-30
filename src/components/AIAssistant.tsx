@@ -33,6 +33,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   onApplyText, 
   onApplyImage,
   initialPrompt = '',
+  currentBook,
   updatePage
 }) => {
   const [prompt, setPrompt] = useState(initialPrompt);
@@ -49,15 +50,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     return Promise.resolve();
   };
 
-  // Initialize the hook with the correct arguments
+  // Initialize the hook with null values since we're not operating on a specific page
   const {
     isGeneratingText,
     isGeneratingImage,
     generatedText,
     generatedImage,
+    setGeneratedText,
+    setGeneratedImage,
     generateText,
     generateImage
-  } = useAIOperations(null, handleUpdatePage);
+  } = useAIOperations(null, handleUpdatePage, () => {});
 
   const handleGenerateText = async () => {
     await generateText(prompt, temperature, maxTokens);
@@ -123,3 +126,4 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     </Sheet>
   );
 };
+

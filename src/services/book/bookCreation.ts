@@ -1,77 +1,81 @@
 
+import { Book, BookPage } from '../../types/book';
 import { v4 as uuidv4 } from 'uuid';
-import { Book, DEFAULT_PAGE_TEXT } from '@/types/book';
-import { BookTemplate } from '@/data/bookTemplates';
 
-// Create an empty book with default values
-export function createEmptyBook(userId: string): Book {
-  const bookId = uuidv4();
-  const now = new Date().toISOString();
-
-  return {
-    id: bookId,
-    title: 'Untitled Book',
-    author: '',
-    description: '',
-    userId: userId,
-    coverImage: '',
-    dimensions: {
-      width: 8.5,
-      height: 11
-    },
-    orientation: 'portrait',
-    pages: [],
-    createdAt: now,
-    updatedAt: now
-  };
-}
-
-// Create a book from a template
-export function createBookFromTemplate(template: BookTemplate, userId: string): Book {
-  const bookId = uuidv4();
-  const now = new Date().toISOString();
+/**
+ * Creates a new book with a default first page
+ * @param title The title of the new book
+ * @param books The current collection of books
+ * @returns Updated array of books including the new book
+ */
+export const createBook = async (title: string, books: Book[]): Promise<Book[]> => {
+  const newBookId = uuidv4();
+  const newPageId = uuidv4();
   
-  // Create the book with template values
-  const book: Book = {
-    id: bookId,
-    title: template.title,
-    author: '',
-    description: template.description || '',
-    userId: userId,
-    coverImage: template.coverImage || '',
-    dimensions: template.dimensions || {
-      width: 8.5,
-      height: 11
-    },
-    orientation: template.orientation || 'portrait',
-    pages: [],
-    createdAt: now,
-    updatedAt: now
-  };
-  
-  // Add pages from the template
-  if (template.pages) {
-    book.pages = template.pages.map((page, index) => ({
-      id: uuidv4(),
-      bookId: bookId,
-      pageNumber: index + 1,
-      text: page.text || DEFAULT_PAGE_TEXT,
-      image: page.image || '',
-      layout: page.layout || 'text-left-image-right',
-      textFormatting: page.textFormatting || {
+  const newBook: Book = {
+    id: newBookId,
+    title: title,
+    pages: [{
+      id: newPageId,
+      bookId: newBookId,
+      pageNumber: 1,
+      text: 'This is the first page of your new book! Click here to edit the text.',
+      image: '',
+      layout: 'text-left-image-right',
+      textFormatting: {
         fontFamily: 'Arial',
         fontSize: 16,
-        fontColor: '#000000',
-        isBold: false,
-        isItalic: false
+        fontColor: '#000000'
       },
-      imageSettings: page.imageSettings || {
+      imageSettings: {
         scale: 1,
         position: { x: 0, y: 0 },
         fitMethod: 'contain'
       }
-    }));
-  }
+    }],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    author: 'Anonymous',
+    description: '',
+    orientation: 'portrait',
+    dimensions: {
+      width: 8.5,
+      height: 11
+    },
+    userId: ''
+  };
+
+  return [...books, newBook];
+};
+
+/**
+ * Creates a new book based on a template
+ * @param template The template to use for the book
+ * @param books The current collection of books
+ * @returns Updated array of books including the new templated book
+ */
+export const createBookFromTemplate = async (template: any, books: Book[]): Promise<Book[]> => {
+  const newBookId = uuidv4();
   
-  return book;
-}
+  const newBook: Book = {
+    id: newBookId,
+    title: template.title,
+    pages: template.pages.map((page: any) => ({
+      ...page,
+      id: uuidv4(),
+      bookId: newBookId,
+    })),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    author: 'Anonymous',
+    description: '',
+    orientation: 'portrait',
+    dimensions: {
+      width: 8.5,
+      height: 11
+    },
+    userId: ''
+  };
+
+  return [...books, newBook];
+};

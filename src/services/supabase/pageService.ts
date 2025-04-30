@@ -10,13 +10,6 @@ import { deletePageNarration } from './storage/audioStorage';
 // Function to add a new page to a book in Supabase
 export const addPageToSupabase = async (bookId: string, pageNumber: number): Promise<BookPage | null> => {
   try {
-    // Validate bookId
-    if (!bookId) {
-      console.error('Cannot add page: bookId is undefined or empty');
-      toast.error('Failed to add page: Missing book ID');
-      return null;
-    }
-    
     const pageId = uuidv4();
     
     // Initial imageSettings with default values
@@ -57,22 +50,8 @@ export const addPageToSupabase = async (bookId: string, pageNumber: number): Pro
 // Function to update a page in a book in Supabase
 export const updatePageInSupabase = async (bookId: string, page: BookPage): Promise<boolean> => {
   try {
-    // Validate bookId
-    if (!bookId) {
-      console.error('Cannot update page: bookId is undefined or empty');
-      toast.error('Failed to update page: Missing book ID');
-      return false;
-    }
-    
-    // Ensure page.bookId matches the provided bookId
-    if (page.bookId !== bookId) {
-      console.warn('Page bookId mismatch, using the provided bookId as source of truth');
-      page.bookId = bookId;
-    }
-    
     console.log('Updating page in Supabase. Page data:', {
       id: page.id,
-      bookId: page.bookId, // Log bookId to ensure it's correct
       text: page.text?.substring(0, 30) + '...',
       layout: page.layout,
       hasImage: !!page.image,

@@ -1,205 +1,152 @@
-
-import { useState, useCallback, useEffect } from 'react';
-import { Book } from '@/types/book';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect, useCallback } from 'react';
+import { Book } from '../types/book';
+import { 
+  createNewBook, 
+  updateBook as updateBookService, 
+  deleteBook as deleteBookService,
+  loadBookById,
+  loadAllBooks
+} from '../services/bookOperations';
 import { BookTemplate } from '@/data/bookTemplates';
-import { createBookFromTemplate, createEmptyBook } from '@/services/book/bookCreation';
 import { toast } from 'sonner';
-import { loadBooks as loadBooksFromStorage, saveBooks } from '@/services/bookStorage';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useBookOperations() {
   const [books, setBooks] = useState<Book[]>([]);
   const [currentBook, setCurrentBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  
-  const auth = useAuth();
-  const userId = auth.user?.id || 'anonymous';
-  
-  // Load books from localStorage on initialization
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+
   useEffect(() => {
-    const initializeBooks = async () => {
-      setLoading(true);
+    async function fetchBooks() {
       try {
-        const loadedBooks = loadBooksFromStorage();
-        console.log("Loaded books from localStorage:", loadedBooks.length);
-        setBooks(loadedBooks);
-      } catch (err) {
-        console.error("Error loading books:", err);
-        const errorObj = err instanceof Error ? err : new Error('Unknown error loading books');
-        setError(errorObj);
-        toast.error("There was an error loading your books");
-      } finally {
+        setLoading(true);
+        console.log('Loading books from Supabase...');
+        const fetchedBooks = await loadAllBooks();
+        
+        const userBooks = user ? fetchedBooks.filter(book => book.userId === user.id) : fetchedBooks;
+        setBooks(userBooks);
+        
+        if (userBooks.length) {
+          console.log(`Found ${userBooks.length} existing books for the user`);
+        } else {
+          console.log('No books found for the user');
+        }
+        
+        setLoading(false);
+      } catch (e) {
+        console.error('Error initializing books', e);
+        setError('Failed to load books');
         setLoading(false);
       }
-    };
-    
-    initializeBooks();
-  }, []);
-  
-  // Save books to localStorage whenever they change
-  useEffect(() => {
-    if (books.length > 0) {
-      console.log("Saving books to localStorage:", books.length);
-      saveBooks(books);
     }
-  }, [books]);
-  
-  // Load all books for the current user
-  const loadBooks = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Load books from localStorage
-      const loadedBooks = loadBooksFromStorage();
-      setBooks(loadedBooks);
-      return loadedBooks;
-    } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error('Unknown error loading books');
-      setError(errorObj);
-      return null;
-    } finally {
+
+    if (user) {
+      fetchBooks();
+    } else {
+      setBooks([]);
       setLoading(false);
     }
-  }, []);
-  
-  // Load a specific book by ID
-  const loadBook = useCallback(async (id: string) => {
-    setLoading(true);
-    setError(null);
+    
+  }, [user]);
+
+  const createBook = useCallback(async (): Promise<string | null> => {
+    if (!user) {
+      toast.error('You must be logged in to create a book');
+      return null;
+    }
     
     try {
-      // Find the book in our local state
-      const book = books.find(book => book.id === id);
+      const newBook = await createNewBook(user.id);
+      setBooks(prevBooks => [...prevBooks, newBook]);
+      setCurrentBook(newBook);
+      return newBook.id;
+    } catch (error) {
+      console.error('Error creating book:', error);
+      toast.error('Failed to create new book');
+      return null;
+    }
+  }, [user]);
+
+  const createBookFromTemplate = useCallback(async (template: BookTemplate): Promise<string | null> => {
+    if (!user) {
+      toast.error('You must be logged in to create a book');
+      return null;
+    }
+    
+    try {
+      const newBook = template.createBook();
+      const savedBook = await createNewBook(user.id);
+      const mergedBook = { ...savedBook, ...newBook, id: savedBook.id, userId: user.id };
+      await updateBookService(mergedBook, books);
       
+      setBooks(prevBooks => [...prevBooks, mergedBook]);
+      setCurrentBook(mergedBook);
+      return mergedBook.id;
+    } catch (error) {
+      console.error('Error creating book from template:', error);
+      toast.error('Failed to create book from template');
+      return null;
+    }
+  }, [books, user]);
+
+  const loadBook = useCallback(async (id: string): Promise<Book | null> => {
+    try {
+      const book = await loadBookById(id);
       if (book) {
         setCurrentBook(book);
         return book;
       }
-      
-      throw new Error(`Book with ID ${id} not found`);
-    } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error(`Unknown error loading book ${id}`);
-      setError(errorObj);
       return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [books]);
-  
-  // Create a new book
-  const createBook = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const newBook = createEmptyBook(userId);
-      
-      // Add the new book to our list of books
-      setBooks(prev => [...prev, newBook]);
-      
-      // Set it as the current book
-      setCurrentBook(newBook);
-      
-      // Return the ID so we can navigate to it
-      return newBook.id;
-    } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error('Failed to create book');
-      setError(errorObj);
+    } catch (error) {
+      console.error('Error loading book:', error);
+      toast.error('Failed to load book');
       return null;
-    } finally {
-      setLoading(false);
     }
-  }, [userId]);
-  
-  // Create a book from a template
-  const createBookFromTemplateCallback = useCallback(async (template: BookTemplate) => {
-    setLoading(true);
-    setError(null);
-    
+  }, []);
+
+  const updateBookState = useCallback(async (updatedBook: Book): Promise<void> => {
     try {
-      const newBook = createBookFromTemplate(template, userId);
+      const updatedBooksResult = await updateBookService(updatedBook, books); 
+      setBooks(updatedBooksResult);
       
-      // Add the new book to our list of books
-      setBooks(prev => [...prev, newBook]);
-      
-      // Set it as the current book
-      setCurrentBook(newBook);
-      
-      // Return the ID so we can navigate to it
-      return newBook.id;
-    } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error('Failed to create book from template');
-      setError(errorObj);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
-  
-  // Update a book
-  const updateBook = useCallback(async (book: Book) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Update the book in our list of books
-      setBooks(prev => 
-        prev.map(b => b.id === book.id ? book : b)
-      );
-      
-      // If this is the current book, update that too
-      if (currentBook && currentBook.id === book.id) {
-        setCurrentBook(book);
+      if (currentBook?.id === updatedBook.id) { 
+        setCurrentBook({ ...updatedBook });
       }
-      
-      return book;
-    } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error(`Failed to update book ${book.id}`);
-      setError(errorObj);
-      throw errorObj;
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Error updating book:', error);
+      toast.error('Failed to update book');
     }
-  }, [currentBook]);
-  
-  // Delete a book
-  const deleteBook = useCallback(async (id: string) => {
-    setLoading(true);
-    setError(null);
-    
+  }, [books, currentBook]);
+
+  const deleteBook = useCallback(async (id: string): Promise<void> => {
     try {
-      // Remove the book from our list
-      setBooks(prev => prev.filter(book => book.id !== id));
+      const updatedBooksResult = await deleteBookService(id, books); 
+      setBooks(updatedBooksResult);
       
-      // If this was the current book, clear it
-      if (currentBook && currentBook.id === id) {
-        setCurrentBook(null);
+      if (currentBook?.id === id) { 
+        setCurrentBook(updatedBooksResult.length ? updatedBooksResult[0] : null);
       }
       
       toast.success('Book deleted successfully');
-    } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error(`Failed to delete book ${id}`);
-      setError(errorObj);
+    } catch (error) {
+      console.error('Error deleting book:', error);
       toast.error('Failed to delete book');
-    } finally {
-      setLoading(false);
     }
-  }, [currentBook]);
-  
+  }, [books, currentBook]);
+
   return {
     books,
-    setBooks,
     currentBook,
-    setCurrentBook,
+    createBook,
+    createBookFromTemplate,
+    updateBook: updateBookState,
+    deleteBook,
+    loadBook,
     loading,
     error,
-    loadBooks,
-    loadBook,
-    createBook,
-    createBookFromTemplate: createBookFromTemplateCallback,
-    updateBook,
-    deleteBook
+    setBooks,
+    setCurrentBook
   };
 }

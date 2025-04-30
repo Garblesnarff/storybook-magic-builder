@@ -12,34 +12,14 @@ import { supabase } from '@/integrations/supabase/client';
 export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: string): Promise<string | null> => {
   try {
     // Validate inputs
-    if (!audioBlob) {
-      toast.error('Missing audio data for upload');
-      return null;
-    }
-    
-    if (!bookId) {
-      toast.error('Missing book ID for audio upload');
-      console.error('Cannot upload audio: bookId is undefined or empty');
-      return null;
-    }
-    
-    if (!pageId) {
-      toast.error('Missing page ID for audio upload');
+    if (!audioBlob || !bookId || !pageId) {
+      toast.error('Missing required information for audio upload');
       return null;
     }
 
     // Generate a consistent file path for audio
     const filePath = `${bookId}/${pageId}_narration.mp3`;
     
-    console.log('Attempting to upload audio file:', {
-      bucket: 'narrations',
-      path: filePath,
-      size: audioBlob.size,
-      type: audioBlob.type,
-      bookId, // Log the bookId to help diagnose issues
-      pageId
-    });
-
     // Upload to Supabase Storage
     const { data, error } = await supabase
       .storage
@@ -51,20 +31,7 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
     
     if (error) {
       console.error('Error uploading audio:', error);
-      toast.error(`Failed to upload narration: ${error.message}`);
-      
-      // Additional logging for debugging RLS issues
-      if (error.message?.includes('new row violates row-level security')) {
-        console.error('Row Level Security violation. Make sure the narrations bucket has proper policies.');
-        toast.error('Storage permission denied. Please contact support.');
-      }
-      
-      return null;
-    }
-    
-    if (!data) {
-      console.error('No data returned from upload');
-      toast.error('Failed to upload narration: No data returned');
+      toast.error('Failed to upload narration audio');
       return null;
     }
     
@@ -74,19 +41,11 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
       .from('narrations')
       .getPublicUrl(data.path);
     
-    if (!urlData?.publicUrl) {
-      console.error('Failed to get public URL');
-      toast.error('Failed to get access to the narration');
-      return null;
-    }
-    
-    console.log("Audio uploaded successfully, public URL:", urlData.publicUrl);
-    toast.success('Narration saved successfully');
+    console.log("Audio uploaded, public URL:", urlData.publicUrl);
     return urlData.publicUrl;
   } catch (e) {
-    const error = e as Error;
-    console.error('Failed to upload audio to storage:', error);
-    toast.error(`Failed to save narration audio: ${error.message || 'Unknown error'}`);
+    console.error('Failed to upload audio to storage', e);
+    toast.error('Failed to save narration audio');
     return null;
   }
 };
@@ -98,13 +57,8 @@ export const uploadAudio = async (audioBlob: Blob, bookId: string, pageId: strin
  */
 export const deletePageNarration = async (bookId: string, pageId: string): Promise<void> => {
   try {
-    if (!bookId || !pageId) {
-      console.error('Cannot delete narration: missing bookId or pageId');
-      return;
-    }
-    
+    // Just delete the consistent filename
     const filePath = `${bookId}/${pageId}_narration.mp3`;
-    console.log('Attempting to delete audio file:', filePath);
     
     const { error: deleteError } = await supabase
       .storage
@@ -113,13 +67,11 @@ export const deletePageNarration = async (bookId: string, pageId: string): Promi
       
     if (deleteError) {
       console.error(`Error deleting page narration: ${filePath}`, deleteError);
-      toast.error('Failed to delete narration');
     } else {
       console.log(`Successfully deleted narration for page ${pageId}`);
-      toast.success('Narration deleted successfully');
     }
   } catch (storageError) {
     console.error('Error deleting page narration:', storageError);
-    toast.error('Failed to delete narration');
+    // Continue even if deletion fails
   }
 };

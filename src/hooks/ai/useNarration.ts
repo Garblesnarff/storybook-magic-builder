@@ -21,9 +21,7 @@ export function useNarration() {
 
   const generateNarration = useCallback(async (text: string, bookId: string, pageId: string): Promise<string | null> => {
     if (!text || !bookId || !pageId) {
-      const errorMsg = `Missing required information for narration: ${!text ? 'text' : !bookId ? 'bookId' : 'pageId'}`;
-      console.error(errorMsg);
-      toast.error(errorMsg);
+      toast.error("Missing required information for narration.");
       return null;
     }
 
@@ -32,12 +30,6 @@ export function useNarration() {
     const toastId = toast.loading("Generating narration...");
 
     try {
-      console.log("Generating narration with parameters:", { 
-        textLength: text.length,
-        bookId,
-        pageId
-      });
-
       // 1. Call the Edge Function
       const { data: funcData, error: funcError } = await supabase.functions.invoke('generate-narration', {
         body: JSON.stringify({ text }),
@@ -70,10 +62,10 @@ export function useNarration() {
       return publicUrl; // Return the URL to be saved
 
     } catch (error) {
-      const err = error instanceof Error ? error : new Error('Unknown error');
-      console.error("Error in generateNarration hook:", err);
-      setNarrationError(err.message);
-      toast.error("Narration Failed", { id: toastId, description: err.message });
+      console.error("Error in generateNarration hook:", error);
+      const errorMsg = error instanceof Error ? error.message : "An unknown error occurred.";
+      setNarrationError(errorMsg);
+      toast.error("Narration Failed", { id: toastId, description: errorMsg });
       return null;
     } finally {
       setIsNarrating(false);

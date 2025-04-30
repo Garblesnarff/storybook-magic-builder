@@ -1,128 +1,174 @@
-
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useImageFit } from './hooks/useImageFit';
+import { useSettingsSync } from './hooks/useSettingsSync';
 import { ImageSettings } from '@/types/book';
-import { useContainerDimensions } from './hooks/useContainerDimensions';
-import { useImageLoader } from './hooks/useImageLoader';
 
 export function useZoomableImage(
-  imageUrl: string | undefined, 
-  initialSettings?: ImageSettings, 
+  src: string,
+  initialSettings?: ImageSettings,
   onSettingsChange?: (settings: ImageSettings) => void
 ) {
-  // Create refs
+  // State for image and container
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const [isInteractionReady, setIsInteractionReady] = useState(false);
+
+  // Refs for DOM elements
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
-  
-  // Use our hooks
-  const { updateDimensions } = useContainerDimensions(containerRef);
-  const { imageLoaded, isLoading, isInteractionReady, handleImageLoad, error } = useImageLoader(imageUrl || '');
-  
-  // State for image interactions
+
+  // State for zoom and position
   const [scale, setScale] = useState(initialSettings?.scale || 1);
   const [position, setPosition] = useState(initialSettings?.position || { x: 0, y: 0 });
-  const [fitMethod, setFitMethod] = useState<'contain' | 'cover'>(initialSettings?.fitMethod as 'contain' | 'cover' || 'contain');
   const [isPanning, setIsPanning] = useState(false);
-  
-  // Refs for tracking state
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Refs for tracking state in event handlers
   const scaleRef = useRef(scale);
   const positionRef = useRef(position);
+  const isPanningRef = useRef(isPanning);
   const startPanRef = useRef({ x: 0, y: 0 });
-  
-  // Update refs when state changes
+
+  const { fitMethod, toggleFitMethod, fitImageToContainer } = useImageFit(initialSettings);
+
+  // Reset states when src changes
   useEffect(() => {
-    scaleRef.current = scale;
-    positionRef.current = position;
-  }, [scale, position]);
-  
-  // Reset position and scale when image changes
-  useEffect(() => {
-    if (imageLoaded) {
-      updateDimensions();
+    console.log('Image source changed:', src);
+    setImageLoaded(false);
+    setIsInteractionReady(false);
+    setIsLoading(true);
+  }, [src]);
+
+  // Handle image loading
+  const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.target as HTMLImageElement;
+    console.log('Image loaded successfully:', {
+      naturalWidth: img.naturalWidth,
+      naturalHeight: img.naturalHeight,
+      src: img.src
+    });
+
+    if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+      console.error('Image loaded with invalid dimensions');
+      return;
     }
-  }, [imageLoaded, updateDimensions]);
-  
-  // Initialize with settings when provided
-  useEffect(() => {
-    if (initialSettings && imageLoaded) {
-      setScale(initialSettings.scale);
-      setPosition(initialSettings.position);
-      setFitMethod(initialSettings.fitMethod as 'contain' | 'cover');
+
+    setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+    setImageLoaded(true);
+    setIsLoading(false);
+
+    // Update container dimensions
+    if (containerRef.current) {
+      const { clientWidth, clientHeight } = containerRef.current;
+      setContainerDimensions({ width: clientWidth, height: clientHeight });
     }
-  }, [initialSettings, imageLoaded]);
 
-  // Toggle fit method (contain/cover)
-  const toggleFitMethod = useCallback(() => {
-    setFitMethod(prev => prev === 'contain' ? 'cover' : 'contain');
+    // Enable interactions after a short delay
+    setTimeout(() => {
+      setIsInteractionReady(true);
+    }, 100);
   }, []);
 
-  // Handle zoom in
-  const handleZoomIn = useCallback(() => {
-    setScale(prev => Math.min(prev + 0.25, 4));
+  // Handle window resize
+  useEffect(() => {
+    function handleResize() {
+      if (containerRef.current) {
+        const { clientWidth, clientHeight } = containerRef.current;
+        console.log('Container resized:', { width: clientWidth, height: clientHeight });
+        setContainerDimensions({ width: clientWidth, height: clientHeight });
+      }
+    }
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial measurement
+
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Handle zoom out
-  const handleZoomOut = useCallback(() => {
-    setScale(prev => Math.max(prev - 0.25, 0.5));
-  }, []);
+  // Fit image to container when dimensions change
+  useEffect(() => {
+    if (imageLoaded && containerDimensions.width > 0 && containerDimensions.height > 0) {
+      console.log('Fitting image to container:', {
+        imageLoaded,
+        containerDimensions,
+        imageDimensions
+      });
 
-  // Handle reset
-  const handleReset = useCallback(() => {
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-  }, []);
+      fitImageToContainer(
+        imageLoaded,
+        containerDimensions,
+        imageDimensions,
+        isInteractionReady,
+        setScale,
+        setPosition,
+        scaleRef
+      );
+    }
+  }, [imageLoaded, containerDimensions, imageDimensions, fitImageToContainer, isInteractionReady]);
 
-  // Mouse event handlers for panning
+  // Mouse event handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!isInteractionReady) return;
     
     setIsPanning(true);
-    startPanRef.current = { 
-      x: e.clientX - positionRef.current.x, 
-      y: e.clientY - positionRef.current.y 
+    isPanningRef.current = true;
+    
+    startPanRef.current = {
+      x: e.clientX - positionRef.current.x,
+      y: e.clientY - positionRef.current.y
     };
     
     e.preventDefault();
   }, [isInteractionReady]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isPanning) return;
+    if (!isPanningRef.current || !isInteractionReady) return;
     
     const newX = e.clientX - startPanRef.current.x;
     const newY = e.clientY - startPanRef.current.y;
     
-    setPosition({
-      x: newX,
-      y: newY
-    });
+    setPosition({ x: newX, y: newY });
+    positionRef.current = { x: newX, y: newY };
     
     e.preventDefault();
-  }, [isPanning]);
+  }, [isInteractionReady]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    if (!isPanning) return;
+    if (!isPanningRef.current) return;
     
     setIsPanning(false);
-    
-    // Save settings if a change handler was provided
-    if (onSettingsChange) {
-      onSettingsChange({
-        scale,
-        position: positionRef.current,
-        fitMethod
-      });
-    }
+    isPanningRef.current = false;
     
     e.preventDefault();
-  }, [isPanning, onSettingsChange, scale, fitMethod]);
+  }, []);
 
-  // Generate style for the image
-  const imageStyle = {
-    transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-    transformOrigin: 'center',
-    transition: isPanning ? 'none' : 'transform 0.15s ease-out',
-    maxWidth: "none",
-    maxHeight: "none",
-  };
+  // Zoom controls
+  const handleZoomIn = useCallback(() => {
+    if (!isInteractionReady) return;
+    
+    const newScale = Math.min(scaleRef.current * 1.2, 4);
+    setScale(newScale);
+    scaleRef.current = newScale;
+  }, [isInteractionReady]);
+
+  const handleZoomOut = useCallback(() => {
+    if (!isInteractionReady) return;
+    
+    const newScale = Math.max(scaleRef.current / 1.2, 0.5);
+    setScale(newScale);
+    scaleRef.current = newScale;
+  }, [isInteractionReady]);
+
+  // Reset to default view
+  const handleReset = useCallback(() => {
+    if (!isInteractionReady) return;
+    
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+    scaleRef.current = 1;
+    positionRef.current = { x: 0, y: 0 };
+  }, [isInteractionReady]);
 
   return {
     scale,
@@ -130,12 +176,10 @@ export function useZoomableImage(
     fitMethod,
     isPanning,
     imageLoaded,
-    isLoading,
     isInteractionReady,
-    error,
+    isLoading,
     containerRef,
     imageRef,
-    imageStyle,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
@@ -143,7 +187,6 @@ export function useZoomableImage(
     handleZoomOut,
     toggleFitMethod,
     handleReset,
-    handleImageLoad,
-    updateDimensions
+    handleImageLoad
   };
 }

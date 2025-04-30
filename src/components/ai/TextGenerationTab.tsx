@@ -1,9 +1,10 @@
+
 import React from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-// Remove toast import if unused
-import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Slider } from '@/components/ui/slider';
+import { Wand2, Loader2 } from 'lucide-react';
 
 interface TextGenerationTabProps {
   prompt: string;
@@ -31,64 +32,69 @@ export const TextGenerationTab: React.FC<TextGenerationTabProps> = ({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="temperature">Temperature</Label>
+        <div className="flex justify-between">
+          <Label htmlFor="temperature">Temperature: {temperature.toFixed(1)}</Label>
+        </div>
         <Slider
           id="temperature"
-          defaultValue={[temperature]}
-          max={1}
+          min={0.1}
+          max={1.0}
           step={0.1}
+          defaultValue={[temperature]}
           onValueChange={(value) => setTemperature(value[0])}
-          disabled={isGenerating}
         />
-        <p className="text-sm text-muted-foreground">
-          Controls the randomness of the generated text. Higher values (e.g., 1)
-          make the output more random, while lower values (e.g., 0) make it more
-          deterministic.
+        <p className="text-xs text-muted-foreground">
+          Lower values create more focused text, higher values create more creative text.
         </p>
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="maxTokens">Max Tokens</Label>
+        <Label htmlFor="max-tokens">Max Length: {maxTokens}</Label>
         <Slider
-          id="maxTokens"
-          defaultValue={[maxTokens]}
+          id="max-tokens"
+          min={100}
           max={2000}
           step={100}
+          defaultValue={[maxTokens]}
           onValueChange={(value) => setMaxTokens(value[0])}
-          disabled={isGenerating}
         />
-        <p className="text-sm text-muted-foreground">
-          The maximum number of tokens to generate in the text completion.
+        <p className="text-xs text-muted-foreground">
+          Controls the maximum length of the generated text.
         </p>
       </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="generatedText">Generated Text</Label>
-        <Textarea 
-          id="generatedText"
-          value={generatedText}
-          readOnly
-          className="min-h-[100px]"
-        />
-      </div>
       
-      <div className="flex justify-end space-x-2">
-        <Button 
-          type="button"
-          variant="secondary"
-          onClick={onGenerate}
-          disabled={isGenerating || !prompt}
-        >
-          {isGenerating ? 'Generating...' : 'Generate Text'}
-        </Button>
-        <Button 
-          type="button"
-          onClick={onApply}
-          disabled={isGenerating || !generatedText}
-        >
-          Apply Text
-        </Button>
-      </div>
+      <Button 
+        onClick={onGenerate} 
+        className="w-full"
+        disabled={isGenerating || !prompt.trim()}
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Generating...
+          </>
+        ) : (
+          <>
+            <Wand2 className="mr-2 h-4 w-4" />
+            Generate Text
+          </>
+        )}
+      </Button>
+      
+      {generatedText && (
+        <div className="space-y-4 mt-4">
+          <div className="border rounded-md p-4 bg-muted/50">
+            <p className="whitespace-pre-wrap">{generatedText}</p>
+          </div>
+          <Button 
+            onClick={onApply} 
+            disabled={!generatedText}
+            className="w-full"
+          >
+            Apply to Page
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

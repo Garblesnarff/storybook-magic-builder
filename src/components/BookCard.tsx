@@ -15,15 +15,9 @@ interface BookCardProps {
 }
 
 export const BookCard: React.FC<BookCardProps> = ({ book, onDelete, onUpdateTitle }) => {
-  // Return early if book is undefined/null
-  if (!book || !book.id) {
-    return null;
-  }
+  const { id, title, author, updatedAt, pages } = book;
   
-  const { id, title, author, updatedAt, pages = [] } = book;
-  
-  // Handle potential date format issues
-  const formattedDate = updatedAt ? formatDistanceToNow(new Date(updatedAt), { addSuffix: true }) : 'recently';
+  const formattedDate = formatDistanceToNow(new Date(updatedAt), { addSuffix: true });
   
   const placeholderCover = 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80';
   
@@ -40,14 +34,14 @@ export const BookCard: React.FC<BookCardProps> = ({ book, onDelete, onUpdateTitl
       
       <CardContent className="flex-grow p-4">
         <EditableTitle 
-          value={title || 'Untitled'} 
+          value={title} 
           onSave={(newTitle) => onUpdateTitle(id, newTitle)}
           className="font-display text-lg font-semibold text-gray-900 line-clamp-1" 
         />
-        <p className="text-sm text-gray-600">by {author || 'Anonymous'}</p>
+        <p className="text-sm text-gray-600">by {author}</p>
         <div className="flex items-center mt-2 text-xs text-gray-500">
           <BookCopy className="w-3 h-3 mr-1" />
-          <span>{Array.isArray(pages) ? pages.length : 0} pages</span>
+          <span>{pages.length} pages</span>
         </div>
         <div className="flex items-center mt-1 text-xs text-gray-500">
           <Clock className="w-3 h-3 mr-1" />

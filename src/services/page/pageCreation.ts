@@ -1,15 +1,21 @@
 
+import { Book, BookPage } from '../../types/book';
 import { v4 as uuidv4 } from 'uuid';
-import { BookPage } from '@/types/book';
-// Remove unused toast import
 
-// Function to create a new page
-export const createNewPage = (bookId: string, pageNumber: number): BookPage => {
-  return {
-    id: uuidv4(),
-    bookId,
-    pageNumber,
-    text: 'This is a new page. Click to edit the text.',
+/**
+ * Adds a new page to a book
+ * @param book The book to add the page to
+ * @param allBooks The current collection of books
+ * @returns Tuple of [updated books array, new page ID]
+ */
+export const addPage = async (book: Book, allBooks: Book[]): Promise<[Book[], string]> => {
+  const newPageId = uuidv4();
+  
+  const newPage: BookPage = {
+    id: newPageId,
+    bookId: book.id,
+    pageNumber: book.pages.length + 1,
+    text: 'New page content. Click here to edit the text.',
     image: '',
     layout: 'text-left-image-right',
     textFormatting: {
@@ -23,72 +29,46 @@ export const createNewPage = (bookId: string, pageNumber: number): BookPage => {
       fitMethod: 'contain'
     }
   };
+
+  const updatedBook: Book = {
+    ...book,
+    pages: [...book.pages, newPage],
+    updatedAt: new Date().toISOString(),
+  };
+
+  const updatedBooks = allBooks.map(b => b.id === book.id ? updatedBook : b);
+  return [updatedBooks, newPage.id];
 };
 
-// Function to duplicate a page
-export const duplicatePage = (originalPage: BookPage): BookPage => {
-  // Create a copy with a new ID
-  return {
-    ...originalPage,
-    id: uuidv4(),
-    text: `${originalPage.text} (Copy)`,
-    // Maintain the same layout and formatting
-    layout: originalPage.layout,
-    textFormatting: {
-      ...originalPage.textFormatting
-    },
-    imageSettings: originalPage.imageSettings ? {
-      ...originalPage.imageSettings
-    } : {
-      scale: 1,
-      position: { x: 0, y: 0 },
-      fitMethod: 'contain'
-    }
-  };
-};
+/**
+ * Duplicates a page in a book
+ * @param id The ID of the page to duplicate
+ * @param book The book containing the page
+ * @param allBooks The current collection of books
+ * @returns Tuple of [updated books array, new page ID]
+ */
+export const duplicatePage = async (id: string, book: Book, allBooks: Book[]): Promise<[Book[], string]> => {
+  const pageToDuplicate = book.pages.find(page => page.id === id);
 
-// Function to create a title page
-export const createTitlePage = (bookId: string, title: string, author: string): BookPage => {
-  return {
-    id: uuidv4(),
-    bookId,
-    pageNumber: 1,
-    text: `# ${title}\n\nBy ${author}`,
-    image: '',
-    layout: 'full-page-text',
-    textFormatting: {
-      fontFamily: 'Georgia',
-      fontSize: 24,
-      fontColor: '#000000',
-      // Remove the align property as it's not in TextFormatting type
-      // align: 'center'
-    },
-    imageSettings: {
-      scale: 1,
-      position: { x: 0, y: 0 },
-      fitMethod: 'contain'
-    }
-  };
-};
+  if (!pageToDuplicate) {
+    console.error('Page not found in book');
+    return [allBooks, undefined];
+  }
 
-// Function to create an about page
-export const createAboutPage = (bookId: string, description: string): BookPage => {
-  return {
-    id: uuidv4(),
-    bookId,
-    pageNumber: 2,
-    text: `# About This Book\n\n${description}`,
-    image: '',
-    layout: 'full-page-text',
-    textFormatting: {
-      fontFamily: 'Georgia',
-      fontSize: 18,
-      fontColor: '#000000'
-    },
-    imageSettings: {
-      scale: 1,
-      position: { x: 0, y: 0 },
-      fitMethod: 'contain'
-    }
+  const newPageId = uuidv4();
+  
+  const newPage: BookPage = {
+    ...pageToDuplicate,
+    id: newPageId,
+    bookId: book.id,
   };
+
+  const updatedBook: Book = {
+    ...book,
+    pages: [...book.pages, newPage],
+    updatedAt: new Date().toISOString(),
+  };
+
+  const updatedBooks = allBooks.map(b => b.id === book.id ? updatedBook : b);
+  return [updatedBooks, newPage.id];
 };

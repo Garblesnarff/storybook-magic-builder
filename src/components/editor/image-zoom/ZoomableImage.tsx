@@ -13,9 +13,9 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
   initialSettings,
   onSettingsChange
 }) => {
-  // Use our custom hook for all the zoom functionality
   const {
     scale,
+    position,
     fitMethod,
     isPanning,
     imageLoaded,
@@ -23,17 +23,36 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     isInteractionReady,
     containerRef,
     imageRef,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
+    handleMouseDown: rawHandleMouseDown,
+    handleMouseMove: rawHandleMouseMove,
+    handleMouseUp: rawHandleMouseUp,
     handleZoomIn,
     handleZoomOut,
     toggleFitMethod,
     handleReset,
     handleImageLoad,
-    updateDimensions,
-    imageStyle
+    updateDimensions
   } = useZoomableImage(src, initialSettings, onSettingsChange);
+
+  // Add wrapper handlers that check for isInteractionReady before executing
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!isInteractionReady) return;
+    rawHandleMouseDown(e);
+  }, [isInteractionReady, rawHandleMouseDown]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isInteractionReady) return;
+    rawHandleMouseMove(e);
+  }, [isInteractionReady, rawHandleMouseMove]);
+
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (!isInteractionReady) return;
+    rawHandleMouseUp(e);
+  }, [isInteractionReady, rawHandleMouseUp]);
+
+  const handleMouseLeave = useCallback((e: React.MouseEvent) => {
+    handleMouseUp(e);
+  }, [handleMouseUp]);
 
   // Update dimensions on mount and when the window is resized
   useEffect(() => {
@@ -45,19 +64,14 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [updateDimensions]);
+  }, []);
 
   // Update dimensions when the image loads
   useEffect(() => {
     if (imageLoaded) {
       updateDimensions();
     }
-  }, [imageLoaded, updateDimensions]);
-
-  // Mouse event handlers with interaction check
-  const handleMouseLeave = useCallback((e: React.MouseEvent) => {
-    handleMouseUp(e);
-  }, [handleMouseUp]);
+  }, [imageLoaded]);
 
   // Generate unique key for image to ensure proper remounting
   const imageKey = `${src}-${Date.now()}`;
@@ -89,7 +103,13 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = memo(({
             isPanning ? "cursor-grabbing" : "cursor-grab",
             className
           )}
-          style={imageStyle}
+          style={{ 
+            transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+            transition: isPanning ? 'none' : 'transform 0.15s ease-out',
+            transformOrigin: 'center',
+            maxWidth: "none",
+            maxHeight: "none",
+          }}
           onLoad={handleImageLoad}
           onError={(e) => {
             console.error('Image failed to load:', {

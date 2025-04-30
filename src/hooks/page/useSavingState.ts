@@ -1,22 +1,49 @@
 
-import { useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 export function useSavingState() {
-  const [isSaving, setSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentSavingOperationsRef = useRef<number>(0);
 
-  // Track saving operations
+  // Helper function to track saving operations
   const trackSavingOperation = () => {
-    setSaving(true);
+    // Increment the counter
+    currentSavingOperationsRef.current += 1;
+    
+    // Make sure saving indicator is shown
+    setIsSaving(true);
+    
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
   };
 
-  // Complete saving operation
+  // Helper function to complete a saving operation
   const completeSavingOperation = () => {
-    setSaving(false);
+    // Decrement the counter
+    currentSavingOperationsRef.current = Math.max(0, currentSavingOperationsRef.current - 1);
+    
+    // If no more operations are in progress, schedule hiding the indicator
+    if (currentSavingOperationsRef.current === 0) {
+      saveTimeoutRef.current = setTimeout(() => {
+        setIsSaving(false);
+      }, 800);
+    }
   };
+
+  // Cleanup function
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return {
     isSaving,
-    setSaving,
     trackSavingOperation,
     completeSavingOperation
   };

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Book } from '@/types/book';
 
-export function usePageSelection(currentBook: Book | null) {
+export function usePageSelection(currentBook: Book | null, books: Book[]) {
   const [selectedPageId, setSelectedPageId] = useState<string | undefined>(undefined);
   
   // Select the first page when book changes or there's no selected page

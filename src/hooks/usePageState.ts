@@ -1,165 +1,123 @@
-
-import { useEffect, useCallback } from 'react';
-import { BookPage, ImageSettings } from '@/types/book';
+import { useState, useCallback } from 'react';
 import { useBook } from '@/contexts/BookContext';
-import { usePageOperations } from './usePageOperations';
-import { usePageSelection } from '@/hooks/page/usePageSelection';
-import { useTextEditor } from '@/hooks/page/useTextEditor';
-import { usePageData } from '@/hooks/page/usePageData';
-import { useSavingState } from '@/hooks/page/useSavingState';
-import { useLayoutManager } from '@/hooks/page/useLayoutManager';
-import { useImageSettings } from '@/hooks/page/useImageSettings';
-import { usePageActions } from '@/hooks/page/usePageActions';
-import { useBookTitle } from '@/hooks/page/useBookTitle';
-import { useNarration } from '@/hooks/ai/useNarration';
+import { useBookLoading } from './page/useBookLoading';
+import { usePageSelection } from './page/usePageSelection';
+import { usePageData } from './page/usePageData';
+import { usePageOperationsHandlers } from './page/usePageOperationsHandlers';
+import { useSavingState } from './page/useSavingState';
+import { useLayoutManager } from './page/useLayoutManager';
+import { useTextEditor } from './page/useTextEditor';
+import { useImageSettings } from './page/useImageSettings';
+import { useBookTitle } from './page/useBookTitle';
+import { BookPage, ImageSettings } from '@/types/book';
 import { toast } from 'sonner';
+import { verifyImageUrl } from '@/utils/imageVerification';
 
-export function usePageState(bookId: string | undefined) {
-  // Get book data from context
-  const { currentBook, updateBook, updatePage, loadBook } = useBook();
+export const usePageState = (bookId?: string) => {
+  const {
+    books,
+    currentBook,
+    loadBook,
+    updateBook,
+    addPage,
+    updatePage: contextUpdatePage,
+    deletePage,
+    duplicatePage,
+    reorderPage,
+    loading,
+    error
+  } = useBook();
   
-  // Save state management
-  const { isSaving, setSaving } = useSavingState();
+  const { isSaving, trackSavingOperation, completeSavingOperation } = useSavingState();
   
-  // Page selection
-  const { selectedPageId, handlePageSelect } = usePageSelection(currentBook);
+  useBookLoading(bookId, books, loadBook);
+  const { selectedPageId, setSelectedPageId, handlePageSelect } = usePageSelection(currentBook, books);
+  const { currentPageData, setCurrentPageData } = usePageData(currentBook, selectedPageId);
   
-  // Page operations from the book context
-  const { addPage, duplicatePage, deletePage, reorderPage } = usePageOperations();
-  
-  // Text editing
-  const { handleTextChange } = useTextEditor(updatePage);
-  
-  // Current page data
-  const { currentPageData } = usePageData(currentBook, selectedPageId);
-  
-  // Page layout management
-  const { handleLayoutChange } = useLayoutManager(currentPageData, updatePage);
+  const updatePage = useCallback(async (page: BookPage): Promise<void> => {
+    try {
+      console.log(`updatePage in usePageState called for page ${page.id}`);
+      trackSavingOperation();
+      
+      // Make a deep copy of the page to avoid reference issues
+      const pageToUpdate = JSON.parse(JSON.stringify(page));
+      
+      // Update local state immediately for responsive UI
+      await setCurrentPageData(pageToUpdate);
 
-  // Add narration functionality
-  const { generateNarration, isNarrating } = useNarration();
-  
-  // Text formatting
-  const handleTextFormattingChange = useCallback((key: string, value: any) => {
-    if (!currentPageData) return;
-    
-    const updatedPage: BookPage = {
-      ...currentPageData,
-      textFormatting: {
-        ...currentPageData.textFormatting,
-        [key]: value
+      try {
+        // If there's an image, verify it's accessible before proceeding
+        if (pageToUpdate.image) {
+          // Skip verification for base64 images
+          if (!pageToUpdate.image.startsWith('data:image')) {
+            console.log(`Verifying image URL: ${pageToUpdate.image.substring(0, 40)}...`);
+            await verifyImageUrl(pageToUpdate.image);
+          }
+        }
+        
+        // Persist to the database
+        console.log('Calling contextUpdatePage to persist changes to database');
+        await contextUpdatePage(pageToUpdate);
+        console.log(`Page ${page.id} successfully updated in database`);
+      } catch (error) {
+        console.error('Error in updatePage:', error);
+        
+        // Handle image verification failure specifically
+        if (error instanceof Error && error.message.includes('verification failed')) {
+          toast.error('Image could not be verified. Please try again.');
+        } else {
+          toast.error('Failed to update page');
+        }
+        
+        throw error;
       }
-    };
-    
-    setSaving(true);
-    updatePage(updatedPage).finally(() => setSaving(false));
-  }, [currentPageData, updatePage, setSaving]);
+    } finally {
+      completeSavingOperation();
+    }
+  }, [contextUpdatePage, trackSavingOperation, completeSavingOperation, setCurrentPageData]);
+
+  const {
+    handleAddPage,
+    handleDuplicatePage,
+    handleDeletePage,
+    handleReorderPage
+  } = usePageOperationsHandlers(
+    currentBook, 
+    selectedPageId, 
+    addPage, 
+    duplicatePage, 
+    deletePage, 
+    reorderPage, 
+    setSelectedPageId
+  );
   
-  // Use useImageSettings without assigning the return value to a variable
-  useImageSettings(updatePage, setSaving);
+  const { handleTextChange, handleTextFormattingChange } = useTextEditor(currentPageData, updatePage);
   
-  // Page actions
-  const { handleAddPage, handleDuplicatePage, handleDeletePage, handleReorderPage } = 
-    usePageActions(bookId, addPage, duplicatePage, deletePage, reorderPage, handlePageSelect);
+  const { handleLayoutChange } = useLayoutManager(currentPageData, updatePage);
   
-  // Book title updating
+  const { handleImageSettingsChange } = useImageSettings(currentPageData, updatePage);
+  
   const { updateBookTitle } = useBookTitle(currentBook, updateBook);
   
-  // Effect to load the book if not already loaded
-  useEffect(() => {
-    if (bookId && !currentBook) {
-      loadBook(bookId).catch(err => {
-        console.error("Failed to load book:", err);
-        toast.error("Could not load the book. Please try again.");
-      });
-    }
-  }, [bookId, currentBook, loadBook]);
-
-  // Create a wrapped version of handleImageSettingsChange that works with the expected signature
-  const handleImageSettingsChange = useCallback((settings: ImageSettings) => {
-    if (!currentPageData) return Promise.resolve();
-    
-    return new Promise<void>((resolve, reject) => {
-      const updatedPage: BookPage = {
-        ...currentPageData,
-        imageSettings: settings
-      };
-      
-      setSaving(true);
-      updatePage(updatedPage)
-        .then(() => resolve())
-        .catch(reject)
-        .finally(() => setSaving(false));
-    });
-  }, [currentPageData, setSaving, updatePage]);
-
-  // Add function to handle narration generation with improved checks
-  const handleGenerateNarration = useCallback(async () => {
-    if (!currentPageData) {
-      toast.error("Cannot generate narration: No page selected");
-      return Promise.resolve();
-    }
-    
-    if (!currentBook) {
-      toast.error("Cannot generate narration: Book not loaded");
-      return Promise.resolve();
-    }
-    
-    // Ensure we have both the page ID and book ID before proceeding
-    if (!currentPageData.id) {
-      toast.error("Cannot generate narration: Page ID is missing");
-      return Promise.resolve();
-    }
-    
-    // Use the currentBook.id which we've verified exists
-    if (!currentBook.id) {
-      toast.error("Cannot generate narration: Book ID is missing");
-      return Promise.resolve();
-    }
-
-    try {
-      setSaving(true);
-      const narrationUrl = await generateNarration(
-        currentPageData.text,
-        currentBook.id,  // Use the verified book ID
-        currentPageData.id
-      );
-
-      if (narrationUrl) {
-        // Create a complete BookPage object with required properties
-        const updatedPage: BookPage = {
-          ...currentPageData,
-          narrationUrl,
-          bookId: currentBook.id  // Ensure bookId is explicitly set
-        };
-        await updatePage(updatedPage);
-      }
-      return Promise.resolve();
-    } catch (error) {
-      console.error("Error generating narration:", error);
-      toast.error("Failed to generate narration");
-      return Promise.resolve();
-    } finally {
-      setSaving(false);
-    }
-  }, [currentPageData, currentBook, generateNarration, updatePage, setSaving]);
-  
   return {
-    currentPageData,
+    books,
+    currentBook,
     selectedPageId,
+    currentPageData,
+    isSaving,
     handlePageSelect,
     handleAddPage,
     handleDuplicatePage,
-    handleTextChange: (text: string) => handleTextChange(text, currentPageData),
+    handleTextChange,
     handleLayoutChange,
     handleTextFormattingChange,
     handleImageSettingsChange,
     updatePage,
+    setCurrentPageData,
     handleReorderPage,
     handleDeletePage,
-    updateBookTitle,
-    isSaving,
-    isNarrating,
-    handleGenerateNarration
+    loading,
+    error,
+    updateBookTitle
   };
-}
+};

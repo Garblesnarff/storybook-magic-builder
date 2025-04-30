@@ -1,7 +1,6 @@
 
 import React from 'react';
-// Fix the import statement for Navigation
-import Navigation from './Navigation';
+import { Navigation } from './Navigation';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
