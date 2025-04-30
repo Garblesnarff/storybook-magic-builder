@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { BookList } from '@/components/BookList';
 import { useBook } from '@/contexts/BookContext';
@@ -21,6 +22,13 @@ const BooksPage: React.FC = () => {
   
   const { user } = useAuth();
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Handle the case when user is not authenticated
+    if (!user && !loading) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
   
   const handleCreateBook = async () => {
     try {
@@ -47,6 +55,11 @@ const BooksPage: React.FC = () => {
   };
   
   const handleCreateBookFromTemplate = async (template: any) => {
+    if (!template) {
+      toast.error('Invalid template selected');
+      return;
+    }
+    
     try {
       toast.loading('Creating book from template...');
       
@@ -88,23 +101,7 @@ const BooksPage: React.FC = () => {
   // Ensure we're working with a valid array of books
   const validBooks = Array.isArray(books) ? books : [];
   
-  // Show error state if there's an error
-  if (error) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8 px-4">
-          <div className="p-8 bg-red-50 rounded-lg text-center">
-            <h2 className="text-xl font-bold text-red-700 mb-3">Error loading books</h2>
-            <p className="text-gray-700 mb-4">There was a problem loading your books.</p>
-            <Button onClick={() => window.location.reload()} variant="outline">
-              Try Again
-            </Button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-  
+  // Show loading state
   if (loading) {
     return (
       <Layout>
@@ -125,6 +122,36 @@ const BooksPage: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+  
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8 px-4">
+          <div className="p-8 bg-red-50 rounded-lg text-center">
+            <h2 className="text-xl font-bold text-red-700 mb-3">Error loading books</h2>
+            <p className="text-gray-700 mb-4">There was a problem loading your books.</p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+  
+  // If we don't have a user yet, show loading
+  if (!user) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8 px-4">
+          <div className="flex items-center justify-center h-[60vh]">
+            <p>Loading user data...</p>
           </div>
         </div>
       </Layout>

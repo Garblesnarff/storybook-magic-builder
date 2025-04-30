@@ -43,19 +43,20 @@ const BookContext = createContext<BookContextProps>({
 export const useBook = () => {
   const context = useContext(BookContext);
   // We still want to throw an error if useBook is used outside of a provider
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useBook must be used within a BookProvider');
   }
   return context;
 };
 
 // Enhanced wrapper functions for the Provider
-const safeBookManagerWrapper = (bookManager) => {
+const safeBookManagerWrapper = (bookManager: any) => {
   // Add defensive wrapper functions for all book operations
   return {
-    ...bookManager,
-    // Ensure books is always an array
     books: Array.isArray(bookManager.books) ? bookManager.books : [],
+    currentBook: bookManager.currentBook || null,
+    loading: Boolean(bookManager.loading),
+    error: bookManager.error || null,
     
     // Wrapper for createBook that ensures it returns a valid ID or null
     createBook: async () => {
@@ -68,7 +69,12 @@ const safeBookManagerWrapper = (bookManager) => {
     },
     
     // Wrapper for createBookFromTemplate
-    createBookFromTemplate: async (template) => {
+    createBookFromTemplate: async (template: BookTemplate) => {
+      if (!template) {
+        console.error('Invalid template provided');
+        return null;
+      }
+      
       try {
         return await bookManager.createBookFromTemplate(template) || null;
       } catch (error) {
@@ -77,13 +83,123 @@ const safeBookManagerWrapper = (bookManager) => {
       }
     },
     
-    // Add similar defensive wrappers for other functions if needed
+    // Wrappers for other methods with proper error handling
+    updateBook: async (book: Book) => {
+      if (!book || !book.id) {
+        console.error('Invalid book provided to updateBook');
+        return;
+      }
+      
+      try {
+        await bookManager.updateBook(book);
+      } catch (error) {
+        console.error('Error in updateBook:', error);
+      }
+    },
+    
+    deleteBook: async (id: string) => {
+      if (!id) {
+        console.error('Invalid ID provided to deleteBook');
+        return;
+      }
+      
+      try {
+        await bookManager.deleteBook(id);
+      } catch (error) {
+        console.error('Error in deleteBook:', error);
+      }
+    },
+    
+    loadBook: async (id: string) => {
+      if (!id) {
+        console.error('Invalid ID provided to loadBook');
+        return null;
+      }
+      
+      try {
+        return await bookManager.loadBook(id) || null;
+      } catch (error) {
+        console.error('Error in loadBook:', error);
+        return null;
+      }
+    },
+    
+    addPage: async () => {
+      try {
+        return await bookManager.addPage();
+      } catch (error) {
+        console.error('Error in addPage:', error);
+        return undefined;
+      }
+    },
+    
+    updatePage: async (page: BookPage) => {
+      if (!page || !page.id) {
+        console.error('Invalid page provided to updatePage');
+        return;
+      }
+      
+      try {
+        await bookManager.updatePage(page);
+      } catch (error) {
+        console.error('Error in updatePage:', error);
+      }
+    },
+    
+    deletePage: async (id: string) => {
+      if (!id) {
+        console.error('Invalid ID provided to deletePage');
+        return;
+      }
+      
+      try {
+        await bookManager.deletePage(id);
+      } catch (error) {
+        console.error('Error in deletePage:', error);
+      }
+    },
+    
+    reorderPage: async (id: string, newPosition: number) => {
+      if (!id) {
+        console.error('Invalid ID provided to reorderPage');
+        return;
+      }
+      
+      try {
+        await bookManager.reorderPage(id, newPosition);
+      } catch (error) {
+        console.error('Error in reorderPage:', error);
+      }
+    },
+    
+    duplicatePage: async (id: string) => {
+      if (!id) {
+        console.error('Invalid ID provided to duplicatePage');
+        return undefined;
+      }
+      
+      try {
+        return await bookManager.duplicatePage(id) || undefined;
+      } catch (error) {
+        console.error('Error in duplicatePage:', error);
+        return undefined;
+      }
+    },
   };
 };
 
 // Provider component that wraps the parts of our app that need the context
 export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const bookManager = useBookManager();
+  
+  if (!bookManager) {
+    // Provide default empty implementation if bookManager is undefined
+    return (
+      <BookContext.Provider value={BookContext._currentValue}>
+        {children}
+      </BookContext.Provider>
+    );
+  }
   
   // Use the enhanced wrapper
   const safeBookManager = safeBookManagerWrapper(bookManager);

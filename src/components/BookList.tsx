@@ -51,7 +51,7 @@ export const BookList: React.FC<BookListProps> = ({
     }
   };
 
-  // Ensure books is always a valid array
+  // Ensure books is always a valid array and filter out any invalid book objects
   const validBooks = Array.isArray(books) 
     ? books.filter(book => book && typeof book === 'object' && book.id)
     : [];
@@ -76,14 +76,14 @@ export const BookList: React.FC<BookListProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {validBooks.map((book) => (
+          {validBooks.map((book) => book && book.id ? (
             <BookCard 
               key={book.id} 
               book={book} 
               onDelete={onDeleteBook}
               onUpdateTitle={handleUpdateTitle}
             />
-          ))}
+          ) : null)}
           <div className="aspect-[3/4] flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300 hover:border-primary transition-colors">
             <Button 
               variant="ghost" 
