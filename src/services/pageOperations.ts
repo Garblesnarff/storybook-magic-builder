@@ -8,18 +8,18 @@ import { addPage, duplicatePage } from './page/pageCreation';
 import { updatePage, deletePage, reorderPage } from './page/pageModification';
 
 // Add additional safety checks to ensure valid objects
-const safeCreateBook = (...args) => {
+const safeCreateBook = (userId) => {
   try {
-    return createBook(...args);
+    return createBook(userId);
   } catch (error) {
     console.error('Error in safeCreateBook:', error);
     return null;
   }
 };
 
-const safeCreateBookFromTemplate = (...args) => {
+const safeCreateBookFromTemplate = (userId, template) => {
   try {
-    return createBookFromTemplate(...args);
+    return createBookFromTemplate(userId, template);
   } catch (error) {
     console.error('Error in safeCreateBookFromTemplate:', error);
     return null;
