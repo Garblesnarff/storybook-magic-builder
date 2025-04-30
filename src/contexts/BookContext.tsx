@@ -195,7 +195,22 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   if (!bookManager) {
     // Provide default empty implementation if bookManager is undefined
     return (
-      <BookContext.Provider value={BookContext._currentValue}>
+      <BookContext.Provider value={{
+        books: [],
+        currentBook: null,
+        createBook: async () => null,
+        createBookFromTemplate: async () => null,
+        updateBook: async () => {},
+        deleteBook: async () => {},
+        loadBook: async () => null,
+        addPage: async () => undefined,
+        updatePage: async () => {},
+        deletePage: async () => {},
+        reorderPage: async () => {},
+        duplicatePage: async () => undefined,
+        loading: false,
+        error: null
+      }}>
         {children}
       </BookContext.Provider>
     );
